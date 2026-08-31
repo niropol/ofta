@@ -1,0 +1,223 @@
+// ═══════════════════════════════════════════════════════════════════════════
+//  SAM — UI del NOMENCLADOR (Etapa 2)
+// ───────────────────────────────────────────────────────────────────────────
+//  Tabla de prestaciones (una fila por prestación lógica, mostrando su precio
+//  vigente) + alta/edición, "nuevo precio" (aumento con vigencia), historial de
+//  precios, inactivar y eliminar. La lógica de versionado vive en nomenclador.js.
+// ═══════════════════════════════════════════════════════════════════════════
+
+function _labelCategoria(id) { return (CATEGORIAS.find(c => c.id === id) || {}).label || id; }
+
+function _opcionesCategoria(sel) {
+  return CATEGORIAS.map(c => `<option value="${c.id}"${c.id === sel ? ' selected' : ''}>${escHtml(c.label)}</option>`).join('');
+}
+
+// ── Render de la tabla ──
+function renderNomenclador() {
+  const cont = document.getElementById('nomencladorTabla');
+  if (!cont) return;
+  const catSel = document.getElementById('nomFiltroCat');
+  const txtSel = document.getElementById('nomBuscar');
+  const categoria = catSel && catSel.value ? catSel.value : null;
+  const texto = txtSel ? txtSel.value : '';
+
+  const filas = listarPrestaciones({ categoria, texto, incluirInactivos: true });
+
+  if (filas.length === 0) {
+    cont.innerHTML = '<p class="vacio">No hay prestaciones cargadas. Usá «+ Nueva prestación».</p>';
+    return;
+  }
+
+  const rows = filas.map(v => {
+    const inactivo = v.estado === 'Inactivo';
+    const esLIO = v.categoria === 'lio';
+    const costo = esLIO && v.costo != null ? fmtMoneda(v.costo, v.costoMoneda) : '—';
+    return `
+    <tr class="${inactivo ? 'fila-inactiva' : ''}">
+      <td>${escHtml(_labelCategoria(v.categoria))}</td>
+      <td>${escHtml(v.codigo || '—')}</td>
+      <td>${escHtml(v.descripcion)}${inactivo ? ' <span class="badge-inactivo">Inactiva</span>' : ''}</td>
+      <td class="num">${fmtMoneda(v.precio, v.moneda)}</td>
+      <td class="num">${costo}</td>
+      <td>${escHtml(v.vigenciaDesde)}</td>
+      <td class="acc">
+        <button onclick="editarPrestacionUI(${v.grupo})">Editar</button>
+        <button onclick="abrirNuevoPrecio(${v.grupo})">Nuevo precio</button>
+        <button onclick="verHistorialPrestacion(${v.grupo})">Historial</button>
+        <button onclick="inactivarPrestacionUI(${v.grupo})">${inactivo ? 'Reactivar' : 'Inactivar'}</button>
+        <button class="danger" onclick="eliminarPrestacionUI(${v.grupo})">Eliminar</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  cont.innerHTML = `
+    <table class="tabla">
+      <thead><tr>
+        <th>Categoría</th><th>Código</th><th>Descripción</th>
+        <th class="num">Precio vigente</th><th class="num">Costo (LIO)</th>
+        <th>Vigente desde</th><th>Acciones</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+// Poblar el select de filtro de categoría (una sola vez).
+function _poblarFiltroCategoria() {
+  const sel = document.getElementById('nomFiltroCat');
+  if (!sel || sel.dataset.listo) return;
+  sel.innerHTML = '<option value="">Todas las categorías</option>' +
+    CATEGORIAS.map(c => `<option value="${c.id}">${escHtml(c.label)}</option>`).join('');
+  sel.dataset.listo = '1';
+}
+
+// ── Modal alta / edición ──
+function _mostrarModalPrest(on) { const m = document.getElementById('modalPrest'); if (m) m.style.display = on ? 'flex' : 'none'; }
+function cerrarModalPrest() { _mostrarModalPrest(false); }
+
+// Muestra/oculta los campos de costo según la categoría elegida.
+function onCategoriaChangePrest() {
+  const cat = document.getElementById('prest_categoria').value;
+  const box = document.getElementById('prest_costo_box');
+  if (box) box.style.display = (cat === 'lio') ? 'block' : 'none';
+}
+
+function abrirNuevaPrestacion() {
+  document.getElementById('modalPrestTitulo').textContent = 'Nueva prestación';
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v == null ? '' : v; };
+  set('prest_grupo', '');
+  document.getElementById('prest_categoria').innerHTML = _opcionesCategoria('consulta');
+  set('prest_codigo', ''); set('prest_descripcion', '');
+  set('prest_precio', ''); set('prest_moneda', 'ARS');
+  set('prest_costo', ''); set('prest_costoMoneda', 'ARS');
+  set('prest_vigencia', hoyISO());
+  document.getElementById('prest_vigencia_box').style.display = 'block';
+  document.getElementById('prest_correccion_nota').style.display = 'none';
+  onCategoriaChangePrest();
+  _mostrarModalPrest(true);
+}
+
+function editarPrestacionUI(grupo) {
+  const v = versionActual(grupo);
+  if (!v) return;
+  document.getElementById('modalPrestTitulo').textContent = 'Editar prestación';
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val == null ? '' : val; };
+  set('prest_grupo', grupo);
+  document.getElementById('prest_categoria').innerHTML = _opcionesCategoria(v.categoria);
+  set('prest_codigo', v.codigo); set('prest_descripcion', v.descripcion);
+  set('prest_precio', v.precio); set('prest_moneda', v.moneda);
+  set('prest_costo', v.costo != null ? v.costo : ''); set('prest_costoMoneda', v.costoMoneda || 'ARS');
+  // En edición no se elige vigencia: el precio de acá corrige la versión actual.
+  document.getElementById('prest_vigencia_box').style.display = 'none';
+  document.getElementById('prest_correccion_nota').style.display = 'block';
+  onCategoriaChangePrest();
+  _mostrarModalPrest(true);
+}
+
+function guardarPrestacion() {
+  const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  const grupo = val('prest_grupo');
+  const datos = {
+    categoria: val('prest_categoria'),
+    codigo: val('prest_codigo'),
+    descripcion: val('prest_descripcion'),
+    precio: val('prest_precio'),
+    moneda: val('prest_moneda') || 'ARS',
+    costo: val('prest_costo'),
+    costoMoneda: val('prest_costoMoneda') || 'ARS',
+    vigenciaDesde: val('prest_vigencia') || hoyISO(),
+  };
+  if (!datos.descripcion) { alert('La descripción es obligatoria.'); return false; }
+  if (datos.precio === '' || isNaN(Number(datos.precio))) { alert('El precio debe ser un número.'); return false; }
+
+  let r;
+  if (grupo) {
+    r = editarPrestacion(Number(grupo), { ...datos, corregirPrecio: true });
+  } else {
+    r = crearPrestacion(datos);
+  }
+  cerrarModalPrest();
+  renderNomenclador();
+  return r;
+}
+
+// ── Modal "Nuevo precio" (aumento con vigencia) ──
+function _mostrarModalPrecio(on) { const m = document.getElementById('modalPrecio'); if (m) m.style.display = on ? 'flex' : 'none'; }
+function cerrarModalPrecio() { _mostrarModalPrecio(false); }
+
+function abrirNuevoPrecio(grupo) {
+  const v = versionActual(grupo);
+  if (!v) return;
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val == null ? '' : val; };
+  set('precio_grupo', grupo);
+  document.getElementById('precio_prest_nombre').textContent = v.descripcion + '  (actual: ' + fmtMoneda(v.precio, v.moneda) + ' desde ' + v.vigenciaDesde + ')';
+  set('precio_valor', v.precio); set('precio_moneda', v.moneda);
+  set('precio_vigencia', hoyISO());
+  const esLIO = v.categoria === 'lio';
+  document.getElementById('precio_costo_box').style.display = esLIO ? 'block' : 'none';
+  set('precio_costo', v.costo != null ? v.costo : ''); set('precio_costoMoneda', v.costoMoneda || 'ARS');
+  _mostrarModalPrecio(true);
+}
+
+function guardarNuevoPrecio() {
+  const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  const grupo = Number(val('precio_grupo'));
+  const datos = {
+    vigenciaDesde: val('precio_vigencia') || hoyISO(),
+    precio: val('precio_valor'),
+    moneda: val('precio_moneda') || 'ARS',
+    costo: val('precio_costo'),
+    costoMoneda: val('precio_costoMoneda') || 'ARS',
+  };
+  if (datos.precio === '' || isNaN(Number(datos.precio))) { alert('El precio debe ser un número.'); return false; }
+  try {
+    versionarPrecio(grupo, datos);
+  } catch (e) {
+    alert(e.message);
+    return false;
+  }
+  cerrarModalPrecio();
+  renderNomenclador();
+  return true;
+}
+
+// ── Modal historial de precios ──
+function _mostrarModalHistorial(on) { const m = document.getElementById('modalHistorial'); if (m) m.style.display = on ? 'flex' : 'none'; }
+function cerrarModalHistorial() { _mostrarModalHistorial(false); }
+
+function verHistorialPrestacion(grupo) {
+  const vs = versionesDe(grupo);
+  if (vs.length === 0) return;
+  document.getElementById('historial_nombre').textContent = vs[0].descripcion;
+  const esLIO = vs[0].categoria === 'lio';
+  const rows = vs.map(v => `
+    <tr>
+      <td>${escHtml(v.vigenciaDesde)}</td>
+      <td>${escHtml(v.vigenciaHasta || 'vigente')}</td>
+      <td class="num">${fmtMoneda(v.precio, v.moneda)}</td>
+      ${esLIO ? `<td class="num">${v.costo != null ? fmtMoneda(v.costo, v.costoMoneda) : '—'}</td>` : ''}
+    </tr>`).join('');
+  document.getElementById('historial_tabla').innerHTML = `
+    <table class="tabla">
+      <thead><tr><th>Desde</th><th>Hasta</th><th class="num">Precio</th>${esLIO ? '<th class="num">Costo</th>' : ''}</tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  _mostrarModalHistorial(true);
+}
+
+// ── Inactivar / eliminar ──
+function inactivarPrestacionUI(grupo) {
+  toggleEstadoPrestacion(grupo);
+  renderNomenclador();
+}
+
+function eliminarPrestacionUI(grupo) {
+  const v = versionActual(grupo);
+  if (!v) return;
+  if (typeof confirm === 'function' && !confirm(`¿Eliminar definitivamente "${v.descripcion}" y todo su historial de precios? Queda registrado en auditoría.`)) return;
+  const r = eliminarPrestacion(grupo);
+  if (!r.ok) {
+    alert(`No se puede eliminar: hay ${r.referencias} prestación(es) realizada(s) que usan este ítem. Inactivalo en su lugar.`);
+    return;
+  }
+  renderNomenclador();
+}

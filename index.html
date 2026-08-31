@@ -61,19 +61,38 @@
   .modal-acciones { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
   .modal-acciones .secundario { background: #eef2f7; color: var(--texto); }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  /* Filtros y tablas */
+  .filtros { display: flex; gap: 10px; margin-bottom: 14px; align-items: center; flex-wrap: wrap; }
+  .filtros input, .filtros select { padding: 8px 10px; border: 1px solid var(--borde); border-radius: 6px; font-size: 14px; }
+  .filtros input[type=search] { min-width: 220px; }
+  .tabla { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--borde);
+    border-radius: 8px; overflow: hidden; }
+  .tabla th, .tabla td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--borde); font-size: 13px; }
+  .tabla th { background: #f8fafc; color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .02em; }
+  .tabla td.num, .tabla th.num { text-align: right; white-space: nowrap; }
+  .tabla tr:last-child td { border-bottom: none; }
+  .tabla .fila-inactiva { opacity: .5; }
+  .tabla td.acc { white-space: nowrap; }
+  .tabla td.acc button { background: #eef2f7; border: 1px solid var(--borde); border-radius: 5px;
+    padding: 4px 8px; cursor: pointer; font-size: 11.5px; margin-right: 3px; }
+  .tabla td.acc button.danger { color: var(--danger); }
+  .nota { font-size: 12px; color: var(--warn); background: #fffbeb; border: 1px solid #fde68a;
+    padding: 8px 10px; border-radius: 6px; margin-bottom: 12px; }
+  .tabla-wrap { overflow-x: auto; }
 </style>
 </head>
 <body>
 <header class="top">
   <div>
     <h1>SAM Oftalmología</h1>
-    <div class="sub">Sistema de gestión — Etapa 1: médicos</div>
+    <div class="sub">Sistema de gestión</div>
   </div>
   <div id="indicadorGuardado"></div>
 </header>
 
 <nav class="tabs" id="navTabs">
   <button class="active" data-sec="section-medicos" onclick="showSection('section-medicos')">Médicos</button>
+  <button data-sec="section-nomenclador" onclick="showSection('section-nomenclador')">Nomenclador</button>
 </nav>
 
 <main>
@@ -84,6 +103,19 @@
       <button class="btn" onclick="abrirNuevoMedico()">+ Nuevo médico</button>
     </div>
     <div id="medicosGrid" class="grid"></div>
+  </section>
+
+  <!-- ── NOMENCLADOR ── -->
+  <section id="section-nomenclador" class="section">
+    <div class="section-head">
+      <h2>Nomenclador de prestaciones</h2>
+      <button class="btn" onclick="abrirNuevaPrestacion()">+ Nueva prestación</button>
+    </div>
+    <div class="filtros">
+      <select id="nomFiltroCat" onchange="renderNomenclador()"></select>
+      <input type="search" id="nomBuscar" placeholder="Buscar por descripción o código…" oninput="renderNomenclador()">
+    </div>
+    <div class="tabla-wrap"><div id="nomencladorTabla"></div></div>
   </section>
 </main>
 
@@ -119,9 +151,89 @@
   </div>
 </div>
 
+<!-- ── Modal prestación (alta / edición) ── -->
+<div id="modalPrest" class="modal">
+  <div class="modal-box">
+    <h3 id="modalPrestTitulo">Nueva prestación</h3>
+    <input type="hidden" id="prest_grupo">
+    <div id="prest_correccion_nota" class="nota" style="display:none">
+      El precio de acá <strong>corrige</strong> el precio actual (por si se cargó mal). Para un
+      aumento con fecha usá el botón «Nuevo precio», que conserva el historial.
+    </div>
+    <div class="row2">
+      <div class="campo"><label>Categoría</label>
+        <select id="prest_categoria" onchange="onCategoriaChangePrest()"></select>
+      </div>
+      <div class="campo"><label>Código (opcional)</label><input id="prest_codigo"></div>
+    </div>
+    <div class="campo"><label>Descripción *</label><input id="prest_descripcion"></div>
+    <div class="row2">
+      <div class="campo"><label>Precio</label><input id="prest_precio" type="number" step="0.01"></div>
+      <div class="campo"><label>Moneda</label>
+        <select id="prest_moneda"><option value="ARS">Pesos (ARS)</option><option value="USD">Dólares (USD)</option></select>
+      </div>
+    </div>
+    <div id="prest_costo_box" style="display:none">
+      <div class="row2">
+        <div class="campo"><label>Costo de la lente (LIO)</label><input id="prest_costo" type="number" step="0.01"></div>
+        <div class="campo"><label>Moneda del costo</label>
+          <select id="prest_costoMoneda"><option value="ARS">Pesos (ARS)</option><option value="USD">Dólares (USD)</option></select>
+        </div>
+      </div>
+    </div>
+    <div id="prest_vigencia_box" class="campo"><label>Vigente desde</label><input id="prest_vigencia" type="date"></div>
+    <div class="modal-acciones">
+      <button class="btn secundario" onclick="cerrarModalPrest()">Cancelar</button>
+      <button class="btn" onclick="guardarPrestacion()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal nuevo precio (aumento con vigencia) ── -->
+<div id="modalPrecio" class="modal">
+  <div class="modal-box">
+    <h3>Nuevo precio</h3>
+    <p class="muted" id="precio_prest_nombre"></p>
+    <input type="hidden" id="precio_grupo">
+    <div class="campo"><label>Rige desde *</label><input id="precio_vigencia" type="date"></div>
+    <div class="row2">
+      <div class="campo"><label>Nuevo precio</label><input id="precio_valor" type="number" step="0.01"></div>
+      <div class="campo"><label>Moneda</label>
+        <select id="precio_moneda"><option value="ARS">Pesos (ARS)</option><option value="USD">Dólares (USD)</option></select>
+      </div>
+    </div>
+    <div id="precio_costo_box" style="display:none">
+      <div class="row2">
+        <div class="campo"><label>Nuevo costo (LIO)</label><input id="precio_costo" type="number" step="0.01"></div>
+        <div class="campo"><label>Moneda del costo</label>
+          <select id="precio_costoMoneda"><option value="ARS">Pesos (ARS)</option><option value="USD">Dólares (USD)</option></select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-acciones">
+      <button class="btn secundario" onclick="cerrarModalPrecio()">Cancelar</button>
+      <button class="btn" onclick="guardarNuevoPrecio()">Guardar precio</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal historial de precios ── -->
+<div id="modalHistorial" class="modal">
+  <div class="modal-box">
+    <h3>Historial de precios</h3>
+    <p class="muted" id="historial_nombre"></p>
+    <div class="tabla-wrap"><div id="historial_tabla"></div></div>
+    <div class="modal-acciones">
+      <button class="btn secundario" onclick="cerrarModalHistorial()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <script src="js/datos.js?v=1"></script>
 <script src="js/auditoria.js?v=1"></script>
+<script src="js/nomenclador.js?v=1"></script>
 <script src="js/ui-medicos.js?v=1"></script>
+<script src="js/ui-nomenclador.js?v=1"></script>
 <script src="js/persistencia.js?v=1"></script>
 <script>
 // ── Navegación entre secciones ──
@@ -133,6 +245,8 @@ function showSection(id) {
 // ── init(): se llama tras cargar la nube (o en modo local). Renderiza todo. ──
 function init() {
   renderMedicos();
+  _poblarFiltroCategoria();
+  renderNomenclador();
 }
 </script>
 </body>

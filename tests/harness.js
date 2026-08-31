@@ -29,6 +29,14 @@ const EXPONER = [
   // ABM de médicos
   'renderMedicos', 'abrirNuevoMedico', 'editarMedico', 'guardarMedico',
   'eliminarMedico', 'toggleEstadoMedico', '_referenciasMedico',
+  // nomenclador: lógica de versionado de precios
+  'hoyISO', 'versionesDe', 'precioVigente', 'versionActual', 'listarPrestaciones',
+  'crearPrestacion', 'editarPrestacion', 'versionarPrecio', 'toggleEstadoPrestacion',
+  'eliminarPrestacion', '_referenciasNomenclador', 'fmtMoneda',
+  // nomenclador: UI
+  'renderNomenclador', '_poblarFiltroCategoria', 'abrirNuevaPrestacion', 'editarPrestacionUI',
+  'guardarPrestacion', 'abrirNuevoPrecio', 'guardarNuevoPrecio', 'onCategoriaChangePrest',
+  'verHistorialPrestacion', 'inactivarPrestacionUI', 'eliminarPrestacionUI',
   // navegación
   'showSection', 'init',
 ];
