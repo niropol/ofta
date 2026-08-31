@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAM — Gestión Oftalmología</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg: #f4f6f9; --panel: #ffffff; --texto: #1f2937; --muted: #6b7280;
+    --borde: #e5e7eb; --primario: #2d5a8e; --primario-osc: #234a76;
+    --danger: #b91c1c; --ok: #15803d; --warn: #b45309;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--bg); color: var(--texto); font-size: 14px; }
+  header.top { background: var(--primario); color: #fff; padding: 12px 20px;
+    display: flex; align-items: center; justify-content: space-between; }
+  header.top h1 { font-size: 18px; margin: 0; font-weight: 600; }
+  header.top .sub { opacity: .8; font-size: 12px; }
+  #indicadorGuardado { font-size: 12px; opacity: .9; }
+  nav.tabs { background: var(--panel); border-bottom: 1px solid var(--borde);
+    padding: 0 16px; display: flex; gap: 4px; }
+  nav.tabs button { background: none; border: none; padding: 12px 16px; cursor: pointer;
+    font-size: 14px; color: var(--muted); border-bottom: 3px solid transparent; }
+  nav.tabs button.active { color: var(--primario); border-bottom-color: var(--primario); font-weight: 600; }
+  main { padding: 20px; max-width: 1200px; margin: 0 auto; }
+  .section { display: none; }
+  .section.active { display: block; }
+  .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .section-head h2 { margin: 0; font-size: 20px; }
+  button.btn { background: var(--primario); color: #fff; border: none; padding: 9px 16px;
+    border-radius: 6px; cursor: pointer; font-size: 14px; }
+  button.btn:hover { background: var(--primario-osc); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .med-card { background: var(--panel); border: 1px solid var(--borde); border-radius: 8px;
+    padding: 14px; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+  .med-card.inactivo { opacity: .6; }
+  .med-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .med-head strong { font-size: 15px; }
+  .med-datos > div { margin: 2px 0; }
+  .muted { color: var(--muted); font-size: 12.5px; }
+  .badge-inactivo { background: #fee2e2; color: var(--danger); font-size: 11px;
+    padding: 2px 7px; border-radius: 10px; }
+  .med-acciones { margin-top: 12px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .med-acciones button { background: #eef2f7; border: 1px solid var(--borde); border-radius: 5px;
+    padding: 5px 10px; cursor: pointer; font-size: 12.5px; }
+  .med-acciones button.danger { color: var(--danger); }
+  .vacio { color: var(--muted); background: var(--panel); border: 1px dashed var(--borde);
+    padding: 30px; border-radius: 8px; text-align: center; }
+  /* Modal */
+  .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4);
+    align-items: center; justify-content: center; z-index: 50; }
+  .modal-box { background: var(--panel); border-radius: 10px; padding: 22px; width: 460px;
+    max-width: 94vw; max-height: 90vh; overflow: auto; }
+  .modal-box h3 { margin: 0 0 16px; }
+  .campo { margin-bottom: 12px; }
+  .campo label { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 4px; }
+  .campo input, .campo select { width: 100%; padding: 8px 10px; border: 1px solid var(--borde);
+    border-radius: 6px; font-size: 14px; }
+  .modal-acciones { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+  .modal-acciones .secundario { background: #eef2f7; color: var(--texto); }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+</style>
+</head>
+<body>
+<header class="top">
+  <div>
+    <h1>SAM Oftalmología</h1>
+    <div class="sub">Sistema de gestión — Etapa 1: médicos</div>
+  </div>
+  <div id="indicadorGuardado"></div>
+</header>
+
+<nav class="tabs" id="navTabs">
+  <button class="active" data-sec="section-medicos" onclick="showSection('section-medicos')">Médicos</button>
+</nav>
+
+<main>
+  <!-- ── MÉDICOS ── -->
+  <section id="section-medicos" class="section active">
+    <div class="section-head">
+      <h2>Médicos</h2>
+      <button class="btn" onclick="abrirNuevoMedico()">+ Nuevo médico</button>
+    </div>
+    <div id="medicosGrid" class="grid"></div>
+  </section>
+</main>
+
+<!-- ── Modal médico ── -->
+<div id="modalMedico" class="modal">
+  <div class="modal-box">
+    <h3 id="modalMedicoTitulo">Nuevo médico</h3>
+    <input type="hidden" id="med_id">
+    <div class="campo">
+      <label>Nombre y apellido *</label>
+      <input id="med_nombre" placeholder="Dr. / Dra. Apellido, Nombre">
+    </div>
+    <div class="row2">
+      <div class="campo"><label>Especialidad</label><input id="med_especialidad"></div>
+      <div class="campo"><label>Matrícula</label><input id="med_matricula"></div>
+    </div>
+    <div class="row2">
+      <div class="campo"><label>CUIT</label><input id="med_cuit"></div>
+      <div class="campo"><label>Teléfono</label><input id="med_tel"></div>
+    </div>
+    <div class="campo"><label>Email</label><input id="med_email" type="email"></div>
+    <div class="campo"><label>CBU (para transferencias)</label><input id="med_cbu"></div>
+    <div class="row2">
+      <div class="campo"><label>Sede</label><select id="med_sede"></select></div>
+      <div class="campo"><label>Estado</label>
+        <select id="med_estado"><option value="Activo">Activo</option><option value="Inactivo">Inactivo</option></select>
+      </div>
+    </div>
+    <div class="modal-acciones">
+      <button class="btn secundario" onclick="cerrarModalMedico()">Cancelar</button>
+      <button class="btn" onclick="guardarMedico()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/datos.js?v=1"></script>
+<script src="js/auditoria.js?v=1"></script>
+<script src="js/ui-medicos.js?v=1"></script>
+<script src="js/persistencia.js?v=1"></script>
+<script>
+// ── Navegación entre secciones ──
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.toggle('active', s.id === id));
+  document.querySelectorAll('#navTabs button').forEach(b => b.classList.toggle('active', b.dataset.sec === id));
+}
+
+// ── init(): se llama tras cargar la nube (o en modo local). Renderiza todo. ──
+function init() {
+  renderMedicos();
+}
+</script>
+</body>
+</html>

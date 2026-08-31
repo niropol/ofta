@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "SAM (puerto 8010)",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["-y", "http-server", ".", "-p", "8010", "-c-1"],
+      "port": 8010
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+// ─────────────────────────────────────────────────────────────────────────────
+//  Harness de tests para SAM (mismo enfoque que OIP).
+//
+//  Lee index.html de producción tal cual, inlinea los <script src="js/..."> (jsdom
+//  no los descarga) y agrega un <script> que expone símbolos internos en
+//  window.__APP__ (en index.html son `const`/`function` de nivel superior, no
+//  accesibles desde afuera). El archivo en disco no se toca.
+//
+//  url NO localhost + sin SDK de Supabase → initSupabase() corta y la app queda
+//  trabajando en memoria, ideal para testear el ciclo de datos sin nube.
+// ─────────────────────────────────────────────────────────────────────────────
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { JSDOM } from 'jsdom';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const HTML_PATH = join(__dirname, '..', 'index.html');
+
+const EXPONER = [
+  // estado / constantes
+  'DB', 'CATEGORIAS', 'CATEGORIA_IDS', 'ROLES', 'MONEDAS', 'MEDIOS_PAGO', 'COLECCIONES',
+  // helpers de dominio
+  'nuevoId', 'usuarioActual', 'sedeActiva', 'getSedesActivas', 'getMedicosActivos', 'escHtml',
+  // auditoría
+  'registrarAuditoria', 'auditoriaDe',
+  // persistencia
+  'marcarCambios', 'cargarDesdeNube', 'guardarEnNube',
+  // ABM de médicos
+  'renderMedicos', 'abrirNuevoMedico', 'editarMedico', 'guardarMedico',
+  'eliminarMedico', 'toggleEstadoMedico', '_referenciasMedico',
+  // navegación
+  'showSection', 'init',
+];
+
+export function loadApp() {
+  let html = readFileSync(HTML_PATH, 'utf8');
+
+  html = html.replace(/<script src="(js\/[^"?]+)(?:\?[^"]*)?"><\/script>/g, (_m, src) => {
+    const code = readFileSync(join(__dirname, '..', src), 'utf8');
+    return `<script>\n${code}\n</script>`;
+  });
+
+  const shim = `\n<script>window.__APP__ = { ${EXPONER.join(', ')} };</script>\n`;
+  const idx = html.lastIndexOf('</body>');
+  html = html.slice(0, idx) + shim + html.slice(idx);
+
+  const dom = new JSDOM(html, {
+    runScripts: 'dangerously',
+    url: 'https://example.com/',   // no localhost → sin modo dev; sin SDK → corta en Supabase
+    pretendToBeVisual: true,
+  });
+  const { window } = dom;
+  window.confirm = () => true;
+  window.alert = () => {};
+  window.prompt = () => '';
+
+  const app = window.__APP__;
+  if (!app) throw new Error('No se pudo exponer __APP__: ¿cambió la estructura de index.html?');
+  // Asegurar init() (renders) aunque el DOMContentLoaded ya haya pasado.
+  try { if (typeof app.init === 'function') app.init(); } catch (e) {}
+  return { window, dom, app };
+}
+
+// Deja las colecciones de datos vacías para un test limpio (conserva sedes/usuarios base).
+export function resetDatos(app) {
+  const D = app.DB;
+  ['medicos', 'obrasSociales', 'pacientes', 'nomenclador', 'reglasReparto',
+   'prestacionesRealizadas', 'cobros', 'gastos', 'pagosMedicos', 'cajaMovimientos',
+   'auditoria'].forEach(c => { D[c] = []; });
+  return D;
+}
+
+export function setInput(window, id, value) {
+  const el = window.document.getElementById(id);
+  if (!el) throw new Error('No existe el elemento #' + id);
+  el.value = String(value);
+  return el;
+}
