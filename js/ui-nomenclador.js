@@ -9,7 +9,8 @@
 function _labelCategoria(id) { return (CATEGORIAS.find(c => c.id === id) || {}).label || id; }
 
 function _opcionesCategoria(sel) {
-  return CATEGORIAS.map(c => `<option value="${c.id}"${c.id === sel ? ' selected' : ''}>${escHtml(c.label)}</option>`).join('');
+  // Solo categorías con precio (las de derivación no son ítems del nomenclador).
+  return CATEGORIAS_NOMENCLADOR.map(c => `<option value="${c.id}"${c.id === sel ? ' selected' : ''}>${escHtml(c.label)}</option>`).join('');
 }
 
 // ── Render de la tabla ──
@@ -66,7 +67,7 @@ function _poblarFiltroCategoria() {
   const sel = document.getElementById('nomFiltroCat');
   if (!sel || sel.dataset.listo) return;
   sel.innerHTML = '<option value="">Todas las categorías</option>' +
-    CATEGORIAS.map(c => `<option value="${c.id}">${escHtml(c.label)}</option>`).join('');
+    CATEGORIAS_NOMENCLADOR.map(c => `<option value="${c.id}">${escHtml(c.label)}</option>`).join('');
   sel.dataset.listo = '1';
 }
 

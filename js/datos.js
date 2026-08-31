@@ -19,16 +19,28 @@
 //   - Anulación = contra-movimiento (el registro queda visible como ANULADO).
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Categorías de prestación con % propio + la consulta (100% al médico).
+// Categorías de prestación.
+//  - tipo 'realizada'  → prestación con precio en el nomenclador (`nomenclador: true`).
+//    Cada una tiene su % de reparto (la consulta es 100% fijo). `permiteDerivador`
+//    indica si esa prestación puede tener médico derivador, y `derivaCategoria` es
+//    la categoría de % que cobra ese derivador (en paralelo, sobre el mismo precio).
+//    `usaCosto` (solo LIO) → guarda costo además de precio; el % va sobre el neto.
+//  - tipo 'derivacion' → NO es un ítem con precio: es la regla de % del derivador.
 const CATEGORIAS = [
-  { id: 'consulta',            label: 'Consulta',                    porcentajeFijo: 100 },
-  { id: 'cirugia',             label: 'Cirugía',                     porcentajeFijo: null },
-  { id: 'lio',                 label: 'LIO (lente intraocular)',     porcentajeFijo: null, netoPrecioMenosCosto: true },
-  { id: 'realizacion_estudio', label: 'Realización de estudio',      porcentajeFijo: null },
-  { id: 'derivacion_estudio',  label: 'Derivación de estudio',       porcentajeFijo: null, esDerivacion: true },
-  { id: 'derivacion_cirugia',  label: 'Derivación de cirugía',       porcentajeFijo: null, esDerivacion: true },
+  { id: 'consulta',            label: 'Consulta',                tipo: 'realizada', nomenclador: true,  porcentajeFijo: 100,  permiteDerivador: false, derivaCategoria: null,                 usaCosto: false },
+  { id: 'cirugia',             label: 'Cirugía',                 tipo: 'realizada', nomenclador: true,  porcentajeFijo: null, permiteDerivador: true,  derivaCategoria: 'derivacion_cirugia', usaCosto: false },
+  { id: 'practica',            label: 'Práctica',                tipo: 'realizada', nomenclador: true,  porcentajeFijo: null, permiteDerivador: true,  derivaCategoria: 'derivacion_practica',usaCosto: false },
+  { id: 'realizacion_estudio', label: 'Realización de estudio',  tipo: 'realizada', nomenclador: true,  porcentajeFijo: null, permiteDerivador: true,  derivaCategoria: 'derivacion_estudio', usaCosto: false },
+  { id: 'lio',                 label: 'LIO (lente intraocular)', tipo: 'realizada', nomenclador: true,  porcentajeFijo: null, permiteDerivador: false, derivaCategoria: null,                 usaCosto: true,  netoPrecioMenosCosto: true },
+  { id: 'derivacion_cirugia',  label: 'Derivación de cirugía',   tipo: 'derivacion', nomenclador: false },
+  { id: 'derivacion_estudio',  label: 'Derivación de estudio',   tipo: 'derivacion', nomenclador: false },
+  { id: 'derivacion_practica', label: 'Derivación de práctica',  tipo: 'derivacion', nomenclador: false },
 ];
 const CATEGORIA_IDS = CATEGORIAS.map(c => c.id);
+// Categorías que se cargan en el nomenclador (tienen precio). Las de derivación no.
+const CATEGORIAS_NOMENCLADOR = CATEGORIAS.filter(c => c.nomenclador);
+function categoriaInfo(id) { return CATEGORIAS.find(c => c.id === id) || null; }
+function derivaCategoriaDe(id) { const c = categoriaInfo(id); return c ? c.derivaCategoria : null; }
 
 // Roles del sistema. Los médicos NO tienen cuenta (no entran al sistema).
 const ROLES = ['admin', 'secretaria_1', 'secretaria_2'];

@@ -19,7 +19,8 @@ const HTML_PATH = join(__dirname, '..', 'index.html');
 
 const EXPONER = [
   // estado / constantes
-  'DB', 'CATEGORIAS', 'CATEGORIA_IDS', 'ROLES', 'MONEDAS', 'MEDIOS_PAGO', 'COLECCIONES',
+  'DB', 'CATEGORIAS', 'CATEGORIA_IDS', 'CATEGORIAS_NOMENCLADOR', 'ROLES', 'MONEDAS', 'MEDIOS_PAGO', 'COLECCIONES',
+  'categoriaInfo', 'derivaCategoriaDe',
   // helpers de dominio
   'nuevoId', 'usuarioActual', 'sedeActiva', 'getSedesActivas', 'getMedicosActivos', 'escHtml',
   // auditoría
@@ -37,6 +38,11 @@ const EXPONER = [
   'renderNomenclador', '_poblarFiltroCategoria', 'abrirNuevaPrestacion', 'editarPrestacionUI',
   'guardarPrestacion', 'abrirNuevoPrecio', 'guardarNuevoPrecio', 'onCategoriaChangePrest',
   'verHistorialPrestacion', 'inactivarPrestacionUI', 'eliminarPrestacionUI',
+  // prestaciones realizadas
+  'pacienteFindOrCreate', 'pacienteLabel', 'medicoNombre',
+  'registrarPrestacion', 'editarPrestacionRealizada', 'anularPrestacion',
+  'reactivarPrestacion', 'eliminarPrestacionRealizada', 'listarPrestacionesRealizadas',
+  'renderPrestaciones', 'abrirNuevaPrestacionRealizada', 'guardarPrestacionReg',
   // navegación
   'showSection', 'init',
 ];

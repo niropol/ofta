@@ -93,6 +93,7 @@
 <nav class="tabs" id="navTabs">
   <button class="active" data-sec="section-medicos" onclick="showSection('section-medicos')">Médicos</button>
   <button data-sec="section-nomenclador" onclick="showSection('section-nomenclador')">Nomenclador</button>
+  <button data-sec="section-prestaciones" onclick="showSection('section-prestaciones')">Prestaciones</button>
 </nav>
 
 <main>
@@ -116,6 +117,20 @@
       <input type="search" id="nomBuscar" placeholder="Buscar por descripción o código…" oninput="renderNomenclador()">
     </div>
     <div class="tabla-wrap"><div id="nomencladorTabla"></div></div>
+  </section>
+
+  <!-- ── PRESTACIONES REALIZADAS ── -->
+  <section id="section-prestaciones" class="section">
+    <div class="section-head">
+      <h2>Prestaciones realizadas</h2>
+      <button class="btn" onclick="abrirNuevaPrestacionRealizada()">+ Cargar prestación</button>
+    </div>
+    <div class="filtros">
+      <label class="muted">Mes <input type="month" id="regFiltroMes" onchange="renderPrestaciones()"></label>
+      <select id="regFiltroMedico" onchange="renderPrestaciones()"></select>
+      <select id="regFiltroCat" onchange="renderPrestaciones()"></select>
+    </div>
+    <div class="tabla-wrap"><div id="prestacionesTabla"></div></div>
   </section>
 </main>
 
@@ -229,11 +244,42 @@
   </div>
 </div>
 
+<!-- ── Modal prestación realizada (alta / edición) ── -->
+<div id="modalReg" class="modal">
+  <div class="modal-box">
+    <h3 id="modalRegTitulo">Cargar prestación</h3>
+    <input type="hidden" id="reg_id">
+    <div class="row2">
+      <div class="campo"><label>Fecha *</label><input id="reg_fecha" type="date" onchange="onCategoriaChangeReg()"></div>
+      <div class="campo"><label>Categoría *</label><select id="reg_categoria" onchange="onCategoriaChangeReg()"></select></div>
+    </div>
+    <div class="campo"><label>Prestación (del nomenclador) *</label><select id="reg_prestacion"></select></div>
+    <div class="campo"><label>Médico realizador *</label><select id="reg_realizador"></select></div>
+    <div id="reg_derivador_box" class="campo" style="display:none">
+      <label>Médico derivador (cobra su % en paralelo)</label><select id="reg_derivador"></select>
+    </div>
+    <div class="campo"><label>Obra social / Particular</label><input id="reg_os" list="osList" placeholder="Particular"></div>
+    <p class="muted" style="margin:14px 0 6px">Paciente</p>
+    <div class="row2">
+      <div class="campo"><label>Apellido</label><input id="reg_pac_apellido"></div>
+      <div class="campo"><label>Nombre</label><input id="reg_pac_nombre"></div>
+    </div>
+    <div class="campo"><label>DNI</label><input id="reg_pac_dni"></div>
+    <div class="modal-acciones">
+      <button class="btn secundario" onclick="cerrarModalReg()">Cancelar</button>
+      <button class="btn" onclick="guardarPrestacionReg()">Guardar</button>
+    </div>
+  </div>
+</div>
+<datalist id="osList"><option value="Particular"></datalist>
+
 <script src="js/datos.js?v=1"></script>
 <script src="js/auditoria.js?v=1"></script>
 <script src="js/nomenclador.js?v=1"></script>
+<script src="js/prestaciones.js?v=1"></script>
 <script src="js/ui-medicos.js?v=1"></script>
 <script src="js/ui-nomenclador.js?v=1"></script>
+<script src="js/ui-prestaciones.js?v=1"></script>
 <script src="js/persistencia.js?v=1"></script>
 <script>
 // ── Navegación entre secciones ──
@@ -247,6 +293,8 @@ function init() {
   renderMedicos();
   _poblarFiltroCategoria();
   renderNomenclador();
+  _poblarFiltrosPrestaciones();
+  renderPrestaciones();
 }
 </script>
 </body>
