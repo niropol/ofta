@@ -102,6 +102,8 @@
   <button class="active" data-sec="section-medicos" onclick="showSection('section-medicos')">Médicos</button>
   <button data-sec="section-nomenclador" onclick="showSection('section-nomenclador')">Nomenclador</button>
   <button data-sec="section-prestaciones" onclick="showSection('section-prestaciones')">Prestaciones</button>
+  <button data-sec="section-obras-sociales" onclick="showSection('section-obras-sociales')">Obras sociales</button>
+  <button data-sec="section-admin" onclick="showSection('section-admin')">Admin 🔒</button>
 </nav>
 
 <main>
@@ -139,6 +141,28 @@
       <select id="regFiltroCat" onchange="renderPrestaciones()"></select>
     </div>
     <div class="tabla-wrap"><div id="prestacionesTabla"></div></div>
+  </section>
+
+  <!-- ── OBRAS SOCIALES ── -->
+  <section id="section-obras-sociales" class="section">
+    <div class="section-head">
+      <h2>Obras sociales</h2>
+      <button class="btn" onclick="abrirNuevaOS()">+ Nueva obra social</button>
+    </div>
+    <div class="tabla-wrap"><div id="osTabla"></div></div>
+  </section>
+
+  <!-- ── ADMIN (acceso restringido) ── -->
+  <section id="section-admin" class="section">
+    <div class="section-head">
+      <h2>Admin <span class="muted" style="font-size:13px">· acceso restringido</span></h2>
+    </div>
+    <p class="nota">Zona sensible (solo admin). Acá va el <strong>costo real</strong> de los insumos y,
+      próximamente, la <strong>caja</strong> (Etapa 5) y las <strong>liquidaciones a médicos</strong> (Etapa 6).
+      La restricción de acceso por usuario se activa en la Etapa 8/10.</p>
+    <h3>Costo real de insumos</h3>
+    <p class="muted" style="margin-top:0">El precio se carga en el Nomenclador (lo ven las secretarias). El costo real se define acá y sirve para el neto.</p>
+    <div class="tabla-wrap"><div id="adminInsumos"></div></div>
   </section>
 </main>
 
@@ -196,14 +220,6 @@
         <select id="prest_moneda"><option value="ARS">Pesos (ARS)</option><option value="USD">Dólares (USD)</option></select>
       </div>
     </div>
-    <div id="prest_costo_box" style="display:none">
-      <div class="row2">
-        <div class="campo"><label>Costo real del insumo</label><input id="prest_costo" type="number" step="0.01"></div>
-        <div class="campo"><label>Moneda del costo</label>
-          <select id="prest_costoMoneda"><option value="ARS">Pesos (ARS)</option><option value="USD">Dólares (USD)</option></select>
-        </div>
-      </div>
-    </div>
     <div id="prest_vigencia_box" class="campo"><label>Vigente desde</label><input id="prest_vigencia" type="date"></div>
     <div class="modal-acciones">
       <button class="btn secundario" onclick="cerrarModalPrest()">Cancelar</button>
@@ -223,14 +239,6 @@
       <div class="campo"><label>Nuevo precio</label><input id="precio_valor" type="number" step="0.01"></div>
       <div class="campo"><label>Moneda</label>
         <select id="precio_moneda"><option value="ARS">Pesos (ARS)</option><option value="USD">Dólares (USD)</option></select>
-      </div>
-    </div>
-    <div id="precio_costo_box" style="display:none">
-      <div class="row2">
-        <div class="campo"><label>Nuevo costo real</label><input id="precio_costo" type="number" step="0.01"></div>
-        <div class="campo"><label>Moneda del costo</label>
-          <select id="precio_costoMoneda"><option value="ARS">Pesos (ARS)</option><option value="USD">Dólares (USD)</option></select>
-        </div>
       </div>
     </div>
     <div class="modal-acciones">
@@ -289,6 +297,25 @@
 </div>
 <datalist id="osList"><option value="Particular"></datalist>
 
+<!-- ── Modal obra social ── -->
+<div id="modalOS" class="modal">
+  <div class="modal-box">
+    <h3 id="modalOSTitulo">Nueva obra social</h3>
+    <input type="hidden" id="os_id">
+    <div class="campo"><label>Nombre *</label><input id="os_nombre"></div>
+    <div class="row2">
+      <div class="campo"><label>Código (opcional)</label><input id="os_codigo"></div>
+      <div class="campo"><label>Estado</label>
+        <select id="os_estado"><option value="Activa">Activa</option><option value="Inactiva">Inactiva</option></select>
+      </div>
+    </div>
+    <div class="modal-acciones">
+      <button class="btn secundario" onclick="cerrarModalOS()">Cancelar</button>
+      <button class="btn" onclick="guardarOS()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <script src="js/datos.js?v=1"></script>
 <script src="js/auditoria.js?v=1"></script>
 <script src="js/nomenclador.js?v=1"></script>
@@ -296,6 +323,8 @@
 <script src="js/ui-medicos.js?v=1"></script>
 <script src="js/ui-nomenclador.js?v=1"></script>
 <script src="js/ui-prestaciones.js?v=1"></script>
+<script src="js/ui-obras-sociales.js?v=1"></script>
+<script src="js/ui-admin.js?v=1"></script>
 <script src="js/persistencia.js?v=1"></script>
 <script>
 // ── Navegación entre secciones ──
@@ -311,6 +340,9 @@ function init() {
   renderNomenclador();
   _poblarFiltrosPrestaciones();
   renderPrestaciones();
+  renderOS();
+  poblarDatalistOS();
+  renderAdmin();
 }
 </script>
 </body>

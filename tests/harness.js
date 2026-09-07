@@ -38,6 +38,12 @@ const EXPONER = [
   'renderNomenclador', '_poblarFiltroCategoria', 'abrirNuevaPrestacion', 'editarPrestacionUI',
   'guardarPrestacion', 'abrirNuevoPrecio', 'guardarNuevoPrecio', 'onCategoriaChangePrest',
   'verHistorialPrestacion', 'inactivarPrestacionUI', 'eliminarPrestacionUI',
+  'setCostoInsumo',
+  // obras sociales
+  'renderOS', 'abrirNuevaOS', 'editarOS', 'guardarOS', 'toggleEstadoOS', 'eliminarOS',
+  '_referenciasOS', 'getObrasSocialesActivas', 'poblarDatalistOS',
+  // admin (costo real de insumos)
+  'renderAdmin', 'renderAdminInsumos', 'guardarCostoInsumoUI',
   // prestaciones realizadas
   'pacienteFindOrCreate', 'pacienteLabel', 'medicoNombre',
   'registrarPrestacion', 'editarPrestacionRealizada', 'anularPrestacion',

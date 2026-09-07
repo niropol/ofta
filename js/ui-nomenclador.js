@@ -31,15 +31,12 @@ function renderNomenclador() {
 
   const rows = filas.map(v => {
     const inactivo = v.estado === 'Inactivo';
-    const usaCosto = (categoriaInfo(v.categoria) || {}).usaCosto;
-    const costo = usaCosto && v.costo != null ? fmtMoneda(v.costo, v.costoMoneda) : '—';
     return `
     <tr class="${inactivo ? 'fila-inactiva' : ''}">
       <td>${escHtml(_labelCategoria(v.categoria))}</td>
       <td>${escHtml(v.codigo || '—')}</td>
       <td>${escHtml(v.descripcion)}${inactivo ? ' <span class="badge-inactivo">Inactiva</span>' : ''}</td>
       <td class="num">${fmtMoneda(v.precio, v.moneda)}</td>
-      <td class="num">${costo}</td>
       <td>${escHtml(v.vigenciaDesde)}</td>
       <td class="acc">
         <button onclick="editarPrestacionUI(${v.grupo})">Editar</button>
@@ -55,7 +52,7 @@ function renderNomenclador() {
     <table class="tabla">
       <thead><tr>
         <th>Categoría</th><th>Código</th><th>Descripción</th>
-        <th class="num">Precio vigente</th><th class="num">Costo real</th>
+        <th class="num">Precio vigente</th>
         <th>Vigente desde</th><th>Acciones</th>
       </tr></thead>
       <tbody>${rows}</tbody>
@@ -75,12 +72,9 @@ function _poblarFiltroCategoria() {
 function _mostrarModalPrest(on) { const m = document.getElementById('modalPrest'); if (m) m.style.display = on ? 'flex' : 'none'; }
 function cerrarModalPrest() { _mostrarModalPrest(false); }
 
-// Muestra/oculta los campos de costo según la categoría elegida.
-function onCategoriaChangePrest() {
-  const cat = document.getElementById('prest_categoria').value;
-  const box = document.getElementById('prest_costo_box');
-  if (box) box.style.display = ((categoriaInfo(cat) || {}).usaCosto) ? 'block' : 'none';
-}
+// El costo real ya no se carga en el Nomenclador general (es admin). Este hook
+// queda por compatibilidad de la UI (el <select> lo llama), sin efecto visible.
+function onCategoriaChangePrest() {}
 
 function abrirNuevaPrestacion() {
   document.getElementById('modalPrestTitulo').textContent = 'Nueva prestación';
@@ -153,21 +147,17 @@ function abrirNuevoPrecio(grupo) {
   document.getElementById('precio_prest_nombre').textContent = v.descripcion + '  (actual: ' + fmtMoneda(v.precio, v.moneda) + ' desde ' + v.vigenciaDesde + ')';
   set('precio_valor', v.precio); set('precio_moneda', v.moneda);
   set('precio_vigencia', hoyISO());
-  const usaCosto = (categoriaInfo(v.categoria) || {}).usaCosto;
-  document.getElementById('precio_costo_box').style.display = usaCosto ? 'block' : 'none';
-  set('precio_costo', v.costo != null ? v.costo : ''); set('precio_costoMoneda', v.costoMoneda || 'ARS');
   _mostrarModalPrecio(true);
 }
 
 function guardarNuevoPrecio() {
   const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
   const grupo = Number(val('precio_grupo'));
+  // El costo real no se toca acá (es admin): versionarPrecio conserva el costo actual.
   const datos = {
     vigenciaDesde: val('precio_vigencia') || hoyISO(),
     precio: val('precio_valor'),
     moneda: val('precio_moneda') || 'ARS',
-    costo: val('precio_costo'),
-    costoMoneda: val('precio_costoMoneda') || 'ARS',
   };
   if (datos.precio === '' || isNaN(Number(datos.precio))) { alert('El precio debe ser un número.'); return false; }
   try {
@@ -189,17 +179,15 @@ function verHistorialPrestacion(grupo) {
   const vs = versionesDe(grupo);
   if (vs.length === 0) return;
   document.getElementById('historial_nombre').textContent = vs[0].descripcion;
-  const esLIO = (categoriaInfo(vs[0].categoria) || {}).usaCosto;
   const rows = vs.map(v => `
     <tr>
       <td>${escHtml(v.vigenciaDesde)}</td>
       <td>${escHtml(v.vigenciaHasta || 'vigente')}</td>
       <td class="num">${fmtMoneda(v.precio, v.moneda)}</td>
-      ${esLIO ? `<td class="num">${v.costo != null ? fmtMoneda(v.costo, v.costoMoneda) : '—'}</td>` : ''}
     </tr>`).join('');
   document.getElementById('historial_tabla').innerHTML = `
     <table class="tabla">
-      <thead><tr><th>Desde</th><th>Hasta</th><th class="num">Precio</th>${esLIO ? '<th class="num">Costo</th>' : ''}</tr></thead>
+      <thead><tr><th>Desde</th><th>Hasta</th><th class="num">Precio</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
   _mostrarModalHistorial(true);

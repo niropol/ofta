@@ -159,6 +159,21 @@ function versionarPrecio(grupo, { vigenciaDesde, precio, moneda, costo, costoMon
   return nueva;
 }
 
+// ── Costo real de un insumo (ADMIN): edita el costo de la versión vigente.
+//    El costo es sensible y se gestiona en el área admin, no en el nomenclador
+//    general. Se aplica sobre la versión actual (los aumentos lo arrastran). ──
+function setCostoInsumo(grupo, costo, costoMoneda) {
+  const actual = versionActual(grupo);
+  if (!actual) return false;
+  if (!(categoriaInfo(actual.categoria) || {}).usaCosto) throw new Error('Solo los insumos tienen costo real.');
+  const antes = JSON.parse(JSON.stringify(actual));
+  actual.costo = Number(costo) || 0;
+  actual.costoMoneda = costoMoneda || actual.costoMoneda || 'ARS';
+  registrarAuditoria('edicion', 'nomenclador_costo', grupo, antes, actual);
+  marcarCambios('nomenclador');
+  return actual;
+}
+
 // ── Inactivar / reactivar todo el grupo (baja lógica reversible) ──
 function toggleEstadoPrestacion(grupo) {
   const versiones = versionesDe(grupo);
