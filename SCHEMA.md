@@ -64,6 +64,19 @@ Derivación (tipo `derivacion`, solo regla de %, sin precio propio):
 - `derivacion_cirugia`, `derivacion_estudio`, `derivacion_practica` — el derivador cobra su %
   en paralelo sobre el precio de nomenclador de la prestación derivada.
 
+Comisión (tipo `comision`, solo regla de %):
+- `sam_insumo` — comisión de **SAM** (parte externa) sobre el neto del insumo.
+
+## Terminología: SAM vs SAM Oftalmo
+
+- **SAM** = parte externa; se le paga una comisión sobre el neto de la lente/insumo.
+- **SAM Oftalmo** = nosotros (la clínica); nos quedamos con el sobrante.
+
+Reparto del **neto de la lente** (neto = precio − costo, con valores de referencia), en paralelo:
+1. **Médico** = `insumo`% × neto
+2. **SAM** = `sam_insumo`% × (neto − parte del médico)
+3. **SAM Oftalmo** = el sobrante (neto − médico − SAM)
+
 ## Reglas de dinero (cerradas en Etapa 0)
 
 - **Redondeo**: hacia abajo, al peso entero, a favor de la clínica.

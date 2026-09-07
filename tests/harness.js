@@ -23,7 +23,7 @@ const EXPONER = [
   'categoriaInfo', 'derivaCategoriaDe',
   // honorarios (motor de cálculo)
   'redondearAbajo', 'porcentajeReglaVigente', 'setReglaReparto', 'listarReglasActuales',
-  'honorariosDePrestacion', 'honorariosDeMedico', 'honorariosDelMes',
+  'honorariosDePrestacion', 'honorariosDeMedico', 'honorariosDelMes', 'repartoLentesDelMes',
   'renderReglas', 'abrirNuevaRegla', 'guardarRegla', 'calcularPreviewHonorarios',
   // caja
   'CATEGORIAS_GASTO', 'registrarMovimientoCaja', 'registrarGasto', 'editarMovimientoCaja',

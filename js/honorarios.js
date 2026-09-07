@@ -105,15 +105,25 @@ function honorariosDePrestacion(reg, cotizacion) {
     else base = precioPesos * r.porcentaje / 100;
   }
 
-  // Insumos (neto × % insumo) → realizador.
-  let insumosMonto = 0;
+  // Insumos: el neto (precio − costo) se reparte en 3 partes EN PARALELO:
+  //   1) Médico realizador  = %insumo × neto
+  //   2) SAM (externo)      = %sam_insumo × (neto − parte del médico)
+  //   3) SAM Oftalmo (noso.) = el sobrante
+  let insumosMonto = 0, samCut = 0, clinicaCut = 0;
   (reg.insumos || []).forEach(ins => {
     const p = _aPesos(ins.precio, ins.moneda, cotizacion, rflags);
     const c = _aPesos(ins.costo, ins.costoMoneda, cotizacion, rflags);
     const neto = Math.max(0, p - c);
-    const r = porcentajeReglaVigente('insumo', reg.medicoRealizadorId, reg.fecha);
-    if (r == null) rflags.faltaPct.push('insumo');
-    else insumosMonto += neto * r.porcentaje / 100;
+    const rMed = porcentajeReglaVigente('insumo', reg.medicoRealizadorId, reg.fecha);
+    const medCut = rMed ? neto * rMed.porcentaje / 100 : 0;
+    if (rMed == null) rflags.faltaPct.push('insumo');
+    insumosMonto += medCut;
+    const samBase = Math.max(0, neto - medCut);
+    const rSam = porcentajeReglaVigente('sam_insumo', reg.medicoRealizadorId, reg.fecha);
+    const sc = rSam ? samBase * rSam.porcentaje / 100 : 0;
+    if (rSam == null) rflags.faltaPct.push('sam_insumo');
+    samCut += sc;
+    clinicaCut += (samBase - sc);   // resto para SAM Oftalmo
   });
 
   const realizador = {
@@ -124,6 +134,9 @@ function honorariosDePrestacion(reg, cotizacion) {
     faltaPct: [...new Set(rflags.faltaPct)],
     requiereCotizacion: rflags.requiereCotizacion,
   };
+  // Reparto de la lente ajeno al médico (redondeo hacia abajo, a favor de SAM Oftalmo).
+  const sam = { monto: redondearAbajo(samCut), requiereCotizacion: rflags.requiereCotizacion };
+  const clinica = { monto: redondearAbajo(clinicaCut), requiereCotizacion: rflags.requiereCotizacion };
 
   // Derivador (en paralelo).
   let derivador = null;
@@ -142,7 +155,21 @@ function honorariosDePrestacion(reg, cotizacion) {
     };
   }
 
-  return { realizador, derivador };
+  return { realizador, derivador, sam, clinica };
+}
+
+// Reparto de las lentes/insumos del mes que NO va a los médicos: comisión SAM y
+// lo que queda para SAM Oftalmo (nosotros).
+function repartoLentesDelMes(mes, cotizacion) {
+  let sam = 0, clinica = 0;
+  DB.prestacionesRealizadas
+    .filter(r => r.estado === 'activa' && (r.insumos || []).length && (!mes || (r.fecha || '').slice(0, 7) === mes))
+    .forEach(r => {
+      const h = honorariosDePrestacion(r, cotizacion);
+      sam += h.sam.monto;
+      clinica += h.clinica.monto;
+    });
+  return { sam, clinica };
 }
 
 // ── Honorarios de un médico en un mes ('YYYY-MM') — precursor de la liquidación (Etapa 6) ──

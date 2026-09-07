@@ -90,11 +90,21 @@ function calcularPreviewHonorarios() {
     </tr>`;
   }).join('');
   const totalMes = meds.reduce((s, h) => s + h.total, 0);
+  const reparto = repartoLentesDelMes(mes, cotiz);
+  const bloqueLentes = (reparto.sam || reparto.clinica) ? `
+    <h4 style="margin:18px 0 6px">Reparto de lentes/insumos (aparte de los médicos)</h4>
+    <table class="tabla" style="max-width:520px">
+      <tbody>
+        <tr><td>Comisión <strong>SAM</strong> (externo)</td><td class="num">${fmtMoneda(reparto.sam, 'ARS')}</td></tr>
+        <tr><td>Queda para <strong>SAM Oftalmo</strong> (nosotros)</td><td class="num">${fmtMoneda(reparto.clinica, 'ARS')}</td></tr>
+      </tbody>
+    </table>` : '';
   cont.innerHTML = `
     <table class="tabla">
       <thead><tr><th>Médico</th><th class="num">Honorarios (ARS)</th><th>Observaciones</th></tr></thead>
       <tbody>${rows}</tbody>
       <tfoot><tr><th>Total del mes</th><th class="num">${fmtMoneda(totalMes, 'ARS')}</th><th></th></tr></tfoot>
     </table>
+    ${bloqueLentes}
     <p class="muted">Vista previa (redondeo hacia abajo al peso). La liquidación formal, el comprobante y el egreso en caja se generan en la Etapa 6.</p>`;
 }

@@ -120,6 +120,48 @@ describe('Cálculo de honorarios', () => {
   });
 });
 
+describe('Reparto de la lente en 3 partes (médico / SAM / SAM Oftalmo)', () => {
+  it('médico %neto, SAM %(neto−médico), SAM Oftalmo el sobrante', () => {
+    app.setReglaReparto('cirugia', null, 40, '2026-01-01');
+    app.setReglaReparto('insumo', null, 20, '2026-01-01');
+    app.setReglaReparto('sam_insumo', null, 50, '2026-01-01');
+    const faco = nom('cirugia', 500000);
+    const ins = nom('insumo', 900000); app.setCostoInsumo(ins.grupo, 300000, 'ARS'); // neto 600000
+    const r = reg({ categoria: 'cirugia', grupoNomenclador: faco.grupo, insumos: [ins.grupo] });
+    const h = app.honorariosDePrestacion(r);
+    // médico: 200000 (cirugía) + 120000 (20% de 600000) = 320000
+    expect(h.realizador.monto).toBe(320000);
+    // SAM: 50% de (600000 − 120000) = 240000
+    expect(h.sam.monto).toBe(240000);
+    // SAM Oftalmo: el sobrante = 480000 − 240000 = 240000
+    expect(h.clinica.monto).toBe(240000);
+  });
+
+  it('sin % de SAM: SAM 0 y todo el resto para SAM Oftalmo (con faltaPct)', () => {
+    app.setReglaReparto('insumo', null, 20, '2026-01-01');
+    const faco = nom('cirugia', 500000);
+    const ins = nom('insumo', 900000); app.setCostoInsumo(ins.grupo, 300000, 'ARS');
+    const r = reg({ categoria: 'cirugia', grupoNomenclador: faco.grupo, insumos: [ins.grupo] });
+    const h = app.honorariosDePrestacion(r);
+    expect(h.sam.monto).toBe(0);
+    expect(h.clinica.monto).toBe(480000); // neto − médico
+    expect(h.realizador.faltaPct).toContain('sam_insumo');
+  });
+
+  it('repartoLentesDelMes suma SAM y SAM Oftalmo del período', () => {
+    app.setReglaReparto('cirugia', null, 40, '2026-01-01');
+    app.setReglaReparto('insumo', null, 20, '2026-01-01');
+    app.setReglaReparto('sam_insumo', null, 50, '2026-01-01');
+    const faco = nom('cirugia', 500000);
+    const ins = nom('insumo', 900000); app.setCostoInsumo(ins.grupo, 300000, 'ARS');
+    reg({ categoria: 'cirugia', grupoNomenclador: faco.grupo, insumos: [ins.grupo] });
+    reg({ categoria: 'cirugia', grupoNomenclador: faco.grupo, insumos: [ins.grupo] });
+    const rep = app.repartoLentesDelMes('2026-03');
+    expect(rep.sam).toBe(480000);      // 240000 × 2
+    expect(rep.clinica).toBe(480000);  // 240000 × 2
+  });
+});
+
 describe('Agregación por médico / mes', () => {
   it('suma realizador + derivador e ignora anuladas', () => {
     app.setReglaReparto('cirugia', null, 40, '2026-01-01');

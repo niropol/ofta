@@ -38,6 +38,9 @@ const CATEGORIAS = [
   { id: 'derivacion_cirugia',  label: 'Derivación de cirugía',  tipo: 'derivacion', nomenclador: false },
   { id: 'derivacion_estudio',  label: 'Derivación de estudio',  tipo: 'derivacion', nomenclador: false },
   { id: 'derivacion_practica', label: 'Derivación de práctica', tipo: 'derivacion', nomenclador: false },
+  // Comisión de SAM (parte externa) sobre el neto del insumo, EN PARALELO al médico.
+  // Base = neto − honorario del médico. El sobrante queda para SAM Oftalmo (nosotros).
+  { id: 'sam_insumo',          label: 'Comisión SAM (insumos)', tipo: 'comision',   nomenclador: false, porcentajeFijo: null },
 ];
 const CATEGORIA_IDS = CATEGORIAS.map(c => c.id);
 // Categorías que se cargan en el Nomenclador (tienen precio): prestaciones + insumos.
