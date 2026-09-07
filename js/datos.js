@@ -44,6 +44,8 @@ const CATEGORIA_IDS = CATEGORIAS.map(c => c.id);
 const CATEGORIAS_NOMENCLADOR = CATEGORIAS.filter(c => c.nomenclador);
 // Categorías que se cargan como prestación realizada a un paciente (no incluye insumos).
 const CATEGORIAS_REALIZADAS = CATEGORIAS.filter(c => c.tipo === 'realizada');
+// Categorías que necesitan una regla de reparto (%). La consulta es 100% fijo, no lleva regla.
+const CATEGORIAS_REGLA = CATEGORIAS.filter(c => c.porcentajeFijo == null);
 function categoriaInfo(id) { return CATEGORIAS.find(c => c.id === id) || null; }
 function derivaCategoriaDe(id) { const c = categoriaInfo(id); return c ? c.derivaCategoria : null; }
 

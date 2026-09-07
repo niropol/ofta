@@ -9,6 +9,7 @@
 
 function renderAdmin() {
   renderAdminInsumos();
+  if (typeof renderReglas === 'function') renderReglas();
 }
 
 // ── Costo real de insumos ──

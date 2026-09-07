@@ -19,8 +19,12 @@ const HTML_PATH = join(__dirname, '..', 'index.html');
 
 const EXPONER = [
   // estado / constantes
-  'DB', 'CATEGORIAS', 'CATEGORIA_IDS', 'CATEGORIAS_NOMENCLADOR', 'CATEGORIAS_REALIZADAS', 'ROLES', 'MONEDAS', 'MEDIOS_PAGO', 'COLECCIONES',
+  'DB', 'CATEGORIAS', 'CATEGORIA_IDS', 'CATEGORIAS_NOMENCLADOR', 'CATEGORIAS_REALIZADAS', 'CATEGORIAS_REGLA', 'ROLES', 'MONEDAS', 'MEDIOS_PAGO', 'COLECCIONES',
   'categoriaInfo', 'derivaCategoriaDe',
+  // honorarios (motor de cálculo)
+  'redondearAbajo', 'porcentajeReglaVigente', 'setReglaReparto', 'listarReglasActuales',
+  'honorariosDePrestacion', 'honorariosDeMedico', 'honorariosDelMes',
+  'renderReglas', 'abrirNuevaRegla', 'guardarRegla', 'calcularPreviewHonorarios',
   // helpers de dominio
   'nuevoId', 'usuarioActual', 'sedeActiva', 'getSedesActivas', 'getMedicosActivos', 'escHtml',
   // auditoría

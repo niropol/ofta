@@ -163,6 +163,21 @@
     <h3>Costo real de insumos</h3>
     <p class="muted" style="margin-top:0">El precio se carga en el Nomenclador (lo ven las secretarias). El costo real se define acá y sirve para el neto.</p>
     <div class="tabla-wrap"><div id="adminInsumos"></div></div>
+
+    <div class="section-head" style="margin-top:28px">
+      <h3 style="margin:0">Reparto de honorarios (%)</h3>
+      <button class="btn" onclick="abrirNuevaRegla()">+ Definir %</button>
+    </div>
+    <p class="muted" style="margin-top:0">% por categoría: general (todos) u override por médico, con vigencia. La consulta es 100% fijo (no lleva regla).</p>
+    <div class="tabla-wrap"><div id="reglasTabla"></div></div>
+
+    <h3 style="margin-top:28px">Vista previa de honorarios</h3>
+    <div class="filtros">
+      <label class="muted">Mes <input type="month" id="prevMes"></label>
+      <label class="muted">Cotización USD→ARS <input type="number" id="prevCotiz" step="0.01" style="width:120px" placeholder="opcional"></label>
+      <button class="btn" onclick="calcularPreviewHonorarios()">Calcular</button>
+    </div>
+    <div class="tabla-wrap"><div id="previewHonorarios"></div></div>
   </section>
 </main>
 
@@ -316,15 +331,36 @@
   </div>
 </div>
 
+<!-- ── Modal definir % (regla de reparto) ── -->
+<div id="modalRegla" class="modal">
+  <div class="modal-box">
+    <h3>Definir %</h3>
+    <div class="row2">
+      <div class="campo"><label>Categoría</label><select id="regla_categoria"></select></div>
+      <div class="campo"><label>Alcance</label><select id="regla_medico"></select></div>
+    </div>
+    <div class="row2">
+      <div class="campo"><label>Porcentaje (%)</label><input id="regla_porcentaje" type="number" step="0.01"></div>
+      <div class="campo"><label>Rige desde</label><input id="regla_vigencia" type="date"></div>
+    </div>
+    <div class="modal-acciones">
+      <button class="btn secundario" onclick="cerrarModalRegla()">Cancelar</button>
+      <button class="btn" onclick="guardarRegla()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <script src="js/datos.js?v=1"></script>
 <script src="js/auditoria.js?v=1"></script>
 <script src="js/nomenclador.js?v=1"></script>
 <script src="js/prestaciones.js?v=1"></script>
+<script src="js/honorarios.js?v=1"></script>
 <script src="js/ui-medicos.js?v=1"></script>
 <script src="js/ui-nomenclador.js?v=1"></script>
 <script src="js/ui-prestaciones.js?v=1"></script>
 <script src="js/ui-obras-sociales.js?v=1"></script>
 <script src="js/ui-admin.js?v=1"></script>
+<script src="js/ui-honorarios.js?v=1"></script>
 <script src="js/persistencia.js?v=1"></script>
 <script>
 // ── Navegación entre secciones ──
