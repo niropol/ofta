@@ -36,10 +36,45 @@ function _setIndicador(estado) {
   el.dataset.estado = estado;
 }
 
+// ── Respaldo local (localStorage): mantiene los datos aunque todavía no haya nube.
+//    Se usa como red de seguridad SIEMPRE; cuando exista Supabase (Etapa 10) la nube
+//    es la fuente y esto queda como caché offline. ──
+const LS_KEY = 'sam_db_v1';
+let _localTimer = null;
+
+function guardarLocal() {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    const dump = { nextId: DB.nextId, config: DB.config };
+    for (const c of COLECCIONES) dump[c] = DB[c];
+    localStorage.setItem(LS_KEY, JSON.stringify(dump));
+  } catch (e) { /* cuota llena o modo privado: se ignora */ }
+}
+
+function cargarLocal() {
+  if (typeof localStorage === 'undefined') return false;
+  let raw;
+  try { raw = localStorage.getItem(LS_KEY); } catch (e) { return false; }
+  if (!raw) return false;
+  try {
+    const dump = JSON.parse(raw);
+    for (const c of COLECCIONES) if (Array.isArray(dump[c])) DB[c] = dump[c];
+    if (dump.config) DB.config = dump.config;
+    if (dump.nextId) DB.nextId = dump.nextId;
+    _asegurarBase('sedes', SEDES_BASE, 'nombre');
+    _asegurarBase('usuarios', USUARIOS_BASE, 'email');
+    _corregirNextId();
+    return true;
+  } catch (e) { return false; }
+}
+
 // ── Marcado de cambios + autoguardado con debounce (misma semántica que OIP) ──
 function marcarCambios(coleccion) {
   if (coleccion) cambiosPendientes.dirty.add(coleccion);
   _setIndicador('pendiente');
+  // Respaldo local: funciona aún sin nube conectada.
+  if (_localTimer) clearTimeout(_localTimer);
+  _localTimer = setTimeout(() => { guardarLocal(); if (!sb) _setIndicador('guardado'); }, 400);
   if (!autosaveActivo) return;
   if (autosaveTimer) clearTimeout(autosaveTimer);
   autosaveTimer = setTimeout(() => { guardarEnNube(true); }, 800);
@@ -180,8 +215,12 @@ async function verificarNube() {
 //  corta temprano y deja la app trabajando en memoria, sin tocar nada.
 async function arranque() {
   if (!initSupabase()) {
-    // Modo local/tests: no hay nube. Igual dejamos la UI utilizable.
+    // Modo local/tests: no hay nube. Restaurar el respaldo local si existe y
+    // dejar la UI utilizable; los cambios se guardan en localStorage.
+    cargarLocal();
+    datosCargados = true;
     if (typeof init === 'function') { try { init(); } catch (e) {} }
+    _setIndicador('guardado');
     return;
   }
   await cargarDesdeNube();
