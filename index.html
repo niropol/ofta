@@ -97,6 +97,10 @@
   .saldo-monto { font-size: 20px; font-weight: 600; margin-top: 4px; }
   .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
   .tabla tfoot th { background: #f0f6ff; }
+  .subtabs { display: flex; gap: 6px; margin-bottom: 16px; border-bottom: 1px solid var(--borde); }
+  .subtabs button { background: none; border: none; padding: 8px 14px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; font-size: 13px; }
+  .subtabs button.active { color: var(--primario); border-bottom-color: var(--primario); font-weight: 600; }
+  h4 { margin: 8px 0; font-size: 14px; }
 </style>
 </head>
 <body>
@@ -113,6 +117,7 @@
   <button data-sec="section-nomenclador" onclick="showSection('section-nomenclador')">Nomenclador</button>
   <button data-sec="section-prestaciones" onclick="showSection('section-prestaciones')">Prestaciones</button>
   <button data-sec="section-obras-sociales" onclick="showSection('section-obras-sociales')">Obras sociales</button>
+  <button data-sec="section-estadisticas" onclick="showSection('section-estadisticas')">Estadísticas</button>
   <button data-sec="section-caja" onclick="showSection('section-caja')">Caja 🔒</button>
   <button data-sec="section-liquidaciones" onclick="showSection('section-liquidaciones')">Liquidaciones 🔒</button>
   <button data-sec="section-admin" onclick="showSection('section-admin')">Admin 🔒</button>
@@ -162,6 +167,21 @@
       <button class="btn" onclick="abrirNuevaOS()">+ Nueva obra social</button>
     </div>
     <div class="tabla-wrap"><div id="osTabla"></div></div>
+  </section>
+
+  <!-- ── ESTADÍSTICAS ── -->
+  <section id="section-estadisticas" class="section">
+    <div class="section-head"><h2>Estadísticas</h2></div>
+    <div class="filtros">
+      <label class="muted">Mes <input type="month" id="statMes" onchange="renderEstadisticas()"></label>
+      <label class="muted">Cotización USD→ARS <input type="number" id="statCotiz" step="0.01" style="width:120px" placeholder="opcional" onchange="renderEstadisticas()"></label>
+    </div>
+    <div class="subtabs" id="statTabs">
+      <button class="active" data-v="clinica" onclick="switchStatView('clinica')">Clínica</button>
+      <button data-v="medico" onclick="switchStatView('medico')">Médico</button>
+      <button data-v="control" onclick="switchStatView('control')">Control interno</button>
+    </div>
+    <div id="statContenido"></div>
   </section>
 
   <!-- ── CAJA (acceso restringido) ── -->
@@ -469,6 +489,7 @@
 <script src="js/honorarios.js?v=1"></script>
 <script src="js/caja.js?v=1"></script>
 <script src="js/liquidaciones.js?v=1"></script>
+<script src="js/estadisticas.js?v=1"></script>
 <script src="js/ui-medicos.js?v=1"></script>
 <script src="js/ui-nomenclador.js?v=1"></script>
 <script src="js/ui-prestaciones.js?v=1"></script>
@@ -477,6 +498,7 @@
 <script src="js/ui-honorarios.js?v=1"></script>
 <script src="js/ui-caja.js?v=1"></script>
 <script src="js/ui-liquidaciones.js?v=1"></script>
+<script src="js/ui-estadisticas.js?v=1"></script>
 <script src="js/persistencia.js?v=1"></script>
 <script>
 // ── Navegación entre secciones ──
@@ -497,6 +519,7 @@ function init() {
   renderAdmin();
   renderCaja();
   renderLiquidaciones();
+  renderEstadisticas();
 }
 </script>
 </body>

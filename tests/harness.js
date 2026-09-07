@@ -65,6 +65,9 @@ const EXPONER = [
   'cerrarLiquidacion', 'reabrirLiquidacion', 'eliminarLiquidacion', 'listarLiquidaciones',
   'mensajeLiquidacionWhatsApp', 'pagarComisionSAM',
   'renderLiquidaciones', 'generarLiquidacionUI', 'cerrarLiquidacionUI',
+  // estadísticas
+  'resumenMes', 'resumenMedicoMes', 'controlInterno', 'resumenMesTextoWhatsApp', 'csvContable',
+  'renderEstadisticas', 'switchStatView',
   // navegación
   'showSection', 'init',
 ];
