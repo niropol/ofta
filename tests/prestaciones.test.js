@@ -64,12 +64,33 @@ describe('Prestaciones realizadas', () => {
     expect(() => app.registrarPrestacion({ fecha: '2026-03-10', categoria: 'consulta', grupoNomenclador: c.grupo, medicoRealizadorId: 501, medicoDerivadorId: 502 })).toThrow();
   });
 
-  it('LIO: guarda snapshot de costo y no admite derivador', () => {
-    const lio = app.crearPrestacion({ categoria: 'lio', descripcion: 'Lente', precio: 900000, moneda: 'ARS', costo: 300, costoMoneda: 'USD', vigenciaDesde: '2026-01-01' });
-    const r = app.registrarPrestacion({ fecha: '2026-03-10', categoria: 'lio', grupoNomenclador: lio.grupo, medicoRealizadorId: 501 });
-    expect(r.costoLIO).toBe(300);
-    expect(r.costoLIOMoneda).toBe('USD');
-    expect(() => app.registrarPrestacion({ fecha: '2026-03-10', categoria: 'lio', grupoNomenclador: lio.grupo, medicoRealizadorId: 501, medicoDerivadorId: 502 })).toThrow();
+  it('insumo NO es una prestación en sí (no se puede registrar como categoría realizada)', () => {
+    const ins = app.crearPrestacion({ categoria: 'insumo', descripcion: 'Lente', precio: 900000, moneda: 'ARS', costo: 300, costoMoneda: 'USD', vigenciaDesde: '2026-01-01' });
+    expect(() => app.registrarPrestacion({ fecha: '2026-03-10', categoria: 'insumo', grupoNomenclador: ins.grupo, medicoRealizadorId: 501 })).toThrow();
+  });
+
+  it('cirugía con insumo: snapshotea precio y costo real del insumo; estudio no admite insumos', () => {
+    const faco = nomFaco();
+    const ins = app.crearPrestacion({ categoria: 'insumo', descripcion: 'Lente monofocal', precio: 900000, moneda: 'ARS', costo: 300, costoMoneda: 'USD', vigenciaDesde: '2026-01-01' });
+    const r = app.registrarPrestacion({ fecha: '2026-03-10', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 501, insumos: [ins.grupo] });
+    expect(r.insumos.length).toBe(1);
+    expect(r.insumos[0].precio).toBe(900000);
+    expect(r.insumos[0].moneda).toBe('ARS');
+    expect(r.insumos[0].costo).toBe(300);
+    expect(r.insumos[0].costoMoneda).toBe('USD');
+    // Realización de estudio no admite insumos → se ignoran.
+    const est = app.crearPrestacion({ categoria: 'realizacion_estudio', descripcion: 'OCT', precio: 15000, vigenciaDesde: '2026-01-01' });
+    const r2 = app.registrarPrestacion({ fecha: '2026-03-10', categoria: 'realizacion_estudio', grupoNomenclador: est.grupo, medicoRealizadorId: 501, insumos: [ins.grupo] });
+    expect(r2.insumos.length).toBe(0);
+  });
+
+  it('el insumo usado pinnea su precio a la fecha (aumento posterior no lo afecta)', () => {
+    const faco = nomFaco();
+    const ins = app.crearPrestacion({ categoria: 'insumo', descripcion: 'Lente', precio: 900000, moneda: 'ARS', costo: 300000, costoMoneda: 'ARS', vigenciaDesde: '2026-01-01' });
+    app.versionarPrecio(ins.grupo, { vigenciaDesde: '2026-06-01', precio: 1100000, costo: 350000 });
+    const r = app.registrarPrestacion({ fecha: '2026-03-10', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 501, insumos: [ins.grupo] });
+    expect(r.insumos[0].precio).toBe(900000);
+    expect(r.insumos[0].costo).toBe(300000);
   });
 
   it('derivador no puede ser el mismo que el realizador', () => {

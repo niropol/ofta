@@ -79,6 +79,14 @@
   .nota { font-size: 12px; color: var(--warn); background: #fffbeb; border: 1px solid #fde68a;
     padding: 8px 10px; border-radius: 6px; margin-bottom: 12px; }
   .tabla-wrap { overflow-x: auto; }
+  /* Insumos dentro del alta de prestación */
+  .ins-box { border: 1px solid var(--borde); border-radius: 8px; padding: 12px; margin-bottom: 12px; background: #f8fafc; }
+  .ins-box > label { display: block; margin-bottom: 8px; }
+  .ins-add { display: flex; gap: 8px; margin-bottom: 8px; }
+  .ins-add select { flex: 1; padding: 8px 10px; border: 1px solid var(--borde); border-radius: 6px; font-size: 14px; }
+  .ins-item { display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    padding: 6px 10px; background: var(--panel); border: 1px solid var(--borde); border-radius: 6px; margin-bottom: 6px; font-size: 13px; }
+  .ins-item button { background: #eef2f7; border: 1px solid var(--borde); border-radius: 5px; padding: 3px 8px; cursor: pointer; font-size: 11.5px; }
 </style>
 </head>
 <body>
@@ -190,7 +198,7 @@
     </div>
     <div id="prest_costo_box" style="display:none">
       <div class="row2">
-        <div class="campo"><label>Costo de la lente (LIO)</label><input id="prest_costo" type="number" step="0.01"></div>
+        <div class="campo"><label>Costo real del insumo</label><input id="prest_costo" type="number" step="0.01"></div>
         <div class="campo"><label>Moneda del costo</label>
           <select id="prest_costoMoneda"><option value="ARS">Pesos (ARS)</option><option value="USD">Dólares (USD)</option></select>
         </div>
@@ -219,7 +227,7 @@
     </div>
     <div id="precio_costo_box" style="display:none">
       <div class="row2">
-        <div class="campo"><label>Nuevo costo (LIO)</label><input id="precio_costo" type="number" step="0.01"></div>
+        <div class="campo"><label>Nuevo costo real</label><input id="precio_costo" type="number" step="0.01"></div>
         <div class="campo"><label>Moneda del costo</label>
           <select id="precio_costoMoneda"><option value="ARS">Pesos (ARS)</option><option value="USD">Dólares (USD)</option></select>
         </div>
@@ -257,6 +265,14 @@
     <div class="campo"><label>Médico realizador *</label><select id="reg_realizador"></select></div>
     <div id="reg_derivador_box" class="campo" style="display:none">
       <label>Médico derivador (cobra su % en paralelo)</label><select id="reg_derivador"></select>
+    </div>
+    <div id="reg_insumos_box" class="ins-box" style="display:none">
+      <label class="muted">Insumos usados (precio y costo real para el neto)</label>
+      <div class="ins-add">
+        <select id="reg_insumo_sel"></select>
+        <button type="button" class="btn secundario" onclick="agregarInsumoReg()">Agregar</button>
+      </div>
+      <div id="reg_insumos_lista"></div>
     </div>
     <div class="campo"><label>Obra social / Particular</label><input id="reg_os" list="osList" placeholder="Particular"></div>
     <p class="muted" style="margin:14px 0 6px">Paciente</p>

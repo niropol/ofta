@@ -6,16 +6,19 @@
 //  una fecha en adelante y las prestaciones/liquidaciones ya cerradas conservan
 //  el precio viejo (no se recalculan).
 //
+//  El nomenclador incluye tanto prestaciones (consulta/cirugía/práctica/estudio)
+//  como el catálogo de INSUMOS (categoria 'insumo'), que llevan además costo real.
+//
 //  Modelo por versión:
 //   { id, grupo, codigo, descripcion, categoria, precio, moneda,
-//     costo, costoMoneda,            // costo solo aplica a LIO
+//     costo, costoMoneda,            // solo categorías con usaCosto (insumo)
 //     vigenciaDesde, vigenciaHasta,  // 'YYYY-MM-DD'; hasta=null → vigente
 //     estado }                       // 'Activo' | 'Inactivo'
 //
 //  Reglas de dinero relevantes (Etapa 0):
 //   - Consulta: valor fijo (100% al médico). Sin costo.
-//   - LIO: precio y costo, cada uno en ARS o USD; el % se calcula (Etapa 4)
-//          sobre el neto (precio − costo).
+//   - Insumo: precio y costo real, cada uno en ARS o USD; el % del realizador se
+//     calcula (Etapa 4) sobre el neto (precio − costo).
 //   - Los aumentos rigen desde su vigencia; meses viejos quedan intactos.
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -68,7 +71,7 @@ function listarPrestaciones({ categoria = null, texto = '', incluirInactivos = f
 // ── Alta de una prestación nueva (crea el grupo + su primera versión) ──
 function crearPrestacion(datos) {
   const grupo = nuevoId();
-  const esLIO = datos.categoria === 'lio';
+  const esLIO = (categoriaInfo(datos.categoria) || {}).usaCosto;
   const v = {
     id: nuevoId(),
     grupo,
@@ -96,7 +99,7 @@ function editarPrestacion(grupo, datos) {
   const versiones = versionesDe(grupo);
   if (versiones.length === 0) return false;
   const antes = versiones.map(v => JSON.parse(JSON.stringify(v)));
-  const esLIO = (datos.categoria || versiones[0].categoria) === 'lio';
+  const esLIO = (categoriaInfo(datos.categoria || versiones[0].categoria) || {}).usaCosto;
 
   versiones.forEach(v => {
     if (datos.codigo != null) v.codigo = String(datos.codigo).trim();
@@ -135,7 +138,7 @@ function versionarPrecio(grupo, { vigenciaDesde, precio, moneda, costo, costoMon
   const antes = JSON.parse(JSON.stringify(actual));
   actual.vigenciaHasta = _diaAnterior(desde);   // cierra la versión vigente
 
-  const esLIO = actual.categoria === 'lio';
+  const esLIO = (categoriaInfo(actual.categoria) || {}).usaCosto;
   const nueva = {
     id: nuevoId(),
     grupo,
@@ -168,10 +171,13 @@ function toggleEstadoPrestacion(grupo) {
   return nuevo;
 }
 
-// Cuántas prestaciones realizadas referencian alguna versión de un grupo.
+// Cuántas prestaciones realizadas referencian alguna versión de un grupo
+// (como prestación en sí o como insumo usado dentro de una cirugía/práctica).
 function _referenciasNomenclador(grupo) {
   const ids = new Set(versionesDe(grupo).map(v => v.id));
-  return DB.prestacionesRealizadas.filter(p => ids.has(p.nomencladorId)).length;
+  return DB.prestacionesRealizadas.filter(p =>
+    ids.has(p.nomencladorId) || (p.insumos || []).some(i => ids.has(i.nomencladorId))
+  ).length;
 }
 
 // ── Eliminar (baja física). Bloquea si hay prestaciones que lo usan. ──

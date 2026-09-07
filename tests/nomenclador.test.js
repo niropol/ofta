@@ -67,16 +67,16 @@ describe('Nomenclador — versionado de precios', () => {
     }
   });
 
-  it('LIO: guarda precio y costo, cada uno con su moneda', () => {
+  it('Insumo: guarda precio y costo real, cada uno con su moneda', () => {
     const { app } = ctx;
-    const v = app.crearPrestacion({ categoria: 'lio', descripcion: 'Lente monofocal', precio: 900000, moneda: 'ARS', costo: 300, costoMoneda: 'USD' });
+    const v = app.crearPrestacion({ categoria: 'insumo', descripcion: 'Lente monofocal', precio: 900000, moneda: 'ARS', costo: 300, costoMoneda: 'USD' });
     expect(v.costo).toBe(300);
     expect(v.costoMoneda).toBe('USD');
     expect(v.precio).toBe(900000);
     expect(v.moneda).toBe('ARS');
   });
 
-  it('no-LIO no guarda costo (queda null)', () => {
+  it('no-insumo no guarda costo (queda null)', () => {
     const { app } = ctx;
     const v = app.crearPrestacion({ categoria: 'consulta', descripcion: 'Consulta', precio: 11000, costo: 999 });
     expect(v.costo).toBe(null);

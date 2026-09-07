@@ -19,26 +19,31 @@
 //   - Anulación = contra-movimiento (el registro queda visible como ANULADO).
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Categorías de prestación.
-//  - tipo 'realizada'  → prestación con precio en el nomenclador (`nomenclador: true`).
-//    Cada una tiene su % de reparto (la consulta es 100% fijo). `permiteDerivador`
-//    indica si esa prestación puede tener médico derivador, y `derivaCategoria` es
-//    la categoría de % que cobra ese derivador (en paralelo, sobre el mismo precio).
-//    `usaCosto` (solo LIO) → guarda costo además de precio; el % va sobre el neto.
+// Categorías.
+//  - tipo 'realizada'  → prestación que se le hace al paciente, con precio en el
+//    nomenclador. Cada una tiene su % de reparto (la consulta es 100% fijo).
+//    `permiteDerivador` → puede tener médico derivador; `derivaCategoria` es la
+//    categoría de % que cobra ese derivador (en paralelo, sobre el mismo precio).
+//    `permiteInsumos` → se le pueden asociar insumos usados (cirugía y práctica).
+//  - tipo 'insumo'     → catálogo de insumos (se gestionan en el Nomenclador). NO
+//    es una prestación en sí: se usa DENTRO de una cirugía/práctica. Tiene precio
+//    y costo real; el % del realizador va sobre el neto (precio − costo).
 //  - tipo 'derivacion' → NO es un ítem con precio: es la regla de % del derivador.
 const CATEGORIAS = [
-  { id: 'consulta',            label: 'Consulta',                tipo: 'realizada', nomenclador: true,  porcentajeFijo: 100,  permiteDerivador: false, derivaCategoria: null,                 usaCosto: false },
-  { id: 'cirugia',             label: 'Cirugía',                 tipo: 'realizada', nomenclador: true,  porcentajeFijo: null, permiteDerivador: true,  derivaCategoria: 'derivacion_cirugia', usaCosto: false },
-  { id: 'practica',            label: 'Práctica',                tipo: 'realizada', nomenclador: true,  porcentajeFijo: null, permiteDerivador: true,  derivaCategoria: 'derivacion_practica',usaCosto: false },
-  { id: 'realizacion_estudio', label: 'Realización de estudio',  tipo: 'realizada', nomenclador: true,  porcentajeFijo: null, permiteDerivador: true,  derivaCategoria: 'derivacion_estudio', usaCosto: false },
-  { id: 'lio',                 label: 'LIO (lente intraocular)', tipo: 'realizada', nomenclador: true,  porcentajeFijo: null, permiteDerivador: false, derivaCategoria: null,                 usaCosto: true,  netoPrecioMenosCosto: true },
-  { id: 'derivacion_cirugia',  label: 'Derivación de cirugía',   tipo: 'derivacion', nomenclador: false },
-  { id: 'derivacion_estudio',  label: 'Derivación de estudio',   tipo: 'derivacion', nomenclador: false },
-  { id: 'derivacion_practica', label: 'Derivación de práctica',  tipo: 'derivacion', nomenclador: false },
+  { id: 'consulta',            label: 'Consulta',               tipo: 'realizada', nomenclador: true,  porcentajeFijo: 100,  permiteDerivador: false, derivaCategoria: null,                  usaCosto: false, permiteInsumos: false },
+  { id: 'cirugia',             label: 'Cirugía',                tipo: 'realizada', nomenclador: true,  porcentajeFijo: null, permiteDerivador: true,  derivaCategoria: 'derivacion_cirugia',  usaCosto: false, permiteInsumos: true  },
+  { id: 'practica',            label: 'Práctica',               tipo: 'realizada', nomenclador: true,  porcentajeFijo: null, permiteDerivador: true,  derivaCategoria: 'derivacion_practica', usaCosto: false, permiteInsumos: true  },
+  { id: 'realizacion_estudio', label: 'Realización de estudio', tipo: 'realizada', nomenclador: true,  porcentajeFijo: null, permiteDerivador: true,  derivaCategoria: 'derivacion_estudio',  usaCosto: false, permiteInsumos: false },
+  { id: 'insumo',              label: 'Insumo',                 tipo: 'insumo',    nomenclador: true,  porcentajeFijo: null, permiteDerivador: false, derivaCategoria: null,                  usaCosto: true,  netoPrecioMenosCosto: true, permiteInsumos: false },
+  { id: 'derivacion_cirugia',  label: 'Derivación de cirugía',  tipo: 'derivacion', nomenclador: false },
+  { id: 'derivacion_estudio',  label: 'Derivación de estudio',  tipo: 'derivacion', nomenclador: false },
+  { id: 'derivacion_practica', label: 'Derivación de práctica', tipo: 'derivacion', nomenclador: false },
 ];
 const CATEGORIA_IDS = CATEGORIAS.map(c => c.id);
-// Categorías que se cargan en el nomenclador (tienen precio). Las de derivación no.
+// Categorías que se cargan en el Nomenclador (tienen precio): prestaciones + insumos.
 const CATEGORIAS_NOMENCLADOR = CATEGORIAS.filter(c => c.nomenclador);
+// Categorías que se cargan como prestación realizada a un paciente (no incluye insumos).
+const CATEGORIAS_REALIZADAS = CATEGORIAS.filter(c => c.tipo === 'realizada');
 function categoriaInfo(id) { return CATEGORIAS.find(c => c.id === id) || null; }
 function derivaCategoriaDe(id) { const c = categoriaInfo(id); return c ? c.derivaCategoria : null; }
 

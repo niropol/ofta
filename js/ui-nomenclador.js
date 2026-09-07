@@ -31,8 +31,8 @@ function renderNomenclador() {
 
   const rows = filas.map(v => {
     const inactivo = v.estado === 'Inactivo';
-    const esLIO = v.categoria === 'lio';
-    const costo = esLIO && v.costo != null ? fmtMoneda(v.costo, v.costoMoneda) : '—';
+    const usaCosto = (categoriaInfo(v.categoria) || {}).usaCosto;
+    const costo = usaCosto && v.costo != null ? fmtMoneda(v.costo, v.costoMoneda) : '—';
     return `
     <tr class="${inactivo ? 'fila-inactiva' : ''}">
       <td>${escHtml(_labelCategoria(v.categoria))}</td>
@@ -55,7 +55,7 @@ function renderNomenclador() {
     <table class="tabla">
       <thead><tr>
         <th>Categoría</th><th>Código</th><th>Descripción</th>
-        <th class="num">Precio vigente</th><th class="num">Costo (LIO)</th>
+        <th class="num">Precio vigente</th><th class="num">Costo real</th>
         <th>Vigente desde</th><th>Acciones</th>
       </tr></thead>
       <tbody>${rows}</tbody>
@@ -79,7 +79,7 @@ function cerrarModalPrest() { _mostrarModalPrest(false); }
 function onCategoriaChangePrest() {
   const cat = document.getElementById('prest_categoria').value;
   const box = document.getElementById('prest_costo_box');
-  if (box) box.style.display = (cat === 'lio') ? 'block' : 'none';
+  if (box) box.style.display = ((categoriaInfo(cat) || {}).usaCosto) ? 'block' : 'none';
 }
 
 function abrirNuevaPrestacion() {
@@ -153,8 +153,8 @@ function abrirNuevoPrecio(grupo) {
   document.getElementById('precio_prest_nombre').textContent = v.descripcion + '  (actual: ' + fmtMoneda(v.precio, v.moneda) + ' desde ' + v.vigenciaDesde + ')';
   set('precio_valor', v.precio); set('precio_moneda', v.moneda);
   set('precio_vigencia', hoyISO());
-  const esLIO = v.categoria === 'lio';
-  document.getElementById('precio_costo_box').style.display = esLIO ? 'block' : 'none';
+  const usaCosto = (categoriaInfo(v.categoria) || {}).usaCosto;
+  document.getElementById('precio_costo_box').style.display = usaCosto ? 'block' : 'none';
   set('precio_costo', v.costo != null ? v.costo : ''); set('precio_costoMoneda', v.costoMoneda || 'ARS');
   _mostrarModalPrecio(true);
 }
@@ -189,7 +189,7 @@ function verHistorialPrestacion(grupo) {
   const vs = versionesDe(grupo);
   if (vs.length === 0) return;
   document.getElementById('historial_nombre').textContent = vs[0].descripcion;
-  const esLIO = vs[0].categoria === 'lio';
+  const esLIO = (categoriaInfo(vs[0].categoria) || {}).usaCosto;
   const rows = vs.map(v => `
     <tr>
       <td>${escHtml(v.vigenciaDesde)}</td>

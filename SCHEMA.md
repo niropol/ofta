@@ -48,14 +48,21 @@ create table app_meta (
 
 `config` y `nextId` van en `app_meta`.
 
-## Categorías de prestación (con % propio) — `CATEGORIAS` en `datos.js`
+## Categorías — `CATEGORIAS` en `datos.js`
 
+Prestaciones realizadas (tipo `realizada`, con precio en el nomenclador):
 - `consulta` — valor fijo cargado, **100% al médico** (porcentaje fijo, no editable por regla).
-- `cirugia`
-- `lio` — % sobre el **neto (precio − costo)**; exclusiva del realizador; costo y precio cada uno en $ o USD.
-- `realizacion_estudio`
-- `derivacion_estudio` — derivación (en paralelo, sobre el precio de nomenclador).
-- `derivacion_cirugia` — derivación (idem).
+- `cirugia` — admite derivador e insumos.
+- `practica` — admite derivador e insumos.
+- `realizacion_estudio` — admite derivador.
+
+Insumos (tipo `insumo`, catálogo en el Nomenclador):
+- `insumo` — precio + **costo real**, cada uno en $ o USD. Se usa DENTRO de una cirugía/práctica
+  (no es una prestación en sí). El % del realizador va sobre el **neto (precio − costo)**.
+
+Derivación (tipo `derivacion`, solo regla de %, sin precio propio):
+- `derivacion_cirugia`, `derivacion_estudio`, `derivacion_practica` — el derivador cobra su %
+  en paralelo sobre el precio de nomenclador de la prestación derivada.
 
 ## Reglas de dinero (cerradas en Etapa 0)
 

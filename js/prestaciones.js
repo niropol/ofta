@@ -49,6 +49,26 @@ function pacienteLabel(pac) {
 }
 function medicoNombre(id) { const m = DB.medicos.find(x => x.id === Number(id)); return m ? m.nombre : '—'; }
 
+// Resuelve los insumos usados (grupos del nomenclador) a snapshots con precio y
+// costo vigentes a la fecha. El neto (precio − costo) se calcula en Etapa 4/6
+// (puede requerir cotización si precio y costo están en monedas distintas).
+function _resolverInsumos(grupos, fecha, permite) {
+  if (!permite || !Array.isArray(grupos) || grupos.length === 0) return [];
+  return grupos.map(g => {
+    const item = versionActual(Number(g));
+    if (!item || item.categoria !== 'insumo') throw new Error('Insumo inválido.');
+    const ver = precioVigente(item.grupo, fecha);
+    if (!ver) throw new Error('No hay precio vigente para el insumo "' + item.descripcion + '" en la fecha ' + fecha + '.');
+    return {
+      grupo: item.grupo,
+      nomencladorId: ver.id,
+      descripcion: ver.descripcion,
+      precio: ver.precio, moneda: ver.moneda,
+      costo: ver.costo != null ? ver.costo : 0, costoMoneda: ver.costoMoneda || 'ARS',
+    };
+  });
+}
+
 // ── Registrar una prestación realizada ──
 function registrarPrestacion(datos) {
   const cat = categoriaInfo(datos.categoria);
@@ -86,8 +106,7 @@ function registrarPrestacion(datos) {
     descripcion: version.descripcion,
     precioNomenclador: version.precio,   // snapshot: base del honorario
     moneda: version.moneda,
-    costoLIO: cat.usaCosto ? version.costo : null,
-    costoLIOMoneda: cat.usaCosto ? version.costoMoneda : null,
+    insumos: _resolverInsumos(datos.insumos, datos.fecha, cat.permiteInsumos),  // insumos usados (snapshot precio+costo)
     medicoRealizadorId: Number(datos.medicoRealizadorId),
     medicoDerivadorId: derivadorId,
     derivaCategoria: derivadorId ? cat.derivaCategoria : null,
@@ -119,6 +138,7 @@ function editarPrestacionRealizada(id, datos) {
     medicoRealizadorId: datos.medicoRealizadorId ?? reg.medicoRealizadorId,
     medicoDerivadorId: datos.medicoDerivadorId !== undefined ? datos.medicoDerivadorId : reg.medicoDerivadorId,
     obraSocial: datos.obraSocial ?? reg.obraSocial,
+    insumos: datos.insumos !== undefined ? datos.insumos : (reg.insumos || []).map(i => i.grupo),
     paciente: datos.paciente ?? { nombre: '', apellido: '', dni: '' },
   });
   // registrarPrestacion agregó uno nuevo: lo fusionamos sobre el existente y quitamos el temporal.
