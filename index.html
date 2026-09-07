@@ -101,6 +101,8 @@
   .subtabs button { background: none; border: none; padding: 8px 14px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; font-size: 13px; }
   .subtabs button.active { color: var(--primario); border-bottom-color: var(--primario); font-weight: 600; }
   h4 { margin: 8px 0; font-size: 14px; }
+  .diag-ok { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; padding: 10px 12px; border-radius: 6px; margin-bottom: 10px; }
+  .diag-err { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 10px 12px; border-radius: 6px; margin-bottom: 10px; }
 </style>
 </head>
 <body>
@@ -241,7 +243,15 @@
     <p class="nota">Zona sensible (solo admin). Acá va el <strong>costo real</strong> de los insumos y,
       próximamente, la <strong>caja</strong> (Etapa 5) y las <strong>liquidaciones a médicos</strong> (Etapa 6).
       La restricción de acceso por usuario se activa en la Etapa 8/10.</p>
-    <div class="section-head">
+    <h3>Diagnóstico y verificación</h3>
+    <div class="btn-group" style="margin-bottom:12px">
+      <button class="btn" onclick="uiVerificarCalculos()">Verificar cálculos</button>
+      <button class="btn secundario" onclick="uiDiagnosticoDatos()">Diagnóstico de datos</button>
+      <button class="btn secundario" onclick="uiVerificarNube()">Verificar nube</button>
+    </div>
+    <div id="diagResultado"></div>
+
+    <div class="section-head" style="margin-top:28px">
       <h3 style="margin:0">Usuarios y roles</h3>
       <button class="btn" onclick="abrirNuevoUsuario()">+ Nuevo usuario</button>
     </div>
@@ -545,6 +555,8 @@
 <script src="js/ui-liquidaciones.js?v=1"></script>
 <script src="js/ui-estadisticas.js?v=1"></script>
 <script src="js/ui-usuarios.js?v=1"></script>
+<script src="js/diagnostico.js?v=1"></script>
+<script src="js/ui-diagnostico.js?v=1"></script>
 <script src="js/persistencia.js?v=1"></script>
 <script>
 // ── Navegación entre secciones ──

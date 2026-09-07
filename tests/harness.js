@@ -72,6 +72,8 @@ const EXPONER = [
   'ROL_LABEL', 'PERMISOS_SECCIONES', 'rolActual', 'puedeVerSeccion', 'setUsuarioActual',
   'guardarUsuarioDatos', 'toggleEstadoUsuario', 'eliminarUsuario', 'listarAuditoria',
   'renderUsuarios', 'renderAuditoria', 'aplicarPermisos', 'poblarActuandoComo',
+  // diagnóstico (Etapa 9)
+  'runSelfTests', 'diagnosticoDatos', 'estadoNube', 'verificarNube',
   // navegación
   'showSection', 'init',
 ];

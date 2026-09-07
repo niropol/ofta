@@ -149,6 +149,32 @@ async function guardarEnNube(automatico = false) {
   }
 }
 
+// ── Diagnóstico de nube (para el botón "Verificar nube" del Admin) ──
+function estadoNube() {
+  return {
+    hayCredenciales: !!SUPABASE_URL && !!SUPABASE_ANON,
+    conectado: !!sb,
+    datosCargados,
+    dirty: [...cambiosPendientes.dirty],
+  };
+}
+
+// Guarda todo y re-lee de la nube para confirmar que cada colección está completa.
+async function verificarNube() {
+  if (!sb && !initSupabase()) return { conectado: false };
+  const guardado = await guardarEnNube(false);
+  const { data: remoto, error } = await sb.from('app_data').select('coleccion, doc_id');
+  if (error) return { conectado: true, guardado, error: error.message };
+  const nubeCount = {};
+  (remoto || []).forEach(r => { nubeCount[r.coleccion] = (nubeCount[r.coleccion] || 0) + 1; });
+  const detalle = COLECCIONES.map(c => {
+    const local = (DB[c] || []).filter(x => x && x.id != null).length;
+    const nube = nubeCount[c] || 0;
+    return { coleccion: c, local, nube, ok: local === nube };
+  });
+  return { conectado: true, guardado, detalle, todoOk: detalle.every(d => d.ok) };
+}
+
 // ── Arranque de la app ──
 //  Fuera de un navegador con Supabase (p. ej. jsdom en los tests, o sin credenciales)
 //  corta temprano y deja la app trabajando en memoria, sin tocar nada.
