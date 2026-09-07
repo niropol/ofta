@@ -13,8 +13,8 @@ const ROL_LABEL = { admin: 'Administrador', secretaria_1: 'Secretaria (nivel 1)'
 
 const PERMISOS_SECCIONES = {
   admin: ['*'],
-  secretaria_1: ['section-medicos', 'section-nomenclador', 'section-prestaciones', 'section-obras-sociales', 'section-estadisticas'],
-  secretaria_2: ['section-prestaciones', 'section-obras-sociales'],
+  secretaria_1: ['section-prestaciones', 'section-estadisticas', 'section-configuracion'],
+  secretaria_2: ['section-prestaciones', 'section-configuracion'],
 };
 
 function rolActual() { return (usuarioActual() || {}).rol || 'admin'; }

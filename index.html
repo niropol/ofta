@@ -120,39 +120,15 @@
 </header>
 
 <nav class="tabs" id="navTabs">
-  <button class="active" data-sec="section-medicos" onclick="showSection('section-medicos')">Médicos</button>
-  <button data-sec="section-nomenclador" onclick="showSection('section-nomenclador')">Nomenclador</button>
-  <button data-sec="section-prestaciones" onclick="showSection('section-prestaciones')">Prestaciones</button>
-  <button data-sec="section-obras-sociales" onclick="showSection('section-obras-sociales')">Obras sociales</button>
+  <button class="active" data-sec="section-prestaciones" onclick="showSection('section-prestaciones')">Prestaciones</button>
   <button data-sec="section-estadisticas" onclick="showSection('section-estadisticas')">Estadísticas</button>
+  <button data-sec="section-configuracion" onclick="showSection('section-configuracion')">Configuración</button>
   <button data-sec="section-admin" onclick="showSection('section-admin')">Admin 🔒</button>
 </nav>
 
 <main>
-  <!-- ── MÉDICOS ── -->
-  <section id="section-medicos" class="section active">
-    <div class="section-head">
-      <h2>Médicos</h2>
-      <button class="btn" onclick="abrirNuevoMedico()">+ Nuevo médico</button>
-    </div>
-    <div id="medicosGrid" class="grid"></div>
-  </section>
-
-  <!-- ── NOMENCLADOR ── -->
-  <section id="section-nomenclador" class="section">
-    <div class="section-head">
-      <h2>Nomenclador de prestaciones</h2>
-      <button class="btn" onclick="abrirNuevaPrestacion()">+ Nueva prestación</button>
-    </div>
-    <div class="filtros">
-      <select id="nomFiltroCat" onchange="renderNomenclador()"></select>
-      <input type="search" id="nomBuscar" placeholder="Buscar por descripción o código…" oninput="renderNomenclador()">
-    </div>
-    <div class="tabla-wrap"><div id="nomencladorTabla"></div></div>
-  </section>
-
-  <!-- ── PRESTACIONES REALIZADAS ── -->
-  <section id="section-prestaciones" class="section">
+  <!-- ── PRESTACIONES REALIZADAS (uso diario) ── -->
+  <section id="section-prestaciones" class="section active">
     <div class="section-head">
       <h2>Prestaciones realizadas</h2>
       <button class="btn" onclick="abrirNuevaPrestacionRealizada()">+ Cargar prestación</button>
@@ -165,13 +141,36 @@
     <div class="tabla-wrap"><div id="prestacionesTabla"></div></div>
   </section>
 
-  <!-- ── OBRAS SOCIALES ── -->
-  <section id="section-obras-sociales" class="section">
-    <div class="section-head">
-      <h2>Obras sociales</h2>
-      <button class="btn" onclick="abrirNuevaOS()">+ Nueva obra social</button>
+  <!-- ── CONFIGURACIÓN (datos maestros) ── -->
+  <section id="section-configuracion" class="section">
+    <div class="section-head"><h2>Configuración</h2></div>
+    <div class="subtabs" id="configTabs">
+      <button class="active" data-p="medicos" onclick="configTab('medicos')">Médicos</button>
+      <button data-p="nomenclador" onclick="configTab('nomenclador')">Nomenclador</button>
+      <button data-p="obras" onclick="configTab('obras')">Obras sociales</button>
     </div>
-    <div class="tabla-wrap"><div id="osTabla"></div></div>
+
+    <div class="configpanel" data-p="medicos">
+      <div class="section-head"><h3 style="margin:0">Médicos</h3>
+        <button class="btn" onclick="abrirNuevoMedico()">+ Nuevo médico</button></div>
+      <div id="medicosGrid" class="grid"></div>
+    </div>
+
+    <div class="configpanel" data-p="nomenclador" hidden>
+      <div class="section-head"><h3 style="margin:0">Nomenclador de prestaciones</h3>
+        <button class="btn" onclick="abrirNuevaPrestacion()">+ Nueva prestación</button></div>
+      <div class="filtros">
+        <select id="nomFiltroCat" onchange="renderNomenclador()"></select>
+        <input type="search" id="nomBuscar" placeholder="Buscar por descripción o código…" oninput="renderNomenclador()">
+      </div>
+      <div class="tabla-wrap"><div id="nomencladorTabla"></div></div>
+    </div>
+
+    <div class="configpanel" data-p="obras" hidden>
+      <div class="section-head"><h3 style="margin:0">Obras sociales</h3>
+        <button class="btn" onclick="abrirNuevaOS()">+ Nueva obra social</button></div>
+      <div class="tabla-wrap"><div id="osTabla"></div></div>
+    </div>
   </section>
 
   <!-- ── ESTADÍSTICAS ── -->
@@ -571,6 +570,12 @@ function showSection(id) {
 function adminTab(p) {
   document.querySelectorAll('#section-admin .adminpanel').forEach(el => { el.hidden = el.dataset.p !== p; });
   document.querySelectorAll('#adminTabs button').forEach(b => b.classList.toggle('active', b.dataset.p === p));
+}
+
+// Sub-pestañas dentro de Configuración (Médicos / Nomenclador / Obras sociales).
+function configTab(p) {
+  document.querySelectorAll('#section-configuracion .configpanel').forEach(el => { el.hidden = el.dataset.p !== p; });
+  document.querySelectorAll('#configTabs button').forEach(b => b.classList.toggle('active', b.dataset.p === p));
 }
 
 // ── init(): se llama tras cargar la nube (o en modo local). Renderiza todo. ──
