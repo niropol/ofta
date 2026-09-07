@@ -108,8 +108,12 @@ const DB = {
   pagosMedicos: [],
 
   // ── Caja: libro único de ingresos/egresos, saldo neteado, multi-moneda (Etapa 5).
-  //    origen: 'manual' | 'pago_medico' | 'gasto' | 'cobro'; referenciaId al origen. ──
+  //    origen: 'manual' | 'pago_medico' | 'gasto'; referenciaId al origen si es automático.
+  //    Los gastos operativos y los ingresos de SAM son movimientos manuales de este libro. ──
   cajaMovimientos: [],
+
+  // ── Cierres/arqueos de caja: por día + moneda + medio, saldo del sistema vs contado. ──
+  cajaCierres: [],
 
   // ── Auditoría de cambios: cada alta/edición/baja/anulación con quién, cuándo,
   //    valor anterior y nuevo. Control de seguridad de caja (Etapa 8, activo ya). ──
@@ -123,7 +127,7 @@ const DB = {
 const COLECCIONES = [
   'usuarios', 'sedes', 'medicos', 'obrasSociales', 'pacientes', 'nomenclador',
   'reglasReparto', 'prestacionesRealizadas', 'cobros', 'gastos', 'pagosMedicos',
-  'cajaMovimientos', 'auditoria',
+  'cajaMovimientos', 'cajaCierres', 'auditoria',
 ];
 
 // Genera el próximo id global y lo consume.

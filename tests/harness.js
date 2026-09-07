@@ -25,6 +25,12 @@ const EXPONER = [
   'redondearAbajo', 'porcentajeReglaVigente', 'setReglaReparto', 'listarReglasActuales',
   'honorariosDePrestacion', 'honorariosDeMedico', 'honorariosDelMes',
   'renderReglas', 'abrirNuevaRegla', 'guardarRegla', 'calcularPreviewHonorarios',
+  // caja
+  'CATEGORIAS_GASTO', 'registrarMovimientoCaja', 'registrarGasto', 'editarMovimientoCaja',
+  'eliminarMovimientoCaja', 'registrarEgresoPagoMedico', 'quitarEgresosDeLiquidacion',
+  'saldosCaja', 'saldoPool', 'listarMovimientosCaja', 'registrarCierreCaja', 'listarCierresCaja',
+  'renderCaja', 'abrirMovimientoCaja', 'guardarMovimientoCaja', 'eliminarMovimientoCajaUI',
+  'abrirCierreCaja', 'guardarCierreCaja',
   // helpers de dominio
   'nuevoId', 'usuarioActual', 'sedeActiva', 'getSedesActivas', 'getMedicosActivos', 'escHtml',
   // auditoría
@@ -92,7 +98,7 @@ export function resetDatos(app) {
   const D = app.DB;
   ['medicos', 'obrasSociales', 'pacientes', 'nomenclador', 'reglasReparto',
    'prestacionesRealizadas', 'cobros', 'gastos', 'pagosMedicos', 'cajaMovimientos',
-   'auditoria'].forEach(c => { D[c] = []; });
+   'cajaCierres', 'auditoria'].forEach(c => { D[c] = []; });
   return D;
 }
 

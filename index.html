@@ -87,6 +87,16 @@
   .ins-item { display: flex; justify-content: space-between; align-items: center; gap: 8px;
     padding: 6px 10px; background: var(--panel); border: 1px solid var(--borde); border-radius: 6px; margin-bottom: 6px; font-size: 13px; }
   .ins-item button { background: #eef2f7; border: 1px solid var(--borde); border-radius: 5px; padding: 3px 8px; cursor: pointer; font-size: 11.5px; }
+  /* Caja */
+  .pos { color: var(--ok); }
+  .neg { color: var(--danger); }
+  .saldos { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .saldo-card { background: var(--panel); border: 1px solid var(--borde); border-radius: 8px; padding: 14px; }
+  .saldo-card.total { background: #f0f6ff; border-color: #c7dbf5; }
+  .saldo-titulo { font-size: 12px; color: var(--muted); }
+  .saldo-monto { font-size: 20px; font-weight: 600; margin-top: 4px; }
+  .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+  .tabla tfoot th { background: #f0f6ff; }
 </style>
 </head>
 <body>
@@ -103,6 +113,7 @@
   <button data-sec="section-nomenclador" onclick="showSection('section-nomenclador')">Nomenclador</button>
   <button data-sec="section-prestaciones" onclick="showSection('section-prestaciones')">Prestaciones</button>
   <button data-sec="section-obras-sociales" onclick="showSection('section-obras-sociales')">Obras sociales</button>
+  <button data-sec="section-caja" onclick="showSection('section-caja')">Caja 🔒</button>
   <button data-sec="section-admin" onclick="showSection('section-admin')">Admin 🔒</button>
 </nav>
 
@@ -150,6 +161,35 @@
       <button class="btn" onclick="abrirNuevaOS()">+ Nueva obra social</button>
     </div>
     <div class="tabla-wrap"><div id="osTabla"></div></div>
+  </section>
+
+  <!-- ── CAJA (acceso restringido) ── -->
+  <section id="section-caja" class="section">
+    <div class="section-head">
+      <h2>Caja <span class="muted" style="font-size:13px">· acceso restringido</span></h2>
+      <div class="btn-group">
+        <button class="btn" onclick="abrirMovimientoCaja('ingreso')">+ Ingreso</button>
+        <button class="btn" onclick="abrirMovimientoCaja('egreso')">+ Egreso</button>
+        <button class="btn" onclick="abrirMovimientoCaja('egreso', true)">+ Gasto</button>
+        <button class="btn secundario" onclick="abrirCierreCaja()">Cierre de caja</button>
+      </div>
+    </div>
+    <div id="cajaSaldos" class="saldos"></div>
+    <div class="filtros">
+      <label class="muted">Mes <input type="month" id="cajaFMes" onchange="renderMovimientosCaja()"></label>
+      <select id="cajaFTipo" onchange="renderMovimientosCaja()">
+        <option value="">Todos</option><option value="ingreso">Ingresos</option><option value="egreso">Egresos</option>
+      </select>
+      <select id="cajaFMoneda" onchange="renderMovimientosCaja()">
+        <option value="">Toda moneda</option><option value="ARS">Pesos</option><option value="USD">Dólares</option>
+      </select>
+      <select id="cajaFMedio" onchange="renderMovimientosCaja()">
+        <option value="">Todo medio</option><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option>
+      </select>
+    </div>
+    <div class="tabla-wrap"><div id="cajaMovsTabla"></div></div>
+    <h3 style="margin-top:26px">Cierres de caja</h3>
+    <div class="tabla-wrap"><div id="cajaCierresTabla"></div></div>
   </section>
 
   <!-- ── ADMIN (acceso restringido) ── -->
@@ -350,17 +390,75 @@
   </div>
 </div>
 
+<!-- ── Modal movimiento de caja ── -->
+<div id="modalMov" class="modal">
+  <div class="modal-box">
+    <h3 id="modalMovTitulo">Nuevo movimiento</h3>
+    <input type="hidden" id="mov_id">
+    <div class="row2">
+      <div class="campo"><label>Fecha *</label><input id="mov_fecha" type="date"></div>
+      <div class="campo"><label>Tipo *</label>
+        <select id="mov_tipo" onchange="onTipoChangeMov()"><option value="ingreso">Ingreso</option><option value="egreso">Egreso</option></select>
+      </div>
+    </div>
+    <div class="campo"><label>Descripción *</label><input id="mov_desc" placeholder="Ej.: Pago de SAM marzo / Alquiler consultorio"></div>
+    <div class="row2">
+      <div class="campo"><label>Monto *</label><input id="mov_monto" type="number" step="0.01"></div>
+      <div class="campo"><label>Moneda</label>
+        <select id="mov_moneda"><option value="ARS">Pesos (ARS)</option><option value="USD">Dólares (USD)</option></select>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="campo"><label>Medio de pago</label>
+        <select id="mov_medio"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option></select>
+      </div>
+      <div class="campo" id="mov_gasto_box" style="display:none"><label>Categoría de gasto (opcional)</label>
+        <select id="mov_categoria"></select>
+      </div>
+    </div>
+    <div class="modal-acciones">
+      <button class="btn secundario" onclick="cerrarModalMov()">Cancelar</button>
+      <button class="btn" onclick="guardarMovimientoCaja()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal cierre / arqueo ── -->
+<div id="modalCierre" class="modal">
+  <div class="modal-box">
+    <h3>Cierre de caja (arqueo)</h3>
+    <div class="row2">
+      <div class="campo"><label>Fecha *</label><input id="cierre_fecha" type="date" onchange="_actualizarSaldoSistemaCierre()"></div>
+      <div class="campo"><label>Moneda</label>
+        <select id="cierre_moneda" onchange="_actualizarSaldoSistemaCierre()"><option value="ARS">Pesos (ARS)</option><option value="USD">Dólares (USD)</option></select>
+      </div>
+    </div>
+    <div class="campo"><label>Medio</label>
+      <select id="cierre_medio" onchange="_actualizarSaldoSistemaCierre()"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option></select>
+    </div>
+    <p class="muted">Saldo según el sistema: <strong id="cierre_sistema">—</strong></p>
+    <div class="campo"><label>Monto contado (real) *</label><input id="cierre_contado" type="number" step="0.01"></div>
+    <div class="campo"><label>Observación</label><input id="cierre_obs"></div>
+    <div class="modal-acciones">
+      <button class="btn secundario" onclick="cerrarModalCierre()">Cancelar</button>
+      <button class="btn" onclick="guardarCierreCaja()">Guardar cierre</button>
+    </div>
+  </div>
+</div>
+
 <script src="js/datos.js?v=1"></script>
 <script src="js/auditoria.js?v=1"></script>
 <script src="js/nomenclador.js?v=1"></script>
 <script src="js/prestaciones.js?v=1"></script>
 <script src="js/honorarios.js?v=1"></script>
+<script src="js/caja.js?v=1"></script>
 <script src="js/ui-medicos.js?v=1"></script>
 <script src="js/ui-nomenclador.js?v=1"></script>
 <script src="js/ui-prestaciones.js?v=1"></script>
 <script src="js/ui-obras-sociales.js?v=1"></script>
 <script src="js/ui-admin.js?v=1"></script>
 <script src="js/ui-honorarios.js?v=1"></script>
+<script src="js/ui-caja.js?v=1"></script>
 <script src="js/persistencia.js?v=1"></script>
 <script>
 // ── Navegación entre secciones ──
@@ -379,6 +477,7 @@ function init() {
   renderOS();
   poblarDatalistOS();
   renderAdmin();
+  renderCaja();
 }
 </script>
 </body>
