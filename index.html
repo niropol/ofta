@@ -125,8 +125,6 @@
   <button data-sec="section-prestaciones" onclick="showSection('section-prestaciones')">Prestaciones</button>
   <button data-sec="section-obras-sociales" onclick="showSection('section-obras-sociales')">Obras sociales</button>
   <button data-sec="section-estadisticas" onclick="showSection('section-estadisticas')">Estadísticas</button>
-  <button data-sec="section-caja" onclick="showSection('section-caja')">Caja 🔒</button>
-  <button data-sec="section-liquidaciones" onclick="showSection('section-liquidaciones')">Liquidaciones 🔒</button>
   <button data-sec="section-admin" onclick="showSection('section-admin')">Admin 🔒</button>
 </nav>
 
@@ -192,9 +190,18 @@
   </section>
 
   <!-- ── CAJA (acceso restringido) ── -->
-  <section id="section-caja" class="section">
+  <section id="section-admin" class="section">
+    <div class="section-head"><h2>Admin <span class="muted" style="font-size:13px">· acceso restringido</span></h2></div>
+    <div class="subtabs" id="adminTabs">
+      <button class="active" data-p="caja" onclick="adminTab('caja')">Caja</button>
+      <button data-p="liquidaciones" onclick="adminTab('liquidaciones')">Liquidaciones</button>
+      <button data-p="honorarios" onclick="adminTab('honorarios')">Honorarios y precios</button>
+      <button data-p="seguridad" onclick="adminTab('seguridad')">Seguridad</button>
+    </div>
+
+    <div class="adminpanel" data-p="caja">
     <div class="section-head">
-      <h2>Caja <span class="muted" style="font-size:13px">· acceso restringido</span></h2>
+      <h3 style="margin:0">Caja</h3>
       <div class="btn-group">
         <button class="btn" onclick="abrirMovimientoCaja('ingreso')">+ Ingreso</button>
         <button class="btn" onclick="abrirMovimientoCaja('egreso')">+ Egreso</button>
@@ -218,13 +225,10 @@
     <div class="tabla-wrap"><div id="cajaMovsTabla"></div></div>
     <h3 style="margin-top:26px">Cierres de caja</h3>
     <div class="tabla-wrap"><div id="cajaCierresTabla"></div></div>
-  </section>
+    </div><!-- /panel caja -->
 
-  <!-- ── LIQUIDACIONES A MÉDICOS (acceso restringido) ── -->
-  <section id="section-liquidaciones" class="section">
-    <div class="section-head">
-      <h2>Liquidaciones a médicos <span class="muted" style="font-size:13px">· acceso restringido</span></h2>
-    </div>
+    <div class="adminpanel" data-p="liquidaciones" hidden>
+    <div class="section-head"><h3 style="margin:0">Liquidaciones a médicos</h3></div>
     <div class="filtros">
       <label class="muted">Mes <input type="month" id="liqMes" onchange="renderLiquidaciones()"></label>
       <label class="muted">Cotización USD→ARS <input type="number" id="liqCotiz" step="0.01" style="width:120px" placeholder="opcional" onchange="renderLiquidaciones()"></label>
@@ -233,16 +237,9 @@
     <h3 style="margin-top:26px">Comisión SAM del mes</h3>
     <p class="muted" style="margin-top:0">SAM (externo) cobra su comisión sobre las lentes; el resto queda para SAM Oftalmo.</p>
     <div class="tabla-wrap"><div id="comisionSAM"></div></div>
-  </section>
+    </div><!-- /panel liquidaciones -->
 
-  <!-- ── ADMIN (acceso restringido) ── -->
-  <section id="section-admin" class="section">
-    <div class="section-head">
-      <h2>Admin <span class="muted" style="font-size:13px">· acceso restringido</span></h2>
-    </div>
-    <p class="nota">Zona sensible (solo admin). Acá va el <strong>costo real</strong> de los insumos y,
-      próximamente, la <strong>caja</strong> (Etapa 5) y las <strong>liquidaciones a médicos</strong> (Etapa 6).
-      La restricción de acceso por usuario se activa en la Etapa 8/10.</p>
+    <div class="adminpanel" data-p="seguridad" hidden>
     <h3>Diagnóstico y verificación</h3>
     <div class="btn-group" style="margin-bottom:12px">
       <button class="btn" onclick="uiVerificarCalculos()">Verificar cálculos</button>
@@ -269,8 +266,10 @@
       <input type="search" id="audBuscar" placeholder="Buscar…" oninput="renderAuditoria()">
     </div>
     <div class="tabla-wrap"><div id="auditoriaTabla"></div></div>
+    </div><!-- /panel seguridad -->
 
-    <h3 style="margin-top:28px">Costo real de insumos</h3>
+    <div class="adminpanel" data-p="honorarios" hidden>
+    <h3>Costo real de insumos</h3>
     <p class="muted" style="margin-top:0">El precio se carga en el Nomenclador (lo ven las secretarias). El costo real se define acá y sirve para el neto.</p>
     <div class="tabla-wrap"><div id="adminInsumos"></div></div>
 
@@ -288,6 +287,7 @@
       <button class="btn" onclick="calcularPreviewHonorarios()">Calcular</button>
     </div>
     <div class="tabla-wrap"><div id="previewHonorarios"></div></div>
+    </div><!-- /panel honorarios -->
   </section>
 </main>
 
@@ -565,6 +565,12 @@ function showSection(id) {
   if (typeof puedeVerSeccion === 'function' && !puedeVerSeccion(id)) return;
   document.querySelectorAll('.section').forEach(s => s.classList.toggle('active', s.id === id));
   document.querySelectorAll('#navTabs button').forEach(b => b.classList.toggle('active', b.dataset.sec === id));
+}
+
+// Sub-pestañas dentro de Admin (Caja / Liquidaciones / Honorarios y precios / Seguridad).
+function adminTab(p) {
+  document.querySelectorAll('#section-admin .adminpanel').forEach(el => { el.hidden = el.dataset.p !== p; });
+  document.querySelectorAll('#adminTabs button').forEach(b => b.classList.toggle('active', b.dataset.p === p));
 }
 
 // ── init(): se llama tras cargar la nube (o en modo local). Renderiza todo. ──
