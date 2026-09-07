@@ -114,6 +114,7 @@
   <button data-sec="section-prestaciones" onclick="showSection('section-prestaciones')">Prestaciones</button>
   <button data-sec="section-obras-sociales" onclick="showSection('section-obras-sociales')">Obras sociales</button>
   <button data-sec="section-caja" onclick="showSection('section-caja')">Caja 🔒</button>
+  <button data-sec="section-liquidaciones" onclick="showSection('section-liquidaciones')">Liquidaciones 🔒</button>
   <button data-sec="section-admin" onclick="showSection('section-admin')">Admin 🔒</button>
 </nav>
 
@@ -190,6 +191,21 @@
     <div class="tabla-wrap"><div id="cajaMovsTabla"></div></div>
     <h3 style="margin-top:26px">Cierres de caja</h3>
     <div class="tabla-wrap"><div id="cajaCierresTabla"></div></div>
+  </section>
+
+  <!-- ── LIQUIDACIONES A MÉDICOS (acceso restringido) ── -->
+  <section id="section-liquidaciones" class="section">
+    <div class="section-head">
+      <h2>Liquidaciones a médicos <span class="muted" style="font-size:13px">· acceso restringido</span></h2>
+    </div>
+    <div class="filtros">
+      <label class="muted">Mes <input type="month" id="liqMes" onchange="renderLiquidaciones()"></label>
+      <label class="muted">Cotización USD→ARS <input type="number" id="liqCotiz" step="0.01" style="width:120px" placeholder="opcional" onchange="renderLiquidaciones()"></label>
+    </div>
+    <div class="tabla-wrap"><div id="liquidacionesTabla"></div></div>
+    <h3 style="margin-top:26px">Comisión SAM del mes</h3>
+    <p class="muted" style="margin-top:0">SAM (externo) cobra su comisión sobre las lentes; el resto queda para SAM Oftalmo.</p>
+    <div class="tabla-wrap"><div id="comisionSAM"></div></div>
   </section>
 
   <!-- ── ADMIN (acceso restringido) ── -->
@@ -452,6 +468,7 @@
 <script src="js/prestaciones.js?v=1"></script>
 <script src="js/honorarios.js?v=1"></script>
 <script src="js/caja.js?v=1"></script>
+<script src="js/liquidaciones.js?v=1"></script>
 <script src="js/ui-medicos.js?v=1"></script>
 <script src="js/ui-nomenclador.js?v=1"></script>
 <script src="js/ui-prestaciones.js?v=1"></script>
@@ -459,6 +476,7 @@
 <script src="js/ui-admin.js?v=1"></script>
 <script src="js/ui-honorarios.js?v=1"></script>
 <script src="js/ui-caja.js?v=1"></script>
+<script src="js/ui-liquidaciones.js?v=1"></script>
 <script src="js/persistencia.js?v=1"></script>
 <script>
 // ── Navegación entre secciones ──
@@ -478,6 +496,7 @@ function init() {
   poblarDatalistOS();
   renderAdmin();
   renderCaja();
+  renderLiquidaciones();
 }
 </script>
 </body>

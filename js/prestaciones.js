@@ -128,6 +128,7 @@ function editarPrestacionRealizada(id, datos) {
   const reg = DB.prestacionesRealizadas.find(r => r.id === Number(id));
   if (!reg) return false;
   if (reg.estado === 'anulada') throw new Error('No se puede editar una prestación anulada.');
+  if (typeof prestacionBloqueada === 'function' && prestacionBloqueada(reg)) throw new Error('El período está liquidado (liquidación cerrada). Reabrí la liquidación para editar.');
   const antes = JSON.parse(JSON.stringify(reg));
 
   const nueva = registrarPrestacion({
@@ -156,6 +157,7 @@ function anularPrestacion(id, motivo) {
   const reg = DB.prestacionesRealizadas.find(r => r.id === Number(id));
   if (!reg) return false;
   if (reg.estado === 'anulada') return reg;
+  if (typeof prestacionBloqueada === 'function' && prestacionBloqueada(reg)) throw new Error('El período está liquidado (liquidación cerrada). Reabrí la liquidación para anular.');
   const antes = JSON.parse(JSON.stringify(reg));
   reg.estado = 'anulada';
   reg.motivoAnulacion = (motivo || '').trim() || 'Sin especificar';
@@ -182,6 +184,7 @@ function reactivarPrestacion(id) {
 function eliminarPrestacionRealizada(id) {
   const reg = DB.prestacionesRealizadas.find(r => r.id === Number(id));
   if (!reg) return false;
+  if (typeof prestacionBloqueada === 'function' && prestacionBloqueada(reg)) throw new Error('El período está liquidado (liquidación cerrada). Reabrí la liquidación para eliminar.');
   const antes = JSON.parse(JSON.stringify(reg));
   DB.prestacionesRealizadas = DB.prestacionesRealizadas.filter(r => r.id !== reg.id);
   registrarAuditoria('baja', 'prestacionRealizada', reg.id, antes, null);

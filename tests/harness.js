@@ -60,6 +60,11 @@ const EXPONER = [
   'reactivarPrestacion', 'eliminarPrestacionRealizada', 'listarPrestacionesRealizadas',
   '_resolverInsumos', 'renderPrestaciones', 'abrirNuevaPrestacionRealizada', 'guardarPrestacionReg',
   'agregarInsumoReg', 'quitarInsumoReg',
+  // liquidaciones
+  'liquidacionDe', 'liquidacionCerradaDe', 'prestacionBloqueada', 'generarLiquidacion',
+  'cerrarLiquidacion', 'reabrirLiquidacion', 'eliminarLiquidacion', 'listarLiquidaciones',
+  'mensajeLiquidacionWhatsApp', 'pagarComisionSAM',
+  'renderLiquidaciones', 'generarLiquidacionUI', 'cerrarLiquidacionUI',
   // navegación
   'showSection', 'init',
 ];
