@@ -64,6 +64,7 @@ const DB = {
   config: {
     empresa: 'SAM Oftalmología',
     sedeActiva: 1,
+    usuarioActualId: null,   // "actuando como" (simula el login hasta la Etapa 10)
   },
 
   // ── Usuarios del sistema (secretarias + admin). Sin login todavía (Etapa 10),
@@ -139,7 +140,10 @@ function nuevoId() { return DB.nextId++; }
 // Helpers de dominio compartidos.
 function sedeActiva() { return DB.config.sedeActiva; }
 function usuarioActual() {
-  // Sin login todavía: el actor por defecto es el admin. En Etapa 10 esto sale de la sesión.
+  // Sin login todavía: el actor sale de config.usuarioActualId ("actuando como").
+  // En la Etapa 10 esto se reemplaza por la sesión autenticada.
+  const id = DB.config.usuarioActualId;
+  if (id != null) { const u = DB.usuarios.find(x => x.id === id); if (u) return u; }
   return (DB.usuarios.find(u => u.rol === 'admin') || DB.usuarios[0] || { nombre: 'sistema' });
 }
 function getSedesActivas() { return DB.sedes.filter(s => s.estado === 'Activa'); }

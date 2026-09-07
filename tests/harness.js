@@ -68,6 +68,10 @@ const EXPONER = [
   // estadísticas
   'resumenMes', 'resumenMedicoMes', 'controlInterno', 'resumenMesTextoWhatsApp', 'csvContable',
   'renderEstadisticas', 'switchStatView',
+  // usuarios / permisos / auditoría
+  'ROL_LABEL', 'PERMISOS_SECCIONES', 'rolActual', 'puedeVerSeccion', 'setUsuarioActual',
+  'guardarUsuarioDatos', 'toggleEstadoUsuario', 'eliminarUsuario', 'listarAuditoria',
+  'renderUsuarios', 'renderAuditoria', 'aplicarPermisos', 'poblarActuandoComo',
   // navegación
   'showSection', 'init',
 ];

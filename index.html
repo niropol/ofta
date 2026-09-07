@@ -109,7 +109,12 @@
     <h1>SAM Oftalmología</h1>
     <div class="sub">Sistema de gestión</div>
   </div>
-  <div id="indicadorGuardado"></div>
+  <div style="display:flex;align-items:center;gap:14px">
+    <label style="font-size:12px;opacity:.9">Actuando como
+      <select id="actuandoComo" onchange="cambiarActuandoComo()" style="margin-left:6px;padding:4px 6px;border-radius:5px;border:none;font-size:12px"></select>
+    </label>
+    <div id="indicadorGuardado"></div>
+  </div>
 </header>
 
 <nav class="tabs" id="navTabs">
@@ -236,7 +241,26 @@
     <p class="nota">Zona sensible (solo admin). Acá va el <strong>costo real</strong> de los insumos y,
       próximamente, la <strong>caja</strong> (Etapa 5) y las <strong>liquidaciones a médicos</strong> (Etapa 6).
       La restricción de acceso por usuario se activa en la Etapa 8/10.</p>
-    <h3>Costo real de insumos</h3>
+    <div class="section-head">
+      <h3 style="margin:0">Usuarios y roles</h3>
+      <button class="btn" onclick="abrirNuevoUsuario()">+ Nuevo usuario</button>
+    </div>
+    <p class="muted" style="margin-top:0">Solo secretarias (niveles) y admin. Los médicos no tienen cuenta. Caja, liquidaciones y esta pantalla son solo del admin.</p>
+    <div class="tabla-wrap"><div id="usuariosTabla"></div></div>
+
+    <h3 style="margin-top:28px">Auditoría de cambios</h3>
+    <p class="muted" style="margin-top:0">Cada alta/edición/baja/anulación queda registrada con quién, cuándo y qué cambió (control de seguridad).</p>
+    <div class="filtros">
+      <select id="audEntidad" onchange="renderAuditoria()"></select>
+      <select id="audAccion" onchange="renderAuditoria()">
+        <option value="">Toda acción</option><option value="alta">Alta</option><option value="edicion">Edición</option>
+        <option value="baja">Baja</option><option value="anulacion">Anulación</option>
+      </select>
+      <input type="search" id="audBuscar" placeholder="Buscar…" oninput="renderAuditoria()">
+    </div>
+    <div class="tabla-wrap"><div id="auditoriaTabla"></div></div>
+
+    <h3 style="margin-top:28px">Costo real de insumos</h3>
     <p class="muted" style="margin-top:0">El precio se carga en el Nomenclador (lo ven las secretarias). El costo real se define acá y sirve para el neto.</p>
     <div class="tabla-wrap"><div id="adminInsumos"></div></div>
 
@@ -482,8 +506,29 @@
   </div>
 </div>
 
+<!-- ── Modal usuario ── -->
+<div id="modalUsuario" class="modal">
+  <div class="modal-box">
+    <h3 id="modalUsuarioTitulo">Nuevo usuario</h3>
+    <input type="hidden" id="usr_id">
+    <div class="campo"><label>Nombre *</label><input id="usr_nombre"></div>
+    <div class="campo"><label>Email</label><input id="usr_email" type="email"></div>
+    <div class="row2">
+      <div class="campo"><label>Rol</label><select id="usr_rol"></select></div>
+      <div class="campo"><label>Estado</label>
+        <select id="usr_estado"><option value="Activo">Activo</option><option value="Inactivo">Inactivo</option></select>
+      </div>
+    </div>
+    <div class="modal-acciones">
+      <button class="btn secundario" onclick="cerrarModalUsuario()">Cancelar</button>
+      <button class="btn" onclick="guardarUsuario()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <script src="js/datos.js?v=1"></script>
 <script src="js/auditoria.js?v=1"></script>
+<script src="js/usuarios.js?v=1"></script>
 <script src="js/nomenclador.js?v=1"></script>
 <script src="js/prestaciones.js?v=1"></script>
 <script src="js/honorarios.js?v=1"></script>
@@ -499,10 +544,13 @@
 <script src="js/ui-caja.js?v=1"></script>
 <script src="js/ui-liquidaciones.js?v=1"></script>
 <script src="js/ui-estadisticas.js?v=1"></script>
+<script src="js/ui-usuarios.js?v=1"></script>
 <script src="js/persistencia.js?v=1"></script>
 <script>
 // ── Navegación entre secciones ──
 function showSection(id) {
+  // Permisos (Etapa 8): no navegar a una sección no permitida para el rol actual.
+  if (typeof puedeVerSeccion === 'function' && !puedeVerSeccion(id)) return;
   document.querySelectorAll('.section').forEach(s => s.classList.toggle('active', s.id === id));
   document.querySelectorAll('#navTabs button').forEach(b => b.classList.toggle('active', b.dataset.sec === id));
 }
@@ -520,6 +568,7 @@ function init() {
   renderCaja();
   renderLiquidaciones();
   renderEstadisticas();
+  renderUsuariosYAuditoria();
 }
 </script>
 </body>
