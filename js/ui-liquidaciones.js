@@ -37,7 +37,9 @@ function renderLiquidaciones() {
       acciones = `<button onclick="generarLiquidacionUI(${mid})">Generar</button>`;
     } else if (liq.estado === 'borrador') {
       const drift = liq.total !== totalCalc ? ` <span class="badge-inactivo" title="El cálculo actual difiere del guardado">cambió (${fmtMoneda(totalCalc, 'ARS')})</span>` : '';
-      estado = 'Borrador' + drift;
+      const reqCot = (liq.requiereCotizacion && !cotiz) ? ' <span class="badge-inactivo">falta cotización USD (monto parcial)</span>' : '';
+      const faltaP = (liq.faltaPct && liq.faltaPct.length) ? ' <span class="badge-inactivo">falta %</span>' : '';
+      estado = 'Borrador' + drift + reqCot + faltaP;
       acciones = `
         <button onclick="generarLiquidacionUI(${mid})">Regenerar</button>
         <button onclick="cerrarLiquidacionUI(${liq.id})">Cerrar y pagar</button>

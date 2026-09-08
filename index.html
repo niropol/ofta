@@ -634,6 +634,12 @@ function configTab(p) {
 // ── init(): se llama tras cargar la nube (o en modo local). Renderiza todo. ──
 function init() {
   _poblarFiltroCategoria();
+  // Por defecto, filtrar por el mes actual (con muchos datos, evita listas enormes).
+  const mesActual = new Date().toISOString().slice(0, 7);
+  ['regFiltroMes', 'statMes', 'liqMes', 'prevMes'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !el.value) el.value = mesActual;
+  });
   sincronizarUI();
   renderUsuariosYAuditoria();
 }
