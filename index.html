@@ -121,7 +121,6 @@
 
 <nav class="tabs" id="navTabs">
   <button class="active" data-sec="section-prestaciones" onclick="showSection('section-prestaciones')">Prestaciones</button>
-  <button data-sec="section-estadisticas" onclick="showSection('section-estadisticas')">Estadísticas</button>
   <button data-sec="section-configuracion" onclick="showSection('section-configuracion')">Configuración</button>
   <button data-sec="section-admin" onclick="showSection('section-admin')">Admin 🔒</button>
 </nav>
@@ -149,6 +148,7 @@
       <button data-p="nomenclador" onclick="configTab('nomenclador')">Nomenclador</button>
       <button data-p="obras" onclick="configTab('obras')">Obras sociales</button>
       <button data-p="sedes" onclick="configTab('sedes')">Sedes</button>
+      <button data-p="estadisticas" onclick="configTab('estadisticas')">Estadísticas</button>
     </div>
 
     <div class="configpanel" data-p="medicos">
@@ -179,21 +179,20 @@
       <p class="muted" style="margin-top:0">Hoy hay una sola sede. Podés agregar más y elegir cuál es la activa por defecto.</p>
       <div class="tabla-wrap"><div id="sedesTabla"></div></div>
     </div>
-  </section>
 
-  <!-- ── ESTADÍSTICAS ── -->
-  <section id="section-estadisticas" class="section">
-    <div class="section-head"><h2>Estadísticas</h2></div>
-    <div class="filtros">
-      <label class="muted">Mes <input type="month" id="statMes" onchange="renderEstadisticas()"></label>
-      <label class="muted">Cotización USD→ARS <input type="number" id="statCotiz" step="0.01" style="width:120px" placeholder="opcional" onchange="renderEstadisticas()"></label>
+    <div class="configpanel" data-p="estadisticas" hidden>
+      <div class="section-head"><h3 style="margin:0">Estadísticas</h3></div>
+      <div class="filtros">
+        <label class="muted">Mes <input type="month" id="statMes" onchange="renderEstadisticas()"></label>
+        <label class="muted">Cotización USD→ARS <input type="number" id="statCotiz" step="0.01" style="width:120px" placeholder="opcional" onchange="renderEstadisticas()"></label>
+      </div>
+      <div class="subtabs" id="statTabs">
+        <button class="active" data-v="clinica" onclick="switchStatView('clinica')">Clínica</button>
+        <button data-v="medico" onclick="switchStatView('medico')">Médico</button>
+        <button data-v="control" onclick="switchStatView('control')">Control interno</button>
+      </div>
+      <div id="statContenido"></div>
     </div>
-    <div class="subtabs" id="statTabs">
-      <button class="active" data-v="clinica" onclick="switchStatView('clinica')">Clínica</button>
-      <button data-v="medico" onclick="switchStatView('medico')">Médico</button>
-      <button data-v="control" onclick="switchStatView('control')">Control interno</button>
-    </div>
-    <div id="statContenido"></div>
   </section>
 
   <!-- ── CAJA (acceso restringido) ── -->
@@ -277,8 +276,9 @@
     </div><!-- /panel seguridad -->
 
     <div class="adminpanel" data-p="honorarios" hidden>
-    <h3>Costo real de insumos</h3>
-    <p class="muted" style="margin-top:0">El precio se carga en el Nomenclador (lo ven las secretarias). El costo real se define acá y sirve para el neto.</p>
+    <div class="section-head"><h3 style="margin:0">Costo real de insumos</h3>
+      <button class="btn" onclick="abrirNuevoInsumo()">+ Nuevo insumo</button></div>
+    <p class="muted" style="margin-top:0">Cargá acá los insumos (lente, etc.) con su precio cobrado y su costo real. El precio también queda en el Nomenclador; el costo (sensible) solo se ve acá y se usa para el neto.</p>
     <div class="tabla-wrap"><div id="adminInsumos"></div></div>
 
     <div class="section-head" style="margin-top:28px">
@@ -522,6 +522,31 @@
     <div class="modal-acciones">
       <button class="btn secundario" onclick="cerrarModalCierre()">Cancelar</button>
       <button class="btn" onclick="guardarCierreCaja()">Guardar cierre</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal nuevo insumo (crea el ítem del nomenclador + su costo real) ── -->
+<div id="modalInsumo" class="modal">
+  <div class="modal-box">
+    <h3>Nuevo insumo</h3>
+    <div class="campo"><label>Descripción *</label><input id="insu_desc" placeholder="Ej.: Lente intraocular monofocal"></div>
+    <div class="row2">
+      <div class="campo"><label>Precio cobrado *</label><input id="insu_precio" type="number" step="0.01"></div>
+      <div class="campo"><label>Moneda</label>
+        <select id="insu_moneda"><option value="ARS">Pesos (ARS)</option><option value="USD">Dólares (USD)</option></select>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="campo"><label>Costo real *</label><input id="insu_costo" type="number" step="0.01"></div>
+      <div class="campo"><label>Moneda del costo</label>
+        <select id="insu_costoMoneda"><option value="ARS">Pesos (ARS)</option><option value="USD">Dólares (USD)</option></select>
+      </div>
+    </div>
+    <div class="campo"><label>Vigente desde</label><input id="insu_vigencia" type="date"></div>
+    <div class="modal-acciones">
+      <button class="btn secundario" onclick="cerrarModalInsumo()">Cancelar</button>
+      <button class="btn" onclick="guardarNuevoInsumo()">Guardar</button>
     </div>
   </div>
 </div>

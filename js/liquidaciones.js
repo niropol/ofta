@@ -72,12 +72,15 @@ function cerrarLiquidacion(id, fechaPago) {
   if (l.estado === 'cerrada') return l;
   if (l.requiereCotizacion && !l.cotizacion) throw new Error('Hay montos en dólares: cargá la cotización y regenerá antes de cerrar.');
   if (l.faltaPct && l.faltaPct.length) throw new Error('Faltan % configurados. Definilos y regenerá antes de cerrar.');
+  if (!(l.total > 0)) throw new Error('La liquidación no tiene honorarios a pagar (total $0). Revisá que el médico tenga prestaciones y que estén los % de reparto.');
   const antes = JSON.parse(JSON.stringify(l));
-  l.estado = 'cerrada';
-  l.fechaCierre = fechaPago || hoyISO();
+  // Primero la caja: si algo falla, la liquidación NO queda a medio cerrar.
   const med = DB.medicos.find(m => m.id === l.medicoId);
-  const mov = registrarEgresoPagoMedico(l.id, l.total, 'Liquidación ' + l.mes + ' — ' + (med ? med.nombre : ''), l.fechaCierre, med ? med.sedeId : sedeActiva());
+  const fecha = fechaPago || hoyISO();
+  const mov = registrarEgresoPagoMedico(l.id, l.total, 'Liquidación ' + l.mes + ' — ' + (med ? med.nombre : ''), fecha, med ? med.sedeId : sedeActiva());
   l.cajaMovimientoId = mov.id;
+  l.estado = 'cerrada';
+  l.fechaCierre = fecha;
   registrarAuditoria('edicion', 'pagoMedico', l.id, antes, l);
   marcarCambios('pagosMedicos');
   return l;

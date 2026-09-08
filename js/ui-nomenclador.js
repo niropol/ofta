@@ -7,6 +7,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 function _labelCategoria(id) { return (CATEGORIAS.find(c => c.id === id) || {}).label || id; }
+function _primerDiaMesActual() { return hoyISO().slice(0, 7) + '-01'; }
 
 function _opcionesCategoria(sel) {
   // Solo categorías con precio (las de derivación no son ítems del nomenclador).
@@ -84,7 +85,7 @@ function abrirNuevaPrestacion() {
   set('prest_codigo', ''); set('prest_descripcion', '');
   set('prest_precio', ''); set('prest_moneda', 'ARS');
   set('prest_costo', ''); set('prest_costoMoneda', 'ARS');
-  set('prest_vigencia', hoyISO());
+  set('prest_vigencia', _primerDiaMesActual());   // así cubre prestaciones cargadas del mes
   document.getElementById('prest_vigencia_box').style.display = 'block';
   document.getElementById('prest_correccion_nota').style.display = 'none';
   onCategoriaChangePrest();

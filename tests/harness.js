@@ -53,7 +53,7 @@ const EXPONER = [
   'renderOS', 'abrirNuevaOS', 'editarOS', 'guardarOS', 'toggleEstadoOS', 'eliminarOS',
   '_referenciasOS', 'getObrasSocialesActivas', 'poblarDatalistOS',
   // admin (costo real de insumos)
-  'renderAdmin', 'renderAdminInsumos', 'guardarCostoInsumoUI',
+  'renderAdmin', 'renderAdminInsumos', 'guardarCostoInsumoUI', 'abrirNuevoInsumo', 'guardarNuevoInsumo',
   // prestaciones realizadas
   'pacienteFindOrCreate', 'pacienteLabel', 'medicoNombre',
   'registrarPrestacion', 'editarPrestacionRealizada', 'anularPrestacion',

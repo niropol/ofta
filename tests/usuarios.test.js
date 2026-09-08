@@ -47,16 +47,14 @@ describe('Permisos por rol', () => {
     const s1 = app.guardarUsuarioDatos({ nombre: 'Sec1', rol: 'secretaria_1' });
     app.setUsuarioActual(s1.id);
     expect(app.puedeVerSeccion('section-prestaciones')).toBe(true);
-    expect(app.puedeVerSeccion('section-estadisticas')).toBe(true);
-    expect(app.puedeVerSeccion('section-caja')).toBe(false);
-    expect(app.puedeVerSeccion('section-liquidaciones')).toBe(false);
+    expect(app.puedeVerSeccion('section-configuracion')).toBe(true); // incluye estadísticas
     expect(app.puedeVerSeccion('section-admin')).toBe(false);
 
     const s2 = app.guardarUsuarioDatos({ nombre: 'Sec2', rol: 'secretaria_2' });
     app.setUsuarioActual(s2.id);
     expect(app.puedeVerSeccion('section-prestaciones')).toBe(true);
-    expect(app.puedeVerSeccion('section-nomenclador')).toBe(false);
-    expect(app.puedeVerSeccion('section-estadisticas')).toBe(false);
+    expect(app.puedeVerSeccion('section-configuracion')).toBe(false); // solo carga del día
+    expect(app.puedeVerSeccion('section-admin')).toBe(false);
   });
 });
 

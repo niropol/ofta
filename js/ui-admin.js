@@ -55,6 +55,35 @@ function _netoInsumo(v) {
   return fmtMoneda(v.precio - v.costo, v.moneda);
 }
 
+// ── Alta de insumo desde el Admin (crea el ítem + su costo, en un solo paso) ──
+function _mostrarModalInsumo(on) { const m = document.getElementById('modalInsumo'); if (m) m.style.display = on ? 'flex' : 'none'; }
+function cerrarModalInsumo() { _mostrarModalInsumo(false); }
+
+function abrirNuevoInsumo() {
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v == null ? '' : v; };
+  set('insu_desc', ''); set('insu_precio', ''); set('insu_moneda', 'ARS');
+  set('insu_costo', ''); set('insu_costoMoneda', 'ARS');
+  set('insu_vigencia', hoyISO().slice(0, 7) + '-01');
+  _mostrarModalInsumo(true);
+}
+
+function guardarNuevoInsumo() {
+  const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  const desc = val('insu_desc');
+  if (!desc) { alert('La descripción es obligatoria.'); return false; }
+  if (val('insu_precio') === '' || isNaN(Number(val('insu_precio')))) { alert('El precio cobrado debe ser un número.'); return false; }
+  if (val('insu_costo') === '' || isNaN(Number(val('insu_costo')))) { alert('El costo real debe ser un número.'); return false; }
+  const v = crearPrestacion({
+    categoria: 'insumo', descripcion: desc,
+    precio: val('insu_precio'), moneda: val('insu_moneda') || 'ARS',
+    costo: val('insu_costo'), costoMoneda: val('insu_costoMoneda') || 'ARS',
+    vigenciaDesde: val('insu_vigencia') || (hoyISO().slice(0, 7) + '-01'),
+  });
+  cerrarModalInsumo();
+  if (typeof sincronizarUI === 'function') sincronizarUI(); else renderAdminInsumos();
+  return v;
+}
+
 function guardarCostoInsumoUI(grupo) {
   const costo = document.getElementById('costo_' + grupo).value;
   const moneda = document.getElementById('costoMon_' + grupo).value;
