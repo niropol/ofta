@@ -58,7 +58,7 @@ const EXPONER = [
   'pacienteFindOrCreate', 'pacienteLabel', 'medicoNombre',
   'registrarPrestacion', 'editarPrestacionRealizada', 'anularPrestacion',
   'reactivarPrestacion', 'eliminarPrestacionRealizada', 'listarPrestacionesRealizadas',
-  '_resolverInsumos', 'renderPrestaciones', 'abrirNuevaPrestacionRealizada', 'guardarPrestacionReg',
+  '_resolverInsumos', 'renderPrestaciones', 'irPaginaPrestaciones', 'abrirNuevaPrestacionRealizada', 'guardarPrestacionReg',
   'agregarInsumoReg', 'quitarInsumoReg',
   // liquidaciones
   'liquidacionDe', 'liquidacionCerradaDe', 'prestacionBloqueada', 'generarLiquidacion',

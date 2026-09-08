@@ -101,6 +101,9 @@
   .subtabs button { background: none; border: none; padding: 8px 14px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; font-size: 13px; }
   .subtabs button.active { color: var(--primario); border-bottom-color: var(--primario); font-weight: 600; }
   h4 { margin: 8px 0; font-size: 14px; }
+  .pager { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+  .pager button { background: #eef2f7; border: 1px solid var(--borde); border-radius: 6px; padding: 6px 12px; cursor: pointer; font-size: 13px; }
+  .pager button:disabled { opacity: .45; cursor: default; }
   .diag-ok { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; padding: 10px 12px; border-radius: 6px; margin-bottom: 10px; }
   .diag-err { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 10px 12px; border-radius: 6px; margin-bottom: 10px; }
 </style>
@@ -133,9 +136,9 @@
       <button class="btn" onclick="abrirNuevaPrestacionRealizada()">+ Cargar prestación</button>
     </div>
     <div class="filtros">
-      <label class="muted">Mes <input type="month" id="regFiltroMes" onchange="renderPrestaciones()"></label>
-      <select id="regFiltroMedico" onchange="renderPrestaciones()"></select>
-      <select id="regFiltroCat" onchange="renderPrestaciones()"></select>
+      <label class="muted">Mes <input type="month" id="regFiltroMes" onchange="irPaginaPrestaciones(0)"></label>
+      <select id="regFiltroMedico" onchange="irPaginaPrestaciones(0)"></select>
+      <select id="regFiltroCat" onchange="irPaginaPrestaciones(0)"></select>
     </div>
     <div class="tabla-wrap"><div id="prestacionesTabla"></div></div>
   </section>

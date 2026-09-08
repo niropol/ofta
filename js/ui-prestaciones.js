@@ -36,7 +36,11 @@ function _optsPrestacionesCat(categoria, fecha, sel) {
   }).join('');
 }
 
-// ── Render de la tabla ──
+// ── Render de la tabla (paginada) ──
+const PRESTACIONES_POR_PAGINA = 50;
+let _prestPagina = 0;
+function irPaginaPrestaciones(p) { _prestPagina = p; renderPrestaciones(); }
+
 function renderPrestaciones() {
   const cont = document.getElementById('prestacionesTabla');
   if (!cont) return;
@@ -48,7 +52,14 @@ function renderPrestaciones() {
     return;
   }
 
-  const rows = filas.map(r => {
+  // Paginación: acotar la página al rango válido y cortar las filas.
+  const totalPag = Math.max(1, Math.ceil(filas.length / PRESTACIONES_POR_PAGINA));
+  if (_prestPagina >= totalPag) _prestPagina = totalPag - 1;
+  if (_prestPagina < 0) _prestPagina = 0;
+  const desde = _prestPagina * PRESTACIONES_POR_PAGINA;
+  const pagina = filas.slice(desde, desde + PRESTACIONES_POR_PAGINA);
+
+  const rows = pagina.map(r => {
     const anulada = r.estado === 'anulada';
     const deriv = r.medicoDerivadorId ? medicoNombre(r.medicoDerivadorId) : '—';
     return `
@@ -71,6 +82,14 @@ function renderPrestaciones() {
     </tr>`;
   }).join('');
 
+  const hasta = Math.min(desde + PRESTACIONES_POR_PAGINA, filas.length);
+  const pager = totalPag > 1 ? `
+    <div class="pager">
+      <button ${_prestPagina === 0 ? 'disabled' : ''} onclick="irPaginaPrestaciones(${_prestPagina - 1})">‹ Anterior</button>
+      <span class="muted">${desde + 1}–${hasta} de ${filas.length} · página ${_prestPagina + 1}/${totalPag}</span>
+      <button ${_prestPagina >= totalPag - 1 ? 'disabled' : ''} onclick="irPaginaPrestaciones(${_prestPagina + 1})">Siguiente ›</button>
+    </div>` : `<p class="muted" style="margin-top:8px">${filas.length} prestación(es)</p>`;
+
   cont.innerHTML = `
     <table class="tabla">
       <thead><tr>
@@ -79,7 +98,7 @@ function renderPrestaciones() {
         <th class="num">Precio nomenclador</th><th>Acciones</th>
       </tr></thead>
       <tbody>${rows}</tbody>
-    </table>`;
+    </table>${pager}`;
 }
 
 // Poblar los selects de filtro, preservando la selección actual al refrescar.
