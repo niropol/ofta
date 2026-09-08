@@ -41,6 +41,7 @@ function _setIndicador(estado) {
 //    es la fuente y esto queda como caché offline. ──
 const LS_KEY = 'sam_db_v1';
 let _localTimer = null;
+let _uiTimer = null;
 
 function guardarLocal() {
   if (typeof localStorage === 'undefined') return;
@@ -75,6 +76,11 @@ function marcarCambios(coleccion) {
   // Respaldo local: funciona aún sin nube conectada.
   if (_localTimer) clearTimeout(_localTimer);
   _localTimer = setTimeout(() => { guardarLocal(); if (!sb) _setIndicador('guardado'); }, 400);
+  // Refresco global de la UI: que la info viaje entre todas las partes sin recargar.
+  if (typeof sincronizarUI === 'function') {
+    if (_uiTimer) clearTimeout(_uiTimer);
+    _uiTimer = setTimeout(() => { try { sincronizarUI(); } catch (e) {} }, 150);
+  }
   if (!autosaveActivo) return;
   if (autosaveTimer) clearTimeout(autosaveTimer);
   autosaveTimer = setTimeout(() => { guardarEnNube(true); }, 800);

@@ -148,6 +148,7 @@
       <button class="active" data-p="medicos" onclick="configTab('medicos')">Médicos</button>
       <button data-p="nomenclador" onclick="configTab('nomenclador')">Nomenclador</button>
       <button data-p="obras" onclick="configTab('obras')">Obras sociales</button>
+      <button data-p="sedes" onclick="configTab('sedes')">Sedes</button>
     </div>
 
     <div class="configpanel" data-p="medicos">
@@ -170,6 +171,13 @@
       <div class="section-head"><h3 style="margin:0">Obras sociales</h3>
         <button class="btn" onclick="abrirNuevaOS()">+ Nueva obra social</button></div>
       <div class="tabla-wrap"><div id="osTabla"></div></div>
+    </div>
+
+    <div class="configpanel" data-p="sedes" hidden>
+      <div class="section-head"><h3 style="margin:0">Sedes</h3>
+        <button class="btn" onclick="abrirNuevaSede()">+ Nueva sede</button></div>
+      <p class="muted" style="margin-top:0">Hoy hay una sola sede. Podés agregar más y elegir cuál es la activa por defecto.</p>
+      <div class="tabla-wrap"><div id="sedesTabla"></div></div>
     </div>
   </section>
 
@@ -228,6 +236,7 @@
 
     <div class="adminpanel" data-p="liquidaciones" hidden>
     <div class="section-head"><h3 style="margin:0">Liquidaciones a médicos</h3></div>
+    <p class="muted" style="margin-top:0">Elegí el mes → <strong>Generar</strong> arma el borrador con lo que le toca a cada médico (según los % de «Honorarios y precios») → <strong>Cerrar y pagar</strong> carga el egreso en la Caja y bloquea el período. Si dice «falta %», definí los porcentajes en la pestaña «Honorarios y precios».</p>
     <div class="filtros">
       <label class="muted">Mes <input type="month" id="liqMes" onchange="renderLiquidaciones()"></label>
       <label class="muted">Cotización USD→ARS <input type="number" id="liqCotiz" step="0.01" style="width:120px" placeholder="opcional" onchange="renderLiquidaciones()"></label>
@@ -394,7 +403,11 @@
       <div class="campo"><label>Categoría *</label><select id="reg_categoria" onchange="onCategoriaChangeReg()"></select></div>
     </div>
     <div class="campo"><label>Prestación (del nomenclador) *</label><select id="reg_prestacion"></select></div>
-    <div class="campo"><label>Médico realizador *</label><select id="reg_realizador"></select></div>
+    <div class="row2">
+      <div class="campo"><label>Médico realizador *</label><select id="reg_realizador"></select></div>
+      <div class="campo"><label>Obra social</label><select id="reg_os"></select></div>
+    </div>
+    <div class="campo"><label>Sede</label><select id="reg_sede"></select></div>
     <div id="reg_derivador_box" class="campo" style="display:none">
       <label>Médico derivador (cobra su % en paralelo)</label><select id="reg_derivador"></select>
     </div>
@@ -406,7 +419,6 @@
       </div>
       <div id="reg_insumos_lista"></div>
     </div>
-    <div class="campo"><label>Obra social / Particular</label><input id="reg_os" list="osList" placeholder="Particular"></div>
     <p class="muted" style="margin:14px 0 6px">Paciente</p>
     <div class="row2">
       <div class="campo"><label>Apellido</label><input id="reg_pac_apellido"></div>
@@ -419,7 +431,6 @@
     </div>
   </div>
 </div>
-<datalist id="osList"><option value="Particular"></datalist>
 
 <!-- ── Modal obra social ── -->
 <div id="modalOS" class="modal">
@@ -515,6 +526,22 @@
   </div>
 </div>
 
+<!-- ── Modal sede ── -->
+<div id="modalSede" class="modal">
+  <div class="modal-box">
+    <h3 id="modalSedeTitulo">Nueva sede</h3>
+    <input type="hidden" id="sede_id">
+    <div class="campo"><label>Nombre *</label><input id="sede_nombre"></div>
+    <div class="campo"><label>Estado</label>
+      <select id="sede_estado"><option value="Activa">Activa</option><option value="Inactiva">Inactiva</option></select>
+    </div>
+    <div class="modal-acciones">
+      <button class="btn secundario" onclick="cerrarModalSede()">Cancelar</button>
+      <button class="btn" onclick="guardarSede()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Modal usuario ── -->
 <div id="modalUsuario" class="modal">
   <div class="modal-box">
@@ -548,6 +575,7 @@
 <script src="js/ui-nomenclador.js?v=1"></script>
 <script src="js/ui-prestaciones.js?v=1"></script>
 <script src="js/ui-obras-sociales.js?v=1"></script>
+<script src="js/ui-sedes.js?v=1"></script>
 <script src="js/ui-admin.js?v=1"></script>
 <script src="js/ui-honorarios.js?v=1"></script>
 <script src="js/ui-caja.js?v=1"></script>
@@ -580,18 +608,23 @@ function configTab(p) {
 
 // ── init(): se llama tras cargar la nube (o en modo local). Renderiza todo. ──
 function init() {
-  renderMedicos();
   _poblarFiltroCategoria();
-  renderNomenclador();
-  _poblarFiltrosPrestaciones();
-  renderPrestaciones();
-  renderOS();
-  poblarDatalistOS();
-  renderAdmin();
-  renderCaja();
-  renderLiquidaciones();
-  renderEstadisticas();
+  sincronizarUI();
   renderUsuariosYAuditoria();
+}
+
+// ── sincronizarUI(): re-renderiza TODO para que la info viaje entre las partes.
+//    Se llama tras cualquier alta/edición/baja de datos maestros (médicos, OS,
+//    sedes, nomenclador…), así los desplegables y las vistas quedan al día sin
+//    tener que recargar la página. ──
+function sincronizarUI() {
+  const run = fns => fns.forEach(f => { try { if (typeof window[f] === 'function') window[f](); } catch (e) { console.error(f, e); } });
+  run([
+    '_poblarFiltrosPrestaciones', 'renderPrestaciones',
+    'renderMedicos', 'renderNomenclador', 'renderOS', 'renderSedes',
+    'renderAdmin', 'renderCaja', 'renderLiquidaciones', 'renderEstadisticas',
+    'poblarActuandoComo',
+  ]);
 }
 </script>
 </body>

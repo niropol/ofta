@@ -14,6 +14,17 @@ function _optsMedicos(sel, incluirVacio, labelVacio) {
   return vacio + meds.map(m => `<option value="${m.id}"${m.id === sel ? ' selected' : ''}>${escHtml(m.nombre)}</option>`).join('');
 }
 
+// Opciones de obra social: Particular + las OS activas.
+function _optsOS(sel) {
+  const nombres = ['Particular', ...getObrasSocialesActivas().map(o => o.nombre)];
+  return nombres.map(n => `<option value="${escHtml(n)}"${n === sel ? ' selected' : ''}>${escHtml(n)}</option>`).join('');
+}
+
+// Opciones de sede activas.
+function _optsSedes(sel) {
+  return getSedesActivas().map(s => `<option value="${s.id}"${s.id === sel ? ' selected' : ''}>${escHtml(s.nombre)}</option>`).join('');
+}
+
 // Opciones del nomenclador para una categoría, mostrando el precio vigente a `fecha`.
 function _optsPrestacionesCat(categoria, fecha, sel) {
   const items = listarPrestaciones({ categoria, incluirInactivos: false });
@@ -71,13 +82,21 @@ function renderPrestaciones() {
     </table>`;
 }
 
-// Poblar los selects de filtro (una sola vez / al refrescar médicos).
+// Poblar los selects de filtro, preservando la selección actual al refrescar.
 function _poblarFiltrosPrestaciones() {
   const cat = document.getElementById('regFiltroCat');
-  if (cat) cat.innerHTML = '<option value="">Todas las categorías</option>' +
-    CATEGORIAS_REALIZADAS.map(c => `<option value="${c.id}">${escHtml(c.label)}</option>`).join('');
+  if (cat) {
+    const prev = cat.value;
+    cat.innerHTML = '<option value="">Todas las categorías</option>' +
+      CATEGORIAS_REALIZADAS.map(c => `<option value="${c.id}">${escHtml(c.label)}</option>`).join('');
+    cat.value = prev;
+  }
   const med = document.getElementById('regFiltroMedico');
-  if (med) med.innerHTML = '<option value="">Todos los médicos</option>' + _optsMedicos(null, false);
+  if (med) {
+    const prev = med.value;
+    med.innerHTML = '<option value="">Todos los médicos</option>' + _optsMedicos(null, false);
+    med.value = prev;
+  }
 }
 
 // ── Modal alta / edición ──
@@ -155,7 +174,8 @@ function abrirNuevaPrestacionRealizada() {
   document.getElementById('reg_categoria').innerHTML = CATEGORIAS_REALIZADAS.map(c => `<option value="${c.id}">${escHtml(c.label)}</option>`).join('');
   document.getElementById('reg_realizador').innerHTML = _optsMedicos(null, true, 'Elegí el médico…');
   document.getElementById('reg_derivador').innerHTML = _optsMedicos(null, true, '— sin derivación —');
-  set('reg_os', 'Particular');
+  document.getElementById('reg_os').innerHTML = _optsOS('Particular');
+  document.getElementById('reg_sede').innerHTML = _optsSedes(sedeActiva());
   set('reg_pac_apellido', ''); set('reg_pac_nombre', ''); set('reg_pac_dni', '');
   onCategoriaChangeReg();
   _mostrarModalReg(true);
@@ -172,7 +192,8 @@ function editarPrestacionRealizadaUI(id) {
   document.getElementById('reg_categoria').innerHTML = CATEGORIAS_REALIZADAS.map(c => `<option value="${c.id}"${c.id === r.categoria ? ' selected' : ''}>${escHtml(c.label)}</option>`).join('');
   document.getElementById('reg_realizador').innerHTML = _optsMedicos(r.medicoRealizadorId, true, 'Elegí el médico…');
   document.getElementById('reg_derivador').innerHTML = _optsMedicos(r.medicoDerivadorId, true, '— sin derivación —');
-  set('reg_os', r.obraSocial);
+  document.getElementById('reg_os').innerHTML = _optsOS(r.obraSocial);
+  document.getElementById('reg_sede').innerHTML = _optsSedes(r.sedeId);
   // Paciente: prellenar desde la ficha vinculada.
   const pac = DB.pacientes.find(p => p.id === r.pacienteId);
   set('reg_pac_apellido', pac ? pac.apellido : ''); set('reg_pac_nombre', pac ? pac.nombre : ''); set('reg_pac_dni', pac ? pac.dni : '');
@@ -191,6 +212,7 @@ function guardarPrestacionReg() {
     medicoRealizadorId: val('reg_realizador'),
     medicoDerivadorId: val('reg_derivador') || null,
     obraSocial: val('reg_os') || 'Particular',
+    sedeId: Number(val('reg_sede')) || sedeActiva(),
     insumos: _regInsumos.map(i => i.grupo),
     paciente: { apellido: val('reg_pac_apellido'), nombre: val('reg_pac_nombre'), dni: val('reg_pac_dni') },
   };
