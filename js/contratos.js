@@ -76,16 +76,33 @@ function contratosDeOS(obraSocial) {
 }
 
 // ── Ingreso de SAM ──
-// SAM factura la prestación (valor de contrato) MÁS los insumos usados (su ingreso,
-// en pesos) y nos paga el porcentajeSAM% de todo. Particular no pasa por SAM.
+// SAM factura la prestación y nos paga el porcentajeSAM% (40%) de lo facturado.
+// Hay DOS motores de facturación según la categoría:
+//   • CIRUGÍA → valor de CONTRATO por obra social (cambia según la OS) + insumos.
+//     Si la OS no tiene contrato cargado, faltaContrato = true (no se puede facturar).
+//   • CONSULTA / ESTUDIO / PRÁCTICA → VALOR ÚNICO = precio del nomenclador (igual
+//     para todas las OS; snapshot pinneado a la fecha) + insumos si hubiera.
+// En ambos casos los insumos usados suman su ingreso (en pesos, lo factura SAM).
+// Particular no pasa por SAM (el paciente paga directo): ingreso 0.
 function ingresoSAMDePrestacion(reg) {
-  if (reg.obraSocial === 'Particular') return { ingreso: 0, facturado: 0, valorContrato: null, faltaContrato: false };
-  const vc = valorContrato(reg.obraSocial, reg.grupoNomenclador, reg.fecha);
   const insIngreso = (reg.insumos || []).reduce((s, i) => s + (Number(i.ingreso) || 0), 0);  // pesos
-  const facturado = (vc || 0) + insIngreso;
+  if (reg.obraSocial === 'Particular') {
+    return { ingreso: 0, facturado: 0, base: 0, valorContrato: null, insumos: insIngreso, faltaContrato: false, modo: 'particular' };
+  }
+  if (reg.categoria === 'cirugia') {
+    const vc = valorContrato(reg.obraSocial, reg.grupoNomenclador, reg.fecha);
+    const facturado = (vc || 0) + insIngreso;
+    return {
+      ingreso: Math.floor(facturado * porcentajeSAM() / 100),
+      facturado, base: vc || 0, valorContrato: vc, insumos: insIngreso, faltaContrato: vc == null, modo: 'contrato',
+    };
+  }
+  // consulta / estudio / práctica → valor único (precio del nomenclador, sin depender de la OS)
+  const base = Number(reg.precioNomenclador) || 0;
+  const facturado = base + insIngreso;
   return {
     ingreso: Math.floor(facturado * porcentajeSAM() / 100),
-    facturado, valorContrato: vc, insumos: insIngreso, faltaContrato: vc == null,
+    facturado, base, valorContrato: null, insumos: insIngreso, faltaContrato: false, modo: 'valor_unico',
   };
 }
 
@@ -139,19 +156,42 @@ function quitarCostoInsumos(mes) {
   return movs.length;
 }
 
+// Compara lo que SAM DEBERÍA pagarnos (40% de lo facturado) contra lo efectivamente
+// cobrado en caja para ese mes. diferencia = recibido − esperado (negativo = nos pagaron de menos).
+function comparacionCobroSAM(mes) {
+  const esperado = ingresoSAMDelMes(mes).ingreso;
+  const mov = DB.cajaMovimientos.find(m => m.origen === 'cobro_sam' && m.referenciaId === mes);
+  const recibido = mov ? mov.monto : null;
+  return {
+    mes, esperado, recibido, registrado: !!mov,
+    diferencia: mov ? mov.monto - esperado : null,
+  };
+}
+
 // Registra en caja el cobro de SAM del mes (ingreso por transferencia). Evita duplicar.
-function registrarCobroSAM(mes, fechaCobro) {
-  const desc = 'Cobro SAM ' + mes + ' (' + porcentajeSAM() + '% de contrato)';
+// montoRecibido: lo que SAM efectivamente transfirió (si se omite, usa el esperado).
+// Guarda esperado/diferencia en el movimiento para el control.
+function registrarCobroSAM(mes, fechaCobro, montoRecibido) {
   if (DB.cajaMovimientos.some(m => m.origen === 'cobro_sam' && m.referenciaId === mes)) {
     throw new Error('El cobro de SAM de ' + mes + ' ya está registrado en la caja.');
   }
   const r = ingresoSAMDelMes(mes);
-  if (!(r.ingreso > 0)) throw new Error('No hay ingreso de SAM para ' + mes + ' (cargá los contratos).');
-  return registrarMovimientoCaja({
+  const esperado = r.ingreso;
+  if (!(esperado > 0)) throw new Error('No hay ingreso de SAM para ' + mes + ' (cargá los contratos / valores).');
+  const recibido = (montoRecibido == null || montoRecibido === '') ? esperado : Number(montoRecibido);
+  if (isNaN(recibido) || recibido < 0) throw new Error('El monto recibido debe ser un número ≥ 0.');
+  const dif = recibido - esperado;
+  const desc = 'Cobro SAM ' + mes + ' (' + porcentajeSAM() + '% facturado)' +
+    (dif !== 0 ? ' · dif ' + (dif > 0 ? '+' : '') + dif : '');
+  const mov = registrarMovimientoCaja({
     fecha: fechaCobro || hoyISO(), tipo: 'ingreso', descripcion: desc,
-    monto: r.ingreso, moneda: 'ARS', medioPago: 'transferencia',
+    monto: recibido, moneda: 'ARS', medioPago: 'transferencia',
     origen: 'cobro_sam', referenciaId: mes,
   });
+  mov.esperado = esperado;
+  mov.diferencia = dif;
+  marcarCambios('cajaMovimientos');
+  return mov;
 }
 
 // Deshace el cobro de SAM de un mes (quita el ingreso de caja).

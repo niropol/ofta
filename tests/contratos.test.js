@@ -91,4 +91,61 @@ describe('Contratos e ingreso de SAM', () => {
     expect(app.quitarCobroSAM('2026-03')).toBe(1);
     expect(app.saldosCaja().ARS.transferencia).toBe(0);
   });
+
+  // ── Motor "valor único": consulta / estudio / práctica no dependen de la OS ──
+  it('consulta/estudio/práctica facturan el VALOR ÚNICO del nomenclador (sin contrato, igual para toda OS)', () => {
+    const cons = app.crearPrestacion({ categoria: 'consulta', descripcion: 'Consulta', precio: 20000, vigenciaDesde: '2026-01-01' });
+    // Misma consulta, dos OS distintas → mismo facturado, no hace falta contrato.
+    const rA = app.registrarPrestacion({ fecha: '2026-03-10', categoria: 'consulta', grupoNomenclador: cons.grupo, medicoRealizadorId: 501, obraSocial: 'OSDE' });
+    const rB = app.registrarPrestacion({ fecha: '2026-03-10', categoria: 'consulta', grupoNomenclador: cons.grupo, medicoRealizadorId: 501, obraSocial: 'IOMA' });
+    const iA = app.ingresoSAMDePrestacion(rA);
+    const iB = app.ingresoSAMDePrestacion(rB);
+    expect(iA.modo).toBe('valor_unico');
+    expect(iA.facturado).toBe(20000);
+    expect(iA.ingreso).toBe(8000);          // 40%
+    expect(iA.faltaContrato).toBe(false);   // valor único no exige contrato
+    expect(iB.ingreso).toBe(8000);          // otra OS, mismo valor
+  });
+
+  it('la práctica valor único suma el insumo a lo facturado', () => {
+    const prac = app.crearPrestacion({ categoria: 'practica', descripcion: 'Práctica', precio: 30000, vigenciaDesde: '2026-01-01' });
+    const ins = app.crearPrestacion({ categoria: 'insumo', descripcion: 'Descartable', precio: 10000, moneda: 'ARS', costo: 4000, costoMoneda: 'ARS', vigenciaDesde: '2026-01-01' });
+    const r = app.registrarPrestacion({ fecha: '2026-03-10', categoria: 'practica', grupoNomenclador: prac.grupo, medicoRealizadorId: 501, obraSocial: 'OSDE', insumos: [ins.grupo] });
+    const i = app.ingresoSAMDePrestacion(r);
+    expect(i.facturado).toBe(40000);        // 30.000 valor único + 10.000 insumo
+    expect(i.ingreso).toBe(16000);          // 40%
+  });
+
+  it('particular no factura por SAM (ingreso 0) aunque tenga valor de nomenclador', () => {
+    const cons = app.crearPrestacion({ categoria: 'consulta', descripcion: 'Consulta', precio: 20000, vigenciaDesde: '2026-01-01' });
+    const r = app.registrarPrestacion({ fecha: '2026-03-10', categoria: 'consulta', grupoNomenclador: cons.grupo, medicoRealizadorId: 501, obraSocial: 'Particular' });
+    expect(app.ingresoSAMDePrestacion(r).ingreso).toBe(0);
+  });
+
+  it('valor único NO cuenta como "sin contrato" en el resumen del mes', () => {
+    const cons = app.crearPrestacion({ categoria: 'consulta', descripcion: 'Consulta', precio: 20000, vigenciaDesde: '2026-01-01' });
+    app.registrarPrestacion({ fecha: '2026-03-01', categoria: 'consulta', grupoNomenclador: cons.grupo, medicoRealizadorId: 501, obraSocial: 'OSDE' });
+    const faco = nomFaco();
+    app.registrarPrestacion({ fecha: '2026-03-02', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 501, obraSocial: 'IOMA' }); // cirugía sin contrato
+    const r = app.ingresoSAMDelMes('2026-03');
+    expect(r.sinContrato).toBe(1);          // solo la cirugía, no la consulta
+    expect(r.ingreso).toBe(8000);           // 40% de la consulta (la cirugía sin contrato aporta 0)
+  });
+
+  // ── Control: comparar el 40% esperado contra lo que SAM efectivamente transfirió ──
+  it('registrarCobroSAM acepta el monto recibido y calcula la diferencia; comparacionCobroSAM la reporta', () => {
+    const faco = nomFaco();
+    app.setContrato('OSDE', faco.grupo, 1000000, '2026-01-01');
+    app.registrarPrestacion({ fecha: '2026-03-01', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 501, obraSocial: 'OSDE' });
+    // Esperado 400.000, pero SAM transfirió 380.000.
+    const mov = app.registrarCobroSAM('2026-03', '2026-03-31', 380000);
+    expect(mov.monto).toBe(380000);         // en caja entra lo que realmente cobramos
+    expect(mov.esperado).toBe(400000);
+    expect(mov.diferencia).toBe(-20000);    // nos pagaron de menos
+    const c = app.comparacionCobroSAM('2026-03');
+    expect(c.esperado).toBe(400000);
+    expect(c.recibido).toBe(380000);
+    expect(c.diferencia).toBe(-20000);
+    expect(c.registrado).toBe(true);
+  });
 });
