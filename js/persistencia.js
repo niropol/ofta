@@ -19,6 +19,7 @@ const SUPABASE_ANON = '';   // ← completar con la anon key de SAM
 
 const OBRAS_SOCIALES_BASE = JSON.parse(JSON.stringify(DB.obrasSociales || []));
 const SEDES_BASE          = JSON.parse(JSON.stringify(DB.sedes || []));
+const CONSULTORIOS_BASE   = JSON.parse(JSON.stringify(DB.consultorios || []));
 const USUARIOS_BASE       = JSON.parse(JSON.stringify(DB.usuarios || []));
 
 let sb = null;                 // cliente Supabase
@@ -63,6 +64,7 @@ function cargarLocal() {
     if (dump.config) DB.config = dump.config;
     if (dump.nextId) DB.nextId = dump.nextId;
     _asegurarBase('sedes', SEDES_BASE, 'nombre');
+    _asegurarBase('consultorios', CONSULTORIOS_BASE, 'nombre');
     _asegurarBase('usuarios', USUARIOS_BASE, 'email');
     _corregirNextId();
     return true;
@@ -113,6 +115,7 @@ async function cargarDesdeNube() {
 
     // Migraciones no destructivas: garantizar sede/usuario base sin pisar lo existente.
     _asegurarBase('sedes', SEDES_BASE, 'nombre');
+    _asegurarBase('consultorios', CONSULTORIOS_BASE, 'nombre');
     _asegurarBase('usuarios', USUARIOS_BASE, 'email');
 
     // config / nextId desde app_meta.

@@ -151,7 +151,8 @@
       <button data-p="nomenclador" onclick="configTab('nomenclador')">Nomenclador</button>
       <button data-p="obras" onclick="configTab('obras')">Obras sociales</button>
       <button data-p="pagos" onclick="configTab('pagos')">Pagos a médicos</button>
-      <button data-p="sedes" onclick="configTab('sedes')">Sedes</button>
+      <button data-p="sedes" onclick="configTab('sedes')">Sedes y consultorios</button>
+      <button data-p="horarios" onclick="configTab('horarios')">Horarios</button>
       <button data-p="estadisticas" onclick="configTab('estadisticas')">Estadísticas</button>
     </div>
 
@@ -196,6 +197,18 @@
         <button class="btn" onclick="abrirNuevaSede()">+ Nueva sede</button></div>
       <p class="muted" style="margin-top:0">Hoy hay una sola sede. Podés agregar más y elegir cuál es la activa por defecto.</p>
       <div class="tabla-wrap"><div id="sedesTabla"></div></div>
+
+      <div class="section-head" style="margin-top:26px"><h3 style="margin:0">Consultorios</h3>
+        <button class="btn" onclick="abrirNuevoConsultorio()">+ Nuevo consultorio</button></div>
+      <p class="muted" style="margin-top:0">Cada consultorio pertenece a una sede. En cada prestación se elige el consultorio.</p>
+      <div class="tabla-wrap"><div id="consultoriosTabla"></div></div>
+    </div>
+
+    <div class="configpanel" data-p="horarios" hidden>
+      <div class="section-head"><h3 style="margin:0">Horarios de los médicos</h3>
+        <button class="btn" onclick="abrirNuevoHorario()">+ Nuevo horario</button></div>
+      <p class="muted" style="margin-top:0">Agenda: qué médico atiende, qué día, en qué horario y consultorio.</p>
+      <div class="tabla-wrap"><div id="horariosTabla"></div></div>
     </div>
 
     <div class="configpanel" data-p="estadisticas" hidden>
@@ -410,26 +423,34 @@
     <h3 id="modalRegTitulo">Cargar prestación</h3>
     <input type="hidden" id="reg_id">
     <div class="row2">
-      <div class="campo"><label>Fecha *</label><input id="reg_fecha" type="date" onchange="onCategoriaChangeReg()"></div>
-      <div class="campo"><label>Categoría *</label><select id="reg_categoria" onchange="onCategoriaChangeReg()"></select></div>
+      <div class="campo"><label>Fecha (día) *</label><input id="reg_fecha" type="date" onchange="onCategoriaChangeReg()"></div>
+      <div class="campo"><label>Horario</label><input id="reg_hora" type="time"></div>
     </div>
-    <div class="campo"><label>Prestación (del nomenclador) *</label><select id="reg_prestacion"></select></div>
+    <div class="row2">
+      <div class="campo"><label>Categoría *</label><select id="reg_categoria" onchange="onCategoriaChangeReg()"></select></div>
+      <div class="campo"><label>Prestación *</label><select id="reg_prestacion"></select></div>
+    </div>
     <div class="row2">
       <div class="campo"><label>Médico realizador *</label><select id="reg_realizador"></select></div>
       <div class="campo"><label>Obra social</label><select id="reg_os"></select></div>
     </div>
-    <div class="campo"><label>Sede</label><select id="reg_sede"></select></div>
+    <div class="row2">
+      <div class="campo"><label>Sede</label><select id="reg_sede" onchange="onSedeChangeReg()"></select></div>
+      <div class="campo"><label>Consultorio</label><select id="reg_consultorio"></select></div>
+    </div>
     <div id="reg_derivador_box" class="campo" style="display:none">
-      <label>Médico derivador (cobra su % en paralelo)</label><select id="reg_derivador"></select>
+      <label>Médico derivador (cobra su valor fijo de derivación)</label><select id="reg_derivador"></select>
     </div>
     <div id="reg_insumos_box" class="ins-box" style="display:none">
-      <label class="muted">Insumos usados (precio y costo real para el neto)</label>
+      <label class="muted">Insumos usados (lente, sutura, válvula). El ingreso es opcional/editable.</label>
       <div class="ins-add">
         <select id="reg_insumo_sel"></select>
+        <input id="reg_insumo_ingreso" type="number" step="0.01" placeholder="Ingreso $ (opcional)" style="width:150px;padding:8px 10px;border:1px solid var(--borde);border-radius:6px">
         <button type="button" class="btn secundario" onclick="agregarInsumoReg()">Agregar</button>
       </div>
       <div id="reg_insumos_lista"></div>
     </div>
+    <div class="campo"><label>Extra al médico (opcional, ej. si paga el paciente)</label><input id="reg_extra" type="number" step="0.01" placeholder="0"></div>
     <p class="muted" style="margin:14px 0 6px">Paciente</p>
     <div class="row2">
       <div class="campo"><label>Apellido</label><input id="reg_pac_apellido"></div>
@@ -562,6 +583,45 @@
   </div>
 </div>
 
+<!-- ── Modal consultorio ── -->
+<div id="modalConsultorio" class="modal">
+  <div class="modal-box">
+    <h3 id="modalConsultorioTitulo">Nuevo consultorio</h3>
+    <input type="hidden" id="cons_id">
+    <div class="campo"><label>Nombre *</label><input id="cons_nombre" placeholder="Ej.: Consultorio 2"></div>
+    <div class="row2">
+      <div class="campo"><label>Sede</label><select id="cons_sede"></select></div>
+      <div class="campo"><label>Estado</label>
+        <select id="cons_estado"><option value="Activa">Activa</option><option value="Inactiva">Inactiva</option></select>
+      </div>
+    </div>
+    <div class="modal-acciones">
+      <button class="btn secundario" onclick="cerrarModalConsultorio()">Cancelar</button>
+      <button class="btn" onclick="guardarConsultorio()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal horario ── -->
+<div id="modalHorario" class="modal">
+  <div class="modal-box">
+    <h3>Nuevo horario</h3>
+    <div class="campo"><label>Médico *</label><select id="hor_medico"></select></div>
+    <div class="row2">
+      <div class="campo"><label>Día</label><select id="hor_dia"></select></div>
+      <div class="campo"><label>Consultorio</label><select id="hor_consultorio"></select></div>
+    </div>
+    <div class="row2">
+      <div class="campo"><label>Desde</label><input id="hor_desde" type="time"></div>
+      <div class="campo"><label>Hasta</label><input id="hor_hasta" type="time"></div>
+    </div>
+    <div class="modal-acciones">
+      <button class="btn secundario" onclick="cerrarModalHorario()">Cancelar</button>
+      <button class="btn" onclick="guardarHorario()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Modal sede ── -->
 <div id="modalSede" class="modal">
   <div class="modal-box">
@@ -613,6 +673,7 @@
 <script src="js/ui-prestaciones.js?v=1"></script>
 <script src="js/ui-obras-sociales.js?v=1"></script>
 <script src="js/ui-sedes.js?v=1"></script>
+<script src="js/ui-consultorios.js?v=1"></script>
 <script src="js/ui-contratos.js?v=1"></script>
 <script src="js/ui-admin.js?v=1"></script>
 <script src="js/ui-honorarios.js?v=1"></script>
@@ -665,9 +726,9 @@ function sincronizarUI() {
   const run = fns => fns.forEach(f => { try { if (typeof window[f] === 'function') window[f](); } catch (e) { console.error(f, e); } });
   run([
     '_poblarFiltrosPrestaciones', 'renderPrestaciones',
-    'renderMedicos', 'renderNomenclador', 'renderOS', 'renderSedes', 'renderContratos',
-    'renderValoresMedico', 'renderAdmin', 'renderCaja', 'renderLiquidaciones', 'renderEstadisticas',
-    'poblarActuandoComo',
+    'renderMedicos', 'renderNomenclador', 'renderOS', 'renderSedes', 'renderConsultorios',
+    'renderHorarios', 'renderContratos', 'renderValoresMedico', 'renderAdmin', 'renderCaja',
+    'renderLiquidaciones', 'renderEstadisticas', 'poblarActuandoComo',
   ]);
 }
 </script>

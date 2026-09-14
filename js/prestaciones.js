@@ -52,19 +52,25 @@ function medicoNombre(id) { const m = DB.medicos.find(x => x.id === Number(id));
 // Resuelve los insumos usados (grupos del nomenclador) a snapshots con precio y
 // costo vigentes a la fecha. El neto (precio − costo) se calcula en Etapa 4/6
 // (puede requerir cotización si precio y costo están en monedas distintas).
-function _resolverInsumos(grupos, fecha, permite) {
-  if (!permite || !Array.isArray(grupos) || grupos.length === 0) return [];
-  return grupos.map(g => {
+//  Cada item puede ser un grupo (número) o {grupo, ingreso, ingresoMoneda}.
+//  El COSTO sale del catálogo (lo que nos cuesta); el INGRESO es customizable por
+//  prestación (a veces se cobra, a veces no) y por defecto toma el precio del catálogo.
+function _resolverInsumos(items, fecha, permite) {
+  if (!permite || !Array.isArray(items) || items.length === 0) return [];
+  return items.map(it => {
+    const g = (it && typeof it === 'object') ? it.grupo : it;
     const item = versionActual(Number(g));
     if (!item || item.categoria !== 'insumo') throw new Error('Insumo inválido.');
     const ver = precioVigente(item.grupo, fecha);
     if (!ver) throw new Error('No hay precio vigente para el insumo "' + item.descripcion + '" en la fecha ' + fecha + '.');
+    const tieneIngreso = (it && typeof it === 'object' && it.ingreso != null && it.ingreso !== '');
     return {
       grupo: item.grupo,
       nomencladorId: ver.id,
       descripcion: ver.descripcion,
-      precio: ver.precio, moneda: ver.moneda,
       costo: ver.costo != null ? ver.costo : 0, costoMoneda: ver.costoMoneda || 'ARS',
+      ingreso: tieneIngreso ? (Number(it.ingreso) || 0) : (ver.precio || 0),
+      ingresoMoneda: (it && typeof it === 'object' && it.ingresoMoneda) ? it.ingresoMoneda : (ver.moneda || 'ARS'),
     };
   });
 }
@@ -98,7 +104,9 @@ function registrarPrestacion(datos) {
   const reg = {
     id: nuevoId(),
     fecha: datos.fecha,
+    hora: datos.hora || '',
     sedeId: datos.sedeId || sedeActiva(),
+    consultorioId: datos.consultorioId != null ? Number(datos.consultorioId) : ((getConsultoriosDeSede(datos.sedeId || sedeActiva())[0] || {}).id || null),
     categoria: datos.categoria,
     grupoNomenclador: item.grupo,
     nomencladorId: version.id,           // versión concreta usada (precio pinneado)
@@ -134,14 +142,16 @@ function editarPrestacionRealizada(id, datos) {
 
   const nueva = registrarPrestacion({
     fecha: datos.fecha ?? reg.fecha,
+    hora: datos.hora ?? reg.hora,
     sedeId: datos.sedeId ?? reg.sedeId,
+    consultorioId: datos.consultorioId ?? reg.consultorioId,
     categoria: datos.categoria ?? reg.categoria,
     grupoNomenclador: datos.grupoNomenclador ?? reg.grupoNomenclador,
     medicoRealizadorId: datos.medicoRealizadorId ?? reg.medicoRealizadorId,
     medicoDerivadorId: datos.medicoDerivadorId !== undefined ? datos.medicoDerivadorId : reg.medicoDerivadorId,
     obraSocial: datos.obraSocial ?? reg.obraSocial,
     extraMedico: datos.extraMedico !== undefined ? datos.extraMedico : reg.extraMedico,
-    insumos: datos.insumos !== undefined ? datos.insumos : (reg.insumos || []).map(i => i.grupo),
+    insumos: datos.insumos !== undefined ? datos.insumos : (reg.insumos || []).map(i => ({ grupo: i.grupo, ingreso: i.ingreso, ingresoMoneda: i.ingresoMoneda })),
     paciente: datos.paciente ?? { nombre: '', apellido: '', dni: '' },
   });
   // registrarPrestacion agregó uno nuevo: lo fusionamos sobre el existente y quitamos el temporal.

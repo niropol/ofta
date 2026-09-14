@@ -121,7 +121,9 @@ const DB = {
   valoresMedico: [],
 
   // ── Consultorios (dentro de una sede). Hoy uno; después más. ──
-  consultorios: [],
+  consultorios: [
+    { id: 1, sedeId: 1, nombre: 'Consultorio 1', estado: 'Activa' },
+  ],
 
   // ── Horarios / agenda de médicos: { id, medicoId, consultorioId, dia, horaDesde, horaHasta }. ──
   horarios: [],
@@ -173,6 +175,8 @@ function usuarioActual() {
 }
 function getSedesActivas() { return DB.sedes.filter(s => s.estado === 'Activa'); }
 function getMedicosActivos() { return DB.medicos.filter(m => m.estado !== 'Inactivo'); }
+function getConsultoriosActivos() { return DB.consultorios.filter(c => c.estado !== 'Inactiva'); }
+function getConsultoriosDeSede(sedeId) { return getConsultoriosActivos().filter(c => c.sedeId === Number(sedeId)); }
 
 // Escapa texto para insertarlo en HTML (anti-XSS; mismo criterio que OIP).
 function escHtml(s) {

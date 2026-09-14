@@ -156,7 +156,7 @@ function _poblarSelectInsumos(fecha) {
   }).join('');
 }
 
-// Agregar el insumo elegido a la lista (snapshot a la fecha del formulario).
+// Agregar el insumo elegido a la lista (con ingreso opcional; costo del catálogo).
 function agregarInsumoReg() {
   const g = document.getElementById('reg_insumo_sel').value;
   if (!g) return;
@@ -164,8 +164,11 @@ function agregarInsumoReg() {
   const item = versionActual(Number(g));
   const ver = item ? precioVigente(item.grupo, fecha) : null;
   if (!ver) { alert('Ese insumo no tiene precio vigente a la fecha.'); return; }
-  _regInsumos.push({ grupo: item.grupo, descripcion: ver.descripcion, precio: ver.precio, moneda: ver.moneda, costo: ver.costo != null ? ver.costo : 0, costoMoneda: ver.costoMoneda || 'ARS' });
+  const ingEl = document.getElementById('reg_insumo_ingreso');
+  const ing = ingEl && ingEl.value !== '' ? Number(ingEl.value) : (ver.precio || 0);
+  _regInsumos.push({ grupo: item.grupo, descripcion: ver.descripcion, costo: ver.costo != null ? ver.costo : 0, costoMoneda: ver.costoMoneda || 'ARS', ingreso: ing, ingresoMoneda: ver.moneda || 'ARS' });
   document.getElementById('reg_insumo_sel').value = '';
+  if (ingEl) ingEl.value = '';
   _renderInsumosReg();
 }
 
@@ -175,26 +178,37 @@ function _renderInsumosReg() {
   const cont = document.getElementById('reg_insumos_lista');
   if (!cont) return;
   if (_regInsumos.length === 0) { cont.innerHTML = '<p class="muted">Sin insumos.</p>'; return; }
-  cont.innerHTML = _regInsumos.map((ins, i) => {
-    const neto = ins.moneda === ins.costoMoneda ? '  ·  neto ' + fmtMoneda(ins.precio - ins.costo, ins.moneda) : '  ·  neto a convertir en liquidación';
-    return `<div class="ins-item">
-      <span>${escHtml(ins.descripcion)} — ${fmtMoneda(ins.precio, ins.moneda)} <span class="muted">(costo ${fmtMoneda(ins.costo, ins.costoMoneda)}${neto})</span></span>
+  cont.innerHTML = _regInsumos.map((ins, i) => `
+    <div class="ins-item">
+      <span>${escHtml(ins.descripcion)} — ingreso ${fmtMoneda(ins.ingreso, ins.ingresoMoneda)} <span class="muted">(costo ${fmtMoneda(ins.costo, ins.costoMoneda)})</span></span>
       <button onclick="quitarInsumoReg(${i})">Quitar</button>
-    </div>`;
-  }).join('');
+    </div>`).join('');
+}
+
+// Opciones de consultorios de la sede elegida en el formulario.
+function _optsConsultorios(sedeId, sel) {
+  const cs = getConsultoriosDeSede(sedeId);
+  if (cs.length === 0) return '<option value="">(sin consultorios en la sede)</option>';
+  return cs.map(c => `<option value="${c.id}"${c.id === sel ? ' selected' : ''}>${escHtml(c.nombre)}</option>`).join('');
+}
+function onSedeChangeReg() {
+  const sede = document.getElementById('reg_sede').value;
+  const el = document.getElementById('reg_consultorio');
+  if (el) el.innerHTML = _optsConsultorios(Number(sede));
 }
 
 function abrirNuevaPrestacionRealizada() {
   document.getElementById('modalRegTitulo').textContent = 'Cargar prestación';
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v == null ? '' : v; };
   set('reg_id', '');
-  set('reg_fecha', hoyISO());
+  set('reg_fecha', hoyISO()); set('reg_hora', ''); set('reg_extra', '');
   _regInsumos = [];
   document.getElementById('reg_categoria').innerHTML = CATEGORIAS_REALIZADAS.map(c => `<option value="${c.id}">${escHtml(c.label)}</option>`).join('');
   document.getElementById('reg_realizador').innerHTML = _optsMedicos(null, true, 'Elegí el médico…');
   document.getElementById('reg_derivador').innerHTML = _optsMedicos(null, true, '— sin derivación —');
   document.getElementById('reg_os').innerHTML = _optsOS('Particular');
   document.getElementById('reg_sede').innerHTML = _optsSedes(sedeActiva());
+  document.getElementById('reg_consultorio').innerHTML = _optsConsultorios(sedeActiva());
   set('reg_pac_apellido', ''); set('reg_pac_nombre', ''); set('reg_pac_dni', '');
   onCategoriaChangeReg();
   _mostrarModalReg(true);
@@ -206,13 +220,14 @@ function editarPrestacionRealizadaUI(id) {
   document.getElementById('modalRegTitulo').textContent = 'Editar prestación';
   const set = (idf, v) => { const el = document.getElementById(idf); if (el) el.value = v == null ? '' : v; };
   set('reg_id', r.id);
-  set('reg_fecha', r.fecha);
+  set('reg_fecha', r.fecha); set('reg_hora', r.hora || ''); set('reg_extra', r.extraMedico || '');
   _regInsumos = (r.insumos || []).map(i => ({ ...i }));
   document.getElementById('reg_categoria').innerHTML = CATEGORIAS_REALIZADAS.map(c => `<option value="${c.id}"${c.id === r.categoria ? ' selected' : ''}>${escHtml(c.label)}</option>`).join('');
   document.getElementById('reg_realizador').innerHTML = _optsMedicos(r.medicoRealizadorId, true, 'Elegí el médico…');
   document.getElementById('reg_derivador').innerHTML = _optsMedicos(r.medicoDerivadorId, true, '— sin derivación —');
   document.getElementById('reg_os').innerHTML = _optsOS(r.obraSocial);
   document.getElementById('reg_sede').innerHTML = _optsSedes(r.sedeId);
+  document.getElementById('reg_consultorio').innerHTML = _optsConsultorios(r.sedeId, r.consultorioId);
   // Paciente: prellenar desde la ficha vinculada.
   const pac = DB.pacientes.find(p => p.id === r.pacienteId);
   set('reg_pac_apellido', pac ? pac.apellido : ''); set('reg_pac_nombre', pac ? pac.nombre : ''); set('reg_pac_dni', pac ? pac.dni : '');
@@ -226,13 +241,16 @@ function guardarPrestacionReg() {
   const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
   const datos = {
     fecha: val('reg_fecha'),
+    hora: val('reg_hora'),
     categoria: val('reg_categoria'),
     grupoNomenclador: val('reg_prestacion'),
     medicoRealizadorId: val('reg_realizador'),
     medicoDerivadorId: val('reg_derivador') || null,
     obraSocial: val('reg_os') || 'Particular',
     sedeId: Number(val('reg_sede')) || sedeActiva(),
-    insumos: _regInsumos.map(i => i.grupo),
+    consultorioId: val('reg_consultorio') || null,
+    extraMedico: val('reg_extra') || 0,
+    insumos: _regInsumos.map(i => ({ grupo: i.grupo, ingreso: i.ingreso, ingresoMoneda: i.ingresoMoneda })),
     paciente: { apellido: val('reg_pac_apellido'), nombre: val('reg_pac_nombre'), dni: val('reg_pac_dni') },
   };
   const idEdit = val('reg_id');

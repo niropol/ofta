@@ -33,6 +33,11 @@ const EXPONER = [
   'abrirCierreCaja', 'guardarCierreCaja',
   // helpers de dominio
   'nuevoId', 'usuarioActual', 'sedeActiva', 'getSedesActivas', 'getMedicosActivos', 'escHtml',
+  'getConsultoriosActivos', 'getConsultoriosDeSede',
+  // consultorios y horarios
+  'DIAS_SEMANA', 'renderConsultorios', 'abrirNuevoConsultorio', 'guardarConsultorio',
+  'toggleEstadoConsultorio', 'eliminarConsultorio', '_referenciasConsultorio',
+  'renderHorarios', 'abrirNuevoHorario', 'guardarHorario', 'eliminarHorario',
   // auditoría
   'registrarAuditoria', 'auditoriaDe',
   // persistencia

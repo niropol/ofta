@@ -74,8 +74,8 @@ describe('Prestaciones realizadas', () => {
     const ins = app.crearPrestacion({ categoria: 'insumo', descripcion: 'Lente monofocal', precio: 900000, moneda: 'ARS', costo: 300, costoMoneda: 'USD', vigenciaDesde: '2026-01-01' });
     const r = app.registrarPrestacion({ fecha: '2026-03-10', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 501, insumos: [ins.grupo] });
     expect(r.insumos.length).toBe(1);
-    expect(r.insumos[0].precio).toBe(900000);
-    expect(r.insumos[0].moneda).toBe('ARS');
+    expect(r.insumos[0].ingreso).toBe(900000); // ingreso por defecto = precio del catálogo
+    expect(r.insumos[0].ingresoMoneda).toBe('ARS');
     expect(r.insumos[0].costo).toBe(300);
     expect(r.insumos[0].costoMoneda).toBe('USD');
     // Realización de estudio no admite insumos → se ignoran.
@@ -89,7 +89,7 @@ describe('Prestaciones realizadas', () => {
     const ins = app.crearPrestacion({ categoria: 'insumo', descripcion: 'Lente', precio: 900000, moneda: 'ARS', costo: 300000, costoMoneda: 'ARS', vigenciaDesde: '2026-01-01' });
     app.versionarPrecio(ins.grupo, { vigenciaDesde: '2026-06-01', precio: 1100000, costo: 350000 });
     const r = app.registrarPrestacion({ fecha: '2026-03-10', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 501, insumos: [ins.grupo] });
-    expect(r.insumos[0].precio).toBe(900000);
+    expect(r.insumos[0].ingreso).toBe(900000);
     expect(r.insumos[0].costo).toBe(300000);
   });
 
