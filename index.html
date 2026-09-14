@@ -203,9 +203,22 @@
     <div class="section-head"><h2>Admin <span class="muted" style="font-size:13px">· acceso restringido</span></h2></div>
     <div class="subtabs" id="adminTabs">
       <button class="active" data-p="caja" onclick="adminTab('caja')">Caja</button>
+      <button data-p="contratos" onclick="adminTab('contratos')">Contratos</button>
       <button data-p="liquidaciones" onclick="adminTab('liquidaciones')">Liquidaciones</button>
       <button data-p="honorarios" onclick="adminTab('honorarios')">Honorarios y precios</button>
       <button data-p="seguridad" onclick="adminTab('seguridad')">Seguridad</button>
+    </div>
+
+    <div class="adminpanel" data-p="contratos" hidden>
+      <div class="section-head"><h3 style="margin:0">Contratos (ingreso)</h3></div>
+      <p class="muted" style="margin-top:0">Valor real que SAM factura por cada prestación según la obra social. SAM te paga un % de eso (config: 40%).</p>
+      <div class="filtros">
+        <label class="muted">Obra social <select id="ctrOS" onchange="renderContratosTabla()"></select></label>
+      </div>
+      <div class="tabla-wrap"><div id="contratosTabla"></div></div>
+      <h4 style="margin-top:24px">Cobro de SAM del mes</h4>
+      <div class="filtros"><label class="muted">Mes <input type="month" id="ctrMes" onchange="renderCobroSAM()"></label></div>
+      <div id="cobroSAM"></div>
     </div>
 
     <div class="adminpanel" data-p="caja">
@@ -594,6 +607,7 @@
 <script src="js/auditoria.js?v=1"></script>
 <script src="js/usuarios.js?v=1"></script>
 <script src="js/nomenclador.js?v=1"></script>
+<script src="js/contratos.js?v=1"></script>
 <script src="js/prestaciones.js?v=1"></script>
 <script src="js/honorarios.js?v=1"></script>
 <script src="js/caja.js?v=1"></script>
@@ -604,6 +618,7 @@
 <script src="js/ui-prestaciones.js?v=1"></script>
 <script src="js/ui-obras-sociales.js?v=1"></script>
 <script src="js/ui-sedes.js?v=1"></script>
+<script src="js/ui-contratos.js?v=1"></script>
 <script src="js/ui-admin.js?v=1"></script>
 <script src="js/ui-honorarios.js?v=1"></script>
 <script src="js/ui-caja.js?v=1"></script>
@@ -639,7 +654,7 @@ function init() {
   _poblarFiltroCategoria();
   // Por defecto, filtrar por el mes actual (con muchos datos, evita listas enormes).
   const mesActual = new Date().toISOString().slice(0, 7);
-  ['regFiltroMes', 'statMes', 'liqMes', 'prevMes'].forEach(id => {
+  ['regFiltroMes', 'statMes', 'liqMes', 'prevMes', 'ctrMes'].forEach(id => {
     const el = document.getElementById(id);
     if (el && !el.value) el.value = mesActual;
   });
@@ -655,7 +670,7 @@ function sincronizarUI() {
   const run = fns => fns.forEach(f => { try { if (typeof window[f] === 'function') window[f](); } catch (e) { console.error(f, e); } });
   run([
     '_poblarFiltrosPrestaciones', 'renderPrestaciones',
-    'renderMedicos', 'renderNomenclador', 'renderOS', 'renderSedes',
+    'renderMedicos', 'renderNomenclador', 'renderOS', 'renderSedes', 'renderContratos',
     'renderAdmin', 'renderCaja', 'renderLiquidaciones', 'renderEstadisticas',
     'poblarActuandoComo',
   ]);

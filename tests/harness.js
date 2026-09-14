@@ -75,6 +75,10 @@ const EXPONER = [
   // sedes (ABM)
   'renderSedes', 'abrirNuevaSede', 'editarSede', 'guardarSede', 'toggleEstadoSede',
   'eliminarSede', '_referenciasSede', 'marcarSedeActiva',
+  // contratos (ingreso)
+  'porcentajeSAM', 'valorContrato', 'setContrato', 'eliminarContrato', 'contratosDeOS',
+  'ingresoSAMDePrestacion', 'ingresoSAMDelMes', 'registrarCobroSAM', 'quitarCobroSAM',
+  'renderContratos', 'guardarValorContratoUI', 'registrarCobroSAMUI',
   // diagnóstico (Etapa 9)
   'runSelfTests', 'diagnosticoDatos', 'estadoNube', 'verificarNube',
   // navegación
@@ -115,7 +119,8 @@ export function resetDatos(app) {
   const D = app.DB;
   ['medicos', 'obrasSociales', 'pacientes', 'nomenclador', 'reglasReparto',
    'prestacionesRealizadas', 'cobros', 'gastos', 'pagosMedicos', 'cajaMovimientos',
-   'cajaCierres', 'auditoria'].forEach(c => { D[c] = []; });
+   'cajaCierres', 'contratos', 'valoresMedico', 'consultorios', 'horarios',
+   'auditoria'].forEach(c => { D[c] = []; });
   return D;
 }
 

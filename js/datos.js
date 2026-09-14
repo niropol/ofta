@@ -65,6 +65,7 @@ const DB = {
     empresa: 'SAM Oftalmología',
     sedeActiva: 1,
     usuarioActualId: null,   // "actuando como" (simula el login hasta la Etapa 10)
+    porcentajeSAM: 40,       // % que SAM le paga a SAM Oftalmo sobre el valor de contrato
   },
 
   // ── Usuarios del sistema (secretarias + admin). Sin login todavía (Etapa 10),
@@ -101,6 +102,21 @@ const DB = {
   //    estado: 'activa' | 'anulada' (+ motivoAnulacion).
   prestacionesRealizadas: [],
 
+  // ── Contratos (INGRESO): valor real por obra social + prestación, con vigencia.
+  //    SAM factura ese valor y paga a SAM Oftalmo el % de config.porcentajeSAM (40).
+  //    { id, obraSocial, grupoNomenclador, descripcion, valor, vigenciaDesde, vigenciaHasta, estado } ──
+  contratos: [],
+
+  // ── Valores fijos a médicos (EGRESO): monto fijo por categoría (consulta/estudio/
+  //    cirugia/practica/derivacion), general (medicoId=null) o por médico, con vigencia. ──
+  valoresMedico: [],
+
+  // ── Consultorios (dentro de una sede). Hoy uno; después más. ──
+  consultorios: [],
+
+  // ── Horarios / agenda de médicos: { id, medicoId, consultorioId, dia, horaDesde, horaHasta }. ──
+  horarios: [],
+
   // ── Cobros (ingresos): lo efectivamente pagado por SAM, sin fórmula (Etapa 5). ──
   cobros: [],
 
@@ -129,9 +145,9 @@ const DB = {
 
 // Colecciones que se persisten a la nube (ver persistencia.js). config/nextId van aparte.
 const COLECCIONES = [
-  'usuarios', 'sedes', 'medicos', 'obrasSociales', 'pacientes', 'nomenclador',
-  'reglasReparto', 'prestacionesRealizadas', 'cobros', 'gastos', 'pagosMedicos',
-  'cajaMovimientos', 'cajaCierres', 'auditoria',
+  'usuarios', 'sedes', 'consultorios', 'medicos', 'obrasSociales', 'pacientes', 'nomenclador',
+  'contratos', 'valoresMedico', 'reglasReparto', 'horarios', 'prestacionesRealizadas',
+  'cobros', 'gastos', 'pagosMedicos', 'cajaMovimientos', 'cajaCierres', 'auditoria',
 ];
 
 // Genera el próximo id global y lo consume.
