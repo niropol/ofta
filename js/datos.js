@@ -49,6 +49,15 @@ const CATEGORIAS_NOMENCLADOR = CATEGORIAS.filter(c => c.nomenclador);
 const CATEGORIAS_REALIZADAS = CATEGORIAS.filter(c => c.tipo === 'realizada');
 // Categorías que necesitan una regla de reparto (%). La consulta es 100% fijo, no lleva regla.
 const CATEGORIAS_REGLA = CATEGORIAS.filter(c => c.porcentajeFijo == null);
+// Modelo nuevo: el médico cobra un VALOR FIJO por tipo (no un %). La derivación es
+// un valor fijo aparte que cobra el médico derivador.
+const CATEGORIAS_VALOR_MEDICO = [
+  { id: 'consulta',            label: 'Consulta' },
+  { id: 'cirugia',             label: 'Cirugía' },
+  { id: 'practica',            label: 'Práctica' },
+  { id: 'realizacion_estudio', label: 'Realización de estudio' },
+  { id: 'derivacion',          label: 'Derivación (al derivador)' },
+];
 function categoriaInfo(id) { return CATEGORIAS.find(c => c.id === id) || null; }
 function derivaCategoriaDe(id) { const c = categoriaInfo(id); return c ? c.derivaCategoria : null; }
 

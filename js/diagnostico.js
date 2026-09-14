@@ -8,7 +8,7 @@
 //   liquidaciones ↔ caja, honorarios sin % faltante, nextId sano). No muta nada.
 // ═══════════════════════════════════════════════════════════════════════════
 
-const _DIAG_COLS = ['medicos', 'obrasSociales', 'pacientes', 'nomenclador', 'reglasReparto',
+const _DIAG_COLS = ['medicos', 'obrasSociales', 'pacientes', 'nomenclador', 'contratos', 'valoresMedico',
   'prestacionesRealizadas', 'pagosMedicos', 'cajaMovimientos', 'cajaCierres', 'auditoria'];
 
 function runSelfTests() {
@@ -22,47 +22,45 @@ function runSelfTests() {
 
   try {
     _DIAG_COLS.forEach(c => { DB[c] = []; });
+    DB.contratos = []; DB.valoresMedico = [];
     DB.medicos.push({ id: 90001, nombre: 'Test Realizador', estado: 'Activo', sedeId: 1 });
     DB.medicos.push({ id: 90002, nombre: 'Test Derivador', estado: 'Activo', sedeId: 1 });
-    setReglaReparto('cirugia', null, 40, '2026-01-01');
-    setReglaReparto('derivacion_cirugia', null, 10, '2026-01-01');
-    setReglaReparto('insumo', null, 20, '2026-01-01');
-    setReglaReparto('sam_insumo', null, 50, '2026-01-01');
+    // Valores fijos a médicos.
+    setValorMedico('consulta', null, 8000, '2026-01-01');
+    setValorMedico('cirugia', null, 120000, '2026-01-01');
+    setValorMedico('derivacion', null, 20000, '2026-01-01');
+    setValorMedico('cirugia', 90001, 150000, '2026-01-01'); // override por médico
 
-    const consulta = crearPrestacion({ categoria: 'consulta', descripcion: 'Consulta', precio: 11000, vigenciaDesde: '2026-01-01' });
-    const faco = crearPrestacion({ categoria: 'cirugia', descripcion: 'Faco', precio: 500000, vigenciaDesde: '2026-01-01' });
-    const ins = crearPrestacion({ categoria: 'insumo', descripcion: 'Lente', precio: 900000, moneda: 'ARS', vigenciaDesde: '2026-01-01' });
-    setCostoInsumo(ins.grupo, 300000, 'ARS');
+    const consulta = crearPrestacion({ categoria: 'consulta', descripcion: 'Consulta', vigenciaDesde: '2026-01-01' });
+    const faco = crearPrestacion({ categoria: 'cirugia', descripcion: 'Faco', vigenciaDesde: '2026-01-01' });
 
     const rc = registrarPrestacion({ fecha: '2026-03-01', categoria: 'consulta', grupoNomenclador: consulta.grupo, medicoRealizadorId: 90001 });
-    check('Consulta = 100% del valor', honorariosDePrestacion(rc).realizador.monto, 11000);
+    check('Consulta = valor fijo', honorariosDePrestacion(rc).realizador.monto, 8000);
 
-    const rf = registrarPrestacion({ fecha: '2026-03-02', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 90001, medicoDerivadorId: 90002, insumos: [ins.grupo] });
+    const rf = registrarPrestacion({ fecha: '2026-03-02', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 90001, medicoDerivadorId: 90002 });
     const h = honorariosDePrestacion(rf);
-    check('Cirugía 40% + insumo 20% del neto', h.realizador.monto, 320000);
-    check('Derivador 10% en paralelo', h.derivador.monto, 50000);
-    check('Comisión SAM = 50% de (neto − médico)', h.sam.monto, 240000);
-    check('SAM Oftalmo = sobrante', h.clinica.monto, 240000);
+    check('Cirugía = override del médico (150000)', h.realizador.monto, 150000);
+    check('Derivador = valor fijo de derivación', h.derivador.monto, 20000);
 
-    const faco2 = crearPrestacion({ categoria: 'cirugia', descripcion: 'Faco2', precio: 10001, vigenciaDesde: '2026-01-01' });
-    const rr = registrarPrestacion({ fecha: '2026-03-03', categoria: 'cirugia', grupoNomenclador: faco2.grupo, medicoRealizadorId: 90001 });
-    check('Redondeo hacia abajo (4000,4 → 4000)', honorariosDePrestacion(rr).realizador.monto, 4000);
+    const rGen = registrarPrestacion({ fecha: '2026-03-03', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 90002 });
+    check('Cirugía sin override = valor general (120000)', honorariosDePrestacion(rGen).realizador.monto, 120000);
 
-    const insU = crearPrestacion({ categoria: 'insumo', descripcion: 'LenteUSD', precio: 400, moneda: 'USD', vigenciaDesde: '2026-01-01' });
-    setCostoInsumo(insU.grupo, 100, 'USD');
-    const ru = registrarPrestacion({ fecha: '2026-03-04', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 90001, insumos: [insU.grupo] });
-    check('USD sin cotización → marca requiere', honorariosDePrestacion(ru).realizador.requiereCotizacion, true);
-    check('USD con cotización 1000 → convierte', honorariosDePrestacion(ru, 1000).realizador.monto, 260000);
+    const rExtra = registrarPrestacion({ fecha: '2026-03-04', categoria: 'consulta', grupoNomenclador: consulta.grupo, medicoRealizadorId: 90001, extraMedico: 5000 });
+    check('Extra al médico se suma (8000 + 5000)', honorariosDePrestacion(rExtra).realizador.monto, 13000);
 
-    const rVieja = registrarPrestacion({ fecha: '2026-03-05', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 90001 });
-    setReglaReparto('cirugia', null, 60, '2026-06-01');
-    check('% de la fecha (aumento futuro no recalcula)', honorariosDePrestacion(rVieja).realizador.monto, 200000);
+    setValorMedico('cirugia', null, 200000, '2026-06-01');
+    check('Valor de la fecha (cambio futuro no recalcula)', honorariosDePrestacion(rGen).realizador.monto, 120000);
+
+    // Ingreso de SAM (40% del contrato).
+    setContrato('OSDE', faco.grupo, 1000000, '2026-01-01');
+    const rOS = registrarPrestacion({ fecha: '2026-03-06', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 90001, obraSocial: 'OSDE' });
+    check('SAM paga 40% del contrato', ingresoSAMDePrestacion(rOS).ingreso, 400000);
 
     registrarMovimientoCaja({ tipo: 'ingreso', descripcion: 't', monto: 1000, moneda: 'ARS', medioPago: 'efectivo' });
     registrarMovimientoCaja({ tipo: 'egreso', descripcion: 't', monto: 300, moneda: 'ARS', medioPago: 'efectivo' });
     check('Caja netea (1000 − 300)', saldosCaja().ARS.efectivo, 700);
 
-    const liq = generarLiquidacion(90001, '2026-03', 1000);
+    const liq = generarLiquidacion(90001, '2026-03');
     cerrarLiquidacion(liq.id, '2026-03-31');
     const eg = DB.cajaMovimientos.find(m => m.origen === 'pago_medico' && m.referenciaId === liq.id);
     check('Cerrar liquidación carga egreso = total', eg ? eg.monto : null, liq.total);
@@ -101,11 +99,11 @@ function diagnosticoDatos() {
     (r.insumos || []).forEach(i => { if (!DB.nomenclador.find(n => n.id === i.nomencladorId)) issues.push(`Prestación #${r.id}: insumo inexistente.`); });
   });
 
-  let sinPct = 0;
+  let sinValor = 0;
   DB.prestacionesRealizadas.filter(r => r.estado === 'activa').forEach(r => {
-    if (honorariosDePrestacion(r, 1).realizador.faltaPct.length) sinPct++;
+    if (honorariosDePrestacion(r).realizador.faltaValor.length) sinValor++;
   });
-  if (sinPct) issues.push(`${sinPct} prestación(es) activa(s) sin % de reparto configurado.`);
+  if (sinValor) issues.push(`${sinValor} prestación(es) activa(s) sin valor fijo configurado.`);
 
   let maxId = 0;
   COLECCIONES.forEach(c => (DB[c] || []).forEach(x => { if (Number(x.id) > maxId) maxId = Number(x.id); }));

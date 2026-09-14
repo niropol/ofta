@@ -150,6 +150,7 @@
       <button class="active" data-p="medicos" onclick="configTab('medicos')">Médicos</button>
       <button data-p="nomenclador" onclick="configTab('nomenclador')">Nomenclador</button>
       <button data-p="obras" onclick="configTab('obras')">Obras sociales</button>
+      <button data-p="pagos" onclick="configTab('pagos')">Pagos a médicos</button>
       <button data-p="sedes" onclick="configTab('sedes')">Sedes</button>
       <button data-p="estadisticas" onclick="configTab('estadisticas')">Estadísticas</button>
     </div>
@@ -176,6 +177,20 @@
       <div class="tabla-wrap"><div id="osTabla"></div></div>
     </div>
 
+    <div class="configpanel" data-p="pagos" hidden>
+      <div class="section-head"><h3 style="margin:0">Valores fijos a médicos</h3>
+        <button class="btn" onclick="abrirNuevoValorMedico()">+ Definir valor</button></div>
+      <p class="muted" style="margin-top:0">Monto fijo que cobra el médico por tipo (consulta, estudio, cirugía, práctica, derivación). General (todos) u override por médico, con vigencia.</p>
+      <div class="tabla-wrap"><div id="valoresTabla"></div></div>
+
+      <h4 style="margin-top:26px">Vista previa de pagos del mes</h4>
+      <div class="filtros">
+        <label class="muted">Mes <input type="month" id="prevMes" onchange="calcularPreviewHonorarios()"></label>
+        <button class="btn secundario" onclick="calcularPreviewHonorarios()">Calcular</button>
+      </div>
+      <div class="tabla-wrap"><div id="previewHonorarios"></div></div>
+    </div>
+
     <div class="configpanel" data-p="sedes" hidden>
       <div class="section-head"><h3 style="margin:0">Sedes</h3>
         <button class="btn" onclick="abrirNuevaSede()">+ Nueva sede</button></div>
@@ -187,7 +202,6 @@
       <div class="section-head"><h3 style="margin:0">Estadísticas</h3></div>
       <div class="filtros">
         <label class="muted">Mes <input type="month" id="statMes" onchange="renderEstadisticas()"></label>
-        <label class="muted">Cotización USD→ARS <input type="number" id="statCotiz" step="0.01" style="width:120px" placeholder="opcional" onchange="renderEstadisticas()"></label>
       </div>
       <div class="subtabs" id="statTabs">
         <button class="active" data-v="clinica" onclick="switchStatView('clinica')">Clínica</button>
@@ -205,7 +219,7 @@
       <button class="active" data-p="caja" onclick="adminTab('caja')">Caja</button>
       <button data-p="contratos" onclick="adminTab('contratos')">Contratos</button>
       <button data-p="liquidaciones" onclick="adminTab('liquidaciones')">Liquidaciones</button>
-      <button data-p="honorarios" onclick="adminTab('honorarios')">Honorarios y precios</button>
+      <button data-p="honorarios" onclick="adminTab('honorarios')">Insumos</button>
       <button data-p="seguridad" onclick="adminTab('seguridad')">Seguridad</button>
     </div>
 
@@ -251,15 +265,11 @@
 
     <div class="adminpanel" data-p="liquidaciones" hidden>
     <div class="section-head"><h3 style="margin:0">Liquidaciones a médicos</h3></div>
-    <p class="muted" style="margin-top:0">Elegí el mes → <strong>Generar</strong> arma el borrador con lo que le toca a cada médico (según los % de «Honorarios y precios») → <strong>Cerrar y pagar</strong> carga el egreso en la Caja y bloquea el período. Si dice «falta %», definí los porcentajes en la pestaña «Honorarios y precios».</p>
+    <p class="muted" style="margin-top:0">Elegí el mes → <strong>Generar</strong> arma el borrador con los valores fijos de cada médico (Configuración ▸ Pagos a médicos) → <strong>Cerrar y pagar</strong> carga el egreso en la Caja y bloquea el período. Si dice «falta valor fijo», cargalo en Pagos a médicos.</p>
     <div class="filtros">
       <label class="muted">Mes <input type="month" id="liqMes" onchange="renderLiquidaciones()"></label>
-      <label class="muted">Cotización USD→ARS <input type="number" id="liqCotiz" step="0.01" style="width:120px" placeholder="opcional" onchange="renderLiquidaciones()"></label>
     </div>
     <div class="tabla-wrap"><div id="liquidacionesTabla"></div></div>
-    <h3 style="margin-top:26px">Comisión SAM del mes</h3>
-    <p class="muted" style="margin-top:0">SAM (externo) cobra su comisión sobre las lentes; el resto queda para SAM Oftalmo.</p>
-    <div class="tabla-wrap"><div id="comisionSAM"></div></div>
     </div><!-- /panel liquidaciones -->
 
     <div class="adminpanel" data-p="seguridad" hidden>
@@ -294,23 +304,8 @@
     <div class="adminpanel" data-p="honorarios" hidden>
     <div class="section-head"><h3 style="margin:0">Costo real de insumos</h3>
       <button class="btn" onclick="abrirNuevoInsumo()">+ Nuevo insumo</button></div>
-    <p class="muted" style="margin-top:0">Cargá acá los insumos (lente, etc.) con su precio cobrado y su costo real. El precio también queda en el Nomenclador; el costo (sensible) solo se ve acá y se usa para el neto.</p>
+    <p class="muted" style="margin-top:0">Cargá acá los insumos (lente, sutura, válvula) con su precio y su costo real. El costo (sensible) solo se ve acá.</p>
     <div class="tabla-wrap"><div id="adminInsumos"></div></div>
-
-    <div class="section-head" style="margin-top:28px">
-      <h3 style="margin:0">Reparto de honorarios (%)</h3>
-      <button class="btn" onclick="abrirNuevaRegla()">+ Definir %</button>
-    </div>
-    <p class="muted" style="margin-top:0">% por categoría: general (todos) u override por médico, con vigencia. La consulta es 100% fijo (no lleva regla).</p>
-    <div class="tabla-wrap"><div id="reglasTabla"></div></div>
-
-    <h3 style="margin-top:28px">Vista previa de honorarios</h3>
-    <div class="filtros">
-      <label class="muted">Mes <input type="month" id="prevMes"></label>
-      <label class="muted">Cotización USD→ARS <input type="number" id="prevCotiz" step="0.01" style="width:120px" placeholder="opcional"></label>
-      <button class="btn" onclick="calcularPreviewHonorarios()">Calcular</button>
-    </div>
-    <div class="tabla-wrap"><div id="previewHonorarios"></div></div>
     </div><!-- /panel honorarios -->
   </section>
 </main>
@@ -467,21 +462,21 @@
   </div>
 </div>
 
-<!-- ── Modal definir % (regla de reparto) ── -->
-<div id="modalRegla" class="modal">
+<!-- ── Modal definir valor fijo a médico ── -->
+<div id="modalValor" class="modal">
   <div class="modal-box">
-    <h3>Definir %</h3>
+    <h3>Definir valor fijo</h3>
     <div class="row2">
-      <div class="campo"><label>Categoría</label><select id="regla_categoria"></select></div>
-      <div class="campo"><label>Alcance</label><select id="regla_medico"></select></div>
+      <div class="campo"><label>Tipo</label><select id="valor_categoria"></select></div>
+      <div class="campo"><label>Alcance</label><select id="valor_medico"></select></div>
     </div>
     <div class="row2">
-      <div class="campo"><label>Porcentaje (%)</label><input id="regla_porcentaje" type="number" step="0.01"></div>
-      <div class="campo"><label>Rige desde</label><input id="regla_vigencia" type="date"></div>
+      <div class="campo"><label>Valor fijo ($)</label><input id="valor_monto" type="number" step="0.01"></div>
+      <div class="campo"><label>Rige desde</label><input id="valor_vigencia" type="date"></div>
     </div>
     <div class="modal-acciones">
-      <button class="btn secundario" onclick="cerrarModalRegla()">Cancelar</button>
-      <button class="btn" onclick="guardarRegla()">Guardar</button>
+      <button class="btn secundario" onclick="cerrarModalValor()">Cancelar</button>
+      <button class="btn" onclick="guardarValorMedico()">Guardar</button>
     </div>
   </div>
 </div>
@@ -671,7 +666,7 @@ function sincronizarUI() {
   run([
     '_poblarFiltrosPrestaciones', 'renderPrestaciones',
     'renderMedicos', 'renderNomenclador', 'renderOS', 'renderSedes', 'renderContratos',
-    'renderAdmin', 'renderCaja', 'renderLiquidaciones', 'renderEstadisticas',
+    'renderValoresMedico', 'renderAdmin', 'renderCaja', 'renderLiquidaciones', 'renderEstadisticas',
     'poblarActuandoComo',
   ]);
 }

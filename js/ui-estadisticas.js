@@ -30,7 +30,7 @@ function _catLabelSt(id) { return (categoriaInfo(id) || {}).label || id; }
 
 // ── Vista clínica ──
 function renderVistaClinica(cont, mes) {
-  const r = resumenMes(mes, _statCotiz());
+  const r = resumenMes(mes);
   const card = (t, v) => `<div class="saldo-card"><div class="saldo-titulo">${escHtml(t)}</div><div class="saldo-monto">${v}</div></div>`;
   const cats = Object.keys(r.porCategoria).sort()
     .map(c => `<tr><td>${escHtml(_catLabelSt(c))}</td><td class="num">${r.porCategoria[c]}</td></tr>`).join('');
@@ -41,9 +41,9 @@ function renderVistaClinica(cont, mes) {
     <div class="saldos">
       ${card('Prestaciones', r.totalPrestaciones)}
       ${card('Consultas', r.consultas)}
-      ${card('Ingresos (pesos)', fmtMoneda(r.ingresosMes, 'ARS'))}
-      ${card('Egresos (pesos)', fmtMoneda(r.egresosMes, 'ARS'))}
-      ${card('Honorarios del mes', fmtMoneda(r.honorariosCalc, 'ARS'))}
+      ${card('Facturado a SAM', fmtMoneda(r.facturadoSAM, 'ARS'))}
+      ${card('SAM paga (' + DB.config.porcentajeSAM + '%)', fmtMoneda(r.ingresoSAM, 'ARS'))}
+      ${card('Honorarios médicos', fmtMoneda(r.honorariosCalc, 'ARS'))}
       ${card('Saldo caja pesos', fmtMoneda(r.saldos.ARS.total, 'ARS'))}
     </div>
     <div class="btn-group" style="margin-bottom:16px">
@@ -70,12 +70,11 @@ function renderVistaMedico(cont, mes) {
   const opciones = meds.map(m => `<option value="${m.id}"${String(m.id) === String(cur) ? ' selected' : ''}>${escHtml(m.nombre)}</option>`).join('');
   let cuerpo = '<p class="muted">Elegí un médico.</p>';
   if (cur) {
-    const r = resumenMedicoMes(Number(cur), mes, _statCotiz());
+    const r = resumenMedicoMes(Number(cur), mes);
     const cats = Object.keys(r.porCategoria).sort()
       .map(c => `<tr><td>${escHtml(_catLabelSt(c))}</td><td class="num">${r.porCategoria[c]}</td></tr>`).join('');
     const flags = [];
-    if (r.requiereCotizacion) flags.push('<span class="badge-inactivo">requiere cotización</span>');
-    if (r.faltaPct.length) flags.push('<span class="badge-inactivo">falta %</span>');
+    if (r.faltaValor.length) flags.push('<span class="badge-inactivo">falta valor fijo</span>');
     cuerpo = `
       <div class="saldos">
         <div class="saldo-card"><div class="saldo-titulo">Prestaciones</div><div class="saldo-monto">${r.cantidad}</div></div>
@@ -119,15 +118,15 @@ function _copiar(txt, msgOk) {
     navigator.clipboard.writeText(txt).then(() => alert(msgOk), () => window.prompt('Copiá el texto:', txt));
   } else { window.prompt('Copiá el texto:', txt); }
 }
-function exportarResumenWhatsApp(mes) { _copiar(resumenMesTextoWhatsApp(mes, _statCotiz()), 'Resumen copiado — listo para WhatsApp.'); }
+function exportarResumenWhatsApp(mes) { _copiar(resumenMesTextoWhatsApp(mes), 'Resumen copiado — listo para WhatsApp.'); }
 function copiarResumenMedicoWhatsApp(medicoId, mes) {
-  const r = resumenMedicoMes(Number(medicoId), mes, _statCotiz());
+  const r = resumenMedicoMes(Number(medicoId), mes);
   const txt = `👁 *SAM Oftalmología* — ${medicoNombre(Number(medicoId))}\n📋 ${mes}\n\n🧾 Prestaciones: *${r.cantidad}*\n👨‍⚕️ Honorarios: *${fmtMoneda(r.total, 'ARS')}*`;
   _copiar(txt, 'Informe del médico copiado — listo para WhatsApp.');
 }
 
 function exportarResumenPDF(mes) {
-  const r = resumenMes(mes, _statCotiz());
+  const r = resumenMes(mes);
   const cats = Object.keys(r.porCategoria).sort().map(c => `<tr><td>${escHtml(_catLabelSt(c))}</td><td style="text-align:right">${r.porCategoria[c]}</td></tr>`).join('');
   const html = `<h1>SAM Oftalmología</h1><h2>Resumen mensual — ${escHtml(mes)}</h2>
     <table><tbody>
@@ -145,7 +144,7 @@ function exportarResumenPDF(mes) {
 }
 
 function verResumenMedicoPDF(medicoId, mes) {
-  const r = resumenMedicoMes(Number(medicoId), mes, _statCotiz());
+  const r = resumenMedicoMes(Number(medicoId), mes);
   const filas = r.detalle.map(d => `<tr><td>${escHtml(d.fecha)}</td><td>${escHtml(d.descripcion)}</td><td>${d.rol === 'derivador' ? 'Derivador' : 'Realizador'}</td><td style="text-align:right">${fmtMoneda(d.monto, 'ARS')}</td></tr>`).join('');
   const html = `<h1>SAM Oftalmología</h1><h2>Informe del médico — ${escHtml(mes)}</h2>
     <p><strong>${escHtml(medicoNombre(Number(medicoId)))}</strong> · Prestaciones: ${r.cantidad}</p>

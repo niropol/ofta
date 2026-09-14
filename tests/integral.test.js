@@ -10,14 +10,11 @@ beforeEach(() => { ctx = loadApp(); app = ctx.app; resetDatos(app); });
 function escenario() {
   app.DB.medicos.push({ id: 701, nombre: 'Dr. Uno', estado: 'Activo', sedeId: 1 });
   app.DB.medicos.push({ id: 702, nombre: 'Dra. Dos', estado: 'Activo', sedeId: 1 });
-  ['cirugia:40', 'derivacion_cirugia:10', 'insumo:20', 'sam_insumo:50'].forEach(x => {
-    const [c, p] = x.split(':'); app.setReglaReparto(c, null, Number(p), '2026-01-01');
-  });
-  const faco = app.crearPrestacion({ categoria: 'cirugia', descripcion: 'Faco', precio: 500000, vigenciaDesde: '2026-01-01' });
-  const ins = app.crearPrestacion({ categoria: 'insumo', descripcion: 'Lente', precio: 900000, moneda: 'ARS', vigenciaDesde: '2026-01-01' });
-  app.setCostoInsumo(ins.grupo, 300000, 'ARS');
-  const p = app.registrarPrestacion({ fecha: '2026-03-10', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 701, medicoDerivadorId: 702, insumos: [ins.grupo], paciente: { apellido: 'Gómez' } });
-  return { faco, ins, p };
+  app.setValorMedico('cirugia', null, 120000, '2026-01-01');
+  app.setValorMedico('derivacion', null, 20000, '2026-01-01');
+  const faco = app.crearPrestacion({ categoria: 'cirugia', descripcion: 'Faco', vigenciaDesde: '2026-01-01' });
+  const p = app.registrarPrestacion({ fecha: '2026-03-10', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 701, medicoDerivadorId: 702, paciente: { apellido: 'Gómez' } });
+  return { faco, p };
 }
 
 describe('Ciclo completo y no-huérfanos', () => {
@@ -46,7 +43,7 @@ describe('Ciclo completo y no-huérfanos', () => {
 
   it('caso borde: anular una prestación la excluye del cálculo', () => {
     const { p } = escenario();
-    expect(app.honorariosDeMedico(701, '2026-03').total).toBe(320000);
+    expect(app.honorariosDeMedico(701, '2026-03').total).toBe(120000);
     app.anularPrestacion(p.id, 'suspendida');
     expect(app.honorariosDeMedico(701, '2026-03').total).toBe(0);
     expect(app.diagnosticoDatos().issues).toEqual([]);

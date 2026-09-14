@@ -21,10 +21,10 @@ const EXPONER = [
   // estado / constantes
   'DB', 'CATEGORIAS', 'CATEGORIA_IDS', 'CATEGORIAS_NOMENCLADOR', 'CATEGORIAS_REALIZADAS', 'CATEGORIAS_REGLA', 'ROLES', 'MONEDAS', 'MEDIOS_PAGO', 'COLECCIONES',
   'categoriaInfo', 'derivaCategoriaDe',
-  // honorarios (motor de cálculo)
-  'redondearAbajo', 'porcentajeReglaVigente', 'setReglaReparto', 'listarReglasActuales',
-  'honorariosDePrestacion', 'honorariosDeMedico', 'honorariosDelMes', 'repartoLentesDelMes',
-  'renderReglas', 'abrirNuevaRegla', 'guardarRegla', 'calcularPreviewHonorarios',
+  // pagos a médicos (valores fijos)
+  'redondearAbajo', 'CATEGORIAS_VALOR_MEDICO', 'valorMedicoVigente', 'setValorMedico', 'listarValoresMedicoActuales',
+  'honorariosDePrestacion', 'honorariosDeMedico', 'honorariosDelMes',
+  'renderValoresMedico', 'abrirNuevoValorMedico', 'guardarValorMedico', 'calcularPreviewHonorarios',
   // caja
   'CATEGORIAS_GASTO', 'registrarMovimientoCaja', 'registrarGasto', 'editarMovimientoCaja',
   'eliminarMovimientoCaja', 'registrarEgresoPagoMedico', 'quitarEgresosDeLiquidacion',
@@ -63,7 +63,7 @@ const EXPONER = [
   // liquidaciones
   'liquidacionDe', 'liquidacionCerradaDe', 'prestacionBloqueada', 'generarLiquidacion',
   'cerrarLiquidacion', 'reabrirLiquidacion', 'eliminarLiquidacion', 'listarLiquidaciones',
-  'mensajeLiquidacionWhatsApp', 'pagarComisionSAM',
+  'mensajeLiquidacionWhatsApp',
   'renderLiquidaciones', 'generarLiquidacionUI', 'cerrarLiquidacionUI',
   // estadísticas
   'resumenMes', 'resumenMedicoMes', 'controlInterno', 'resumenMesTextoWhatsApp', 'csvContable',

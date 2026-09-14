@@ -7,7 +7,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 // ── Vista clínica: KPIs del mes ──
-function resumenMes(mes, cotizacion) {
+function resumenMes(mes) {
   const prest = DB.prestacionesRealizadas.filter(r => (r.fecha || '').slice(0, 7) === mes);
   const activas = prest.filter(r => r.estado === 'activa');
   const porCategoria = {};
@@ -24,19 +24,20 @@ function resumenMes(mes, cotizacion) {
   const egresosMes = movs.filter(m => m.tipo === 'egreso').reduce((s, m) => s + m.monto, 0);
   const gastosMes = movs.filter(m => m.origen === 'gasto').reduce((s, m) => s + m.monto, 0);
 
-  const honorariosCalc = honorariosDelMes(mes, cotizacion).reduce((s, h) => s + h.total, 0);
+  const honorariosCalc = honorariosDelMes(mes).reduce((s, h) => s + h.total, 0);
   const liquidado = DB.pagosMedicos.filter(p => p.mes === mes && p.estado === 'cerrada').reduce((s, p) => s + p.total, 0);
-  const lentes = repartoLentesDelMes(mes, cotizacion);
+  const sam = (typeof ingresoSAMDelMes === 'function') ? ingresoSAMDelMes(mes) : { facturado: 0, ingreso: 0 };
 
   return {
     mes, totalPrestaciones: activas.length, consultas, porCategoria, porDia, anuladas,
-    ingresosMes, egresosMes, gastosMes, honorariosCalc, liquidado, lentes, saldos: saldosCaja(),
+    ingresosMes, egresosMes, gastosMes, honorariosCalc, liquidado,
+    facturadoSAM: sam.facturado, ingresoSAM: sam.ingreso, saldos: saldosCaja(),
   };
 }
 
 // ── Vista médico: resumen para entregar (no entra al sistema) ──
-function resumenMedicoMes(medicoId, mes, cotizacion) {
-  const h = honorariosDeMedico(medicoId, mes, cotizacion);
+function resumenMedicoMes(medicoId, mes) {
+  const h = honorariosDeMedico(medicoId, mes);
   const porCategoria = {};
   h.detalle.forEach(d => {
     const reg = DB.prestacionesRealizadas.find(r => r.id === d.prestacionId);
@@ -45,7 +46,7 @@ function resumenMedicoMes(medicoId, mes, cotizacion) {
   });
   return {
     medicoId, mes, total: h.total, cantidad: h.detalle.length, porCategoria,
-    detalle: h.detalle, requiereCotizacion: h.requiereCotizacion, faltaPct: h.faltaPct,
+    detalle: h.detalle, faltaValor: h.faltaValor,
   };
 }
 
@@ -64,8 +65,8 @@ function controlInterno(mes) {
 }
 
 // ── Exportación: texto para WhatsApp (resumen del mes) ──
-function resumenMesTextoWhatsApp(mes, cotizacion) {
-  const r = resumenMes(mes, cotizacion);
+function resumenMesTextoWhatsApp(mes) {
+  const r = resumenMes(mes);
   const cats = Object.keys(r.porCategoria).sort()
     .map(c => `   • ${(categoriaInfo(c) || {}).label || c}: ${r.porCategoria[c]}`).join('\n');
   return `👁 *SAM Oftalmología* — Resumen ${mes}\n\n` +
@@ -76,7 +77,7 @@ function resumenMesTextoWhatsApp(mes, cotizacion) {
     `💸 Egresos (pesos): *${fmtMoneda(r.egresosMes, 'ARS')}*\n` +
     (r.gastosMes ? `   (gastos: ${fmtMoneda(r.gastosMes, 'ARS')})\n` : '') +
     `👨‍⚕️ Honorarios del mes: *${fmtMoneda(r.honorariosCalc, 'ARS')}* (liquidado: ${fmtMoneda(r.liquidado, 'ARS')})\n` +
-    (r.lentes.sam ? `🔎 Comisión SAM: ${fmtMoneda(r.lentes.sam, 'ARS')} · SAM Oftalmo: ${fmtMoneda(r.lentes.clinica, 'ARS')}\n` : '') +
+    (r.ingresoSAM ? `🏦 SAM paga (${DB.config.porcentajeSAM}%): ${fmtMoneda(r.ingresoSAM, 'ARS')} de ${fmtMoneda(r.facturadoSAM, 'ARS')} facturados\n` : '') +
     `\n💰 Saldo caja pesos: *${fmtMoneda(r.saldos.ARS.total, 'ARS')}* · dólares: ${fmtMoneda(r.saldos.USD.total, 'USD')}`;
 }
 

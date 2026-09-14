@@ -7,21 +7,19 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 function _liqGV(id) { const el = document.getElementById(id); return el ? el.value : ''; }
-function _liqCotiz() { return Number(_liqGV('liqCotiz')) || null; }
 
 function renderLiquidaciones() {
   const cont = document.getElementById('liquidacionesTabla');
   if (!cont) return;
   const mes = _liqGV('liqMes');
-  if (!mes) { cont.innerHTML = '<p class="muted">Elegí un mes.</p>'; renderComisionSAM(); return; }
-  const cotiz = _liqCotiz();
+  if (!mes) { cont.innerHTML = '<p class="muted">Elegí un mes.</p>'; return; }
 
   // Unión de médicos con honorarios del mes + los que ya tienen liquidación.
-  const calc = honorariosDelMes(mes, cotiz);
+  const calc = honorariosDelMes(mes);
   const ids = new Set(calc.map(h => h.medicoId));
   listarLiquidaciones(mes).forEach(l => ids.add(l.medicoId));
 
-  if (ids.size === 0) { cont.innerHTML = '<p class="vacio">No hay honorarios ni liquidaciones para este mes.</p>'; renderComisionSAM(); return; }
+  if (ids.size === 0) { cont.innerHTML = '<p class="vacio">No hay honorarios ni liquidaciones para este mes.</p>'; return; }
 
   const rows = [...ids].map(mid => {
     const hc = calc.find(h => h.medicoId === mid);
@@ -30,16 +28,13 @@ function renderLiquidaciones() {
     const nombre = medicoNombre(mid);
     let estado, acciones;
     if (!liq) {
-      const flags = [];
-      if (hc && hc.requiereCotizacion) flags.push('<span class="badge-inactivo">req. cotización</span>');
-      if (hc && hc.faltaPct.length) flags.push('<span class="badge-inactivo">falta %</span>');
-      estado = '<span class="muted">sin generar</span> ' + flags.join(' ');
+      const flags = (hc && hc.faltaValor.length) ? '<span class="badge-inactivo">falta valor fijo</span>' : '';
+      estado = '<span class="muted">sin generar</span> ' + flags;
       acciones = `<button onclick="generarLiquidacionUI(${mid})">Generar</button>`;
     } else if (liq.estado === 'borrador') {
       const drift = liq.total !== totalCalc ? ` <span class="badge-inactivo" title="El cálculo actual difiere del guardado">cambió (${fmtMoneda(totalCalc, 'ARS')})</span>` : '';
-      const reqCot = (liq.requiereCotizacion && !cotiz) ? ' <span class="badge-inactivo">falta cotización USD (monto parcial)</span>' : '';
-      const faltaP = (liq.faltaPct && liq.faltaPct.length) ? ' <span class="badge-inactivo">falta %</span>' : '';
-      estado = 'Borrador' + drift + reqCot + faltaP;
+      const faltaP = (liq.faltaValor && liq.faltaValor.length) ? ' <span class="badge-inactivo">falta valor fijo</span>' : '';
+      estado = 'Borrador' + drift + faltaP;
       acciones = `
         <button onclick="generarLiquidacionUI(${mid})">Regenerar</button>
         <button onclick="cerrarLiquidacionUI(${liq.id})">Cerrar y pagar</button>
@@ -67,30 +62,10 @@ function renderLiquidaciones() {
       <thead><tr><th>Médico</th><th class="num">A depositar</th><th>Estado</th><th>Acciones</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
-  renderComisionSAM();
-}
-
-// Comisión SAM + lo que queda para SAM Oftalmo (del mes).
-function renderComisionSAM() {
-  const cont = document.getElementById('comisionSAM');
-  if (!cont) return;
-  const mes = _liqGV('liqMes');
-  if (!mes) { cont.innerHTML = ''; return; }
-  const rep = repartoLentesDelMes(mes, _liqCotiz());
-  if (!rep.sam && !rep.clinica) { cont.innerHTML = '<p class="muted">Sin lentes/insumos en el mes.</p>'; return; }
-  const pagada = DB.cajaMovimientos.some(m => m.origen === 'manual' && m.descripcion === 'Comisión SAM ' + mes);
-  cont.innerHTML = `
-    <table class="tabla" style="max-width:560px">
-      <tbody>
-        <tr><td>Comisión <strong>SAM</strong> (externo)</td><td class="num">${fmtMoneda(rep.sam, 'ARS')}</td>
-          <td class="acc">${pagada ? '<span class="pos">pagada</span>' : `<button onclick="pagarComisionSAMUI()">Registrar pago a SAM</button>`}</td></tr>
-        <tr><td>Queda para <strong>SAM Oftalmo</strong> (nosotros)</td><td class="num">${fmtMoneda(rep.clinica, 'ARS')}</td><td></td></tr>
-      </tbody>
-    </table>`;
 }
 
 function generarLiquidacionUI(medicoId) {
-  try { generarLiquidacion(medicoId, _liqGV('liqMes'), _liqCotiz()); }
+  try { generarLiquidacion(medicoId, _liqGV('liqMes')); }
   catch (e) { alert(e.message); return; }
   renderLiquidaciones();
 }
@@ -114,13 +89,6 @@ function eliminarLiquidacionUI(id) {
   if (typeof confirm === 'function' && !confirm('¿Eliminar esta liquidación? Queda en auditoría.')) return;
   eliminarLiquidacion(id);
   renderLiquidaciones();
-  if (typeof renderCaja === 'function') renderCaja();
-}
-
-function pagarComisionSAMUI() {
-  try { pagarComisionSAM(_liqGV('liqMes'), _liqCotiz()); }
-  catch (e) { alert(e.message); return; }
-  renderComisionSAM();
   if (typeof renderCaja === 'function') renderCaja();
 }
 
@@ -154,7 +122,7 @@ function verComprobante(id) {
     <h2>Comprobante de liquidación — ${escHtml(l.mes)}</h2>
     <p><strong>Médico:</strong> ${escHtml(med ? med.nombre : '')}<br>
        <strong>Estado:</strong> ${l.estado === 'cerrada' ? 'Cerrada (' + escHtml(l.fechaCierre || '') + ')' : 'Borrador'}
-       ${l.cotizacion ? '<br><strong>Cotización USD:</strong> ' + fmtMoneda(l.cotizacion, 'ARS') : ''}</p>
+    </p>
     <table>
       <thead><tr><th>Fecha</th><th>Prestación</th><th>Paciente</th><th>Rol</th><th style="text-align:right">Honorario</th></tr></thead>
       <tbody>${filas}</tbody>

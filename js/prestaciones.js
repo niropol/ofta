@@ -110,6 +110,7 @@ function registrarPrestacion(datos) {
     medicoRealizadorId: Number(datos.medicoRealizadorId),
     medicoDerivadorId: derivadorId,
     derivaCategoria: derivadorId ? cat.derivaCategoria : null,
+    extraMedico: Number(datos.extraMedico) || 0,   // extra opcional al médico (Etapa 3)
     obraSocial: (datos.obraSocial || 'Particular').trim() || 'Particular',
     pacienteId: pac ? pac.id : null,
     pacienteNombre: pacienteLabel(pac),
@@ -139,6 +140,7 @@ function editarPrestacionRealizada(id, datos) {
     medicoRealizadorId: datos.medicoRealizadorId ?? reg.medicoRealizadorId,
     medicoDerivadorId: datos.medicoDerivadorId !== undefined ? datos.medicoDerivadorId : reg.medicoDerivadorId,
     obraSocial: datos.obraSocial ?? reg.obraSocial,
+    extraMedico: datos.extraMedico !== undefined ? datos.extraMedico : reg.extraMedico,
     insumos: datos.insumos !== undefined ? datos.insumos : (reg.insumos || []).map(i => i.grupo),
     paciente: datos.paciente ?? { nombre: '', apellido: '', dni: '' },
   });

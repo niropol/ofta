@@ -1,110 +1,92 @@
 // ═══════════════════════════════════════════════════════════════════════════
-//  SAM — UI de HONORARIOS (Etapa 4): configuración de % + vista previa
+//  SAM — UI de PAGOS A MÉDICOS (valores fijos)
 // ───────────────────────────────────────────────────────────────────────────
-//  Vive en el área Admin (acceso restringido). Dos bloques:
-//   1) Reparto de honorarios: % general por categoría + overrides por médico,
-//      con vigencia (versionado; un cambio no recalcula el pasado).
-//   2) Vista previa: honorarios calculados del mes por médico (precursor de la
-//      liquidación de la Etapa 6), con cotización para los montos en USD.
+//  Vive en la parte VISIBLE (Configuración ▸ Pagos a médicos). Dos bloques:
+//   1) Valores fijos por tipo (consulta/estudio/cirugía/práctica/derivación):
+//      general + override por médico, con vigencia.
+//   2) Vista previa: cuánto le toca a cada médico en el mes.
 // ═══════════════════════════════════════════════════════════════════════════
 
-function _catReglaLabel(id) { return (CATEGORIAS.find(c => c.id === id) || {}).label || id; }
+function _catValLabel(id) { return (CATEGORIAS_VALOR_MEDICO.find(c => c.id === id) || {}).label || id; }
 
-// ── Configuración de % ──
-function renderReglas() {
-  const cont = document.getElementById('reglasTabla');
+// ── Configuración de valores fijos ──
+function renderValoresMedico() {
+  const cont = document.getElementById('valoresTabla');
   if (!cont) return;
-  const reglas = listarReglasActuales()
+  const valores = listarValoresMedicoActuales()
     .sort((a, b) => (a.categoria.localeCompare(b.categoria) || ((a.medicoId || 0) - (b.medicoId || 0))));
 
-  // Aviso: categorías sin % general definido.
-  const sinGeneral = CATEGORIAS_REGLA.filter(c => !porcentajeReglaVigente(c.id, null, hoyISO()))
-    .map(c => c.label);
+  const sinGeneral = CATEGORIAS_VALOR_MEDICO.filter(c => !valorMedicoVigente(c.id, null, hoyISO())).map(c => c.label);
   const aviso = sinGeneral.length
-    ? `<p class="nota">Falta definir el % general de: <strong>${sinGeneral.map(escHtml).join(', ')}</strong>. Sin % general ni override, esas prestaciones calculan $0.</p>`
+    ? `<p class="nota">Falta definir el valor general de: <strong>${sinGeneral.map(escHtml).join(', ')}</strong>. Sin valor, esas prestaciones pagan $0.</p>`
     : '';
 
-  if (reglas.length === 0) {
-    cont.innerHTML = aviso + '<p class="vacio">No hay % cargados. Usá «+ Definir %».</p>';
+  if (valores.length === 0) {
+    cont.innerHTML = aviso + '<p class="vacio">No hay valores cargados. Usá «+ Definir valor».</p>';
     return;
   }
-  const rows = reglas.map(r => `
+  const rows = valores.map(v => `
     <tr>
-      <td>${escHtml(_catReglaLabel(r.categoria))}</td>
-      <td>${r.medicoId == null ? '<strong>General</strong>' : escHtml(medicoNombre(r.medicoId))}</td>
-      <td class="num">${r.porcentaje}%</td>
-      <td>${escHtml(r.vigenciaDesde)}</td>
+      <td>${escHtml(_catValLabel(v.categoria))}</td>
+      <td>${v.medicoId == null ? '<strong>General</strong>' : escHtml(medicoNombre(v.medicoId))}</td>
+      <td class="num">${fmtMoneda(v.valor, 'ARS')}</td>
+      <td>${escHtml(v.vigenciaDesde)}</td>
     </tr>`).join('');
   cont.innerHTML = aviso + `
     <table class="tabla">
-      <thead><tr><th>Categoría</th><th>Alcance</th><th class="num">%</th><th>Vigente desde</th></tr></thead>
+      <thead><tr><th>Tipo</th><th>Alcance</th><th class="num">Valor fijo</th><th>Vigente desde</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
 }
 
-function _mostrarModalRegla(on) { const m = document.getElementById('modalRegla'); if (m) m.style.display = on ? 'flex' : 'none'; }
-function cerrarModalRegla() { _mostrarModalRegla(false); }
+function _mostrarModalValor(on) { const m = document.getElementById('modalValor'); if (m) m.style.display = on ? 'flex' : 'none'; }
+function cerrarModalValor() { _mostrarModalValor(false); }
 
-function abrirNuevaRegla() {
+function abrirNuevoValorMedico() {
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v == null ? '' : v; };
-  document.getElementById('regla_categoria').innerHTML =
-    CATEGORIAS_REGLA.map(c => `<option value="${c.id}">${escHtml(c.label)}</option>`).join('');
-  document.getElementById('regla_medico').innerHTML =
+  document.getElementById('valor_categoria').innerHTML =
+    CATEGORIAS_VALOR_MEDICO.map(c => `<option value="${c.id}">${escHtml(c.label)}</option>`).join('');
+  document.getElementById('valor_medico').innerHTML =
     '<option value="">General (todos los médicos)</option>' +
     getMedicosActivos().sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es'))
       .map(m => `<option value="${m.id}">${escHtml(m.nombre)}</option>`).join('');
-  set('regla_porcentaje', ''); set('regla_vigencia', hoyISO());
-  _mostrarModalRegla(true);
+  set('valor_monto', ''); set('valor_vigencia', hoyISO().slice(0, 7) + '-01');
+  _mostrarModalValor(true);
 }
 
-function guardarRegla() {
+function guardarValorMedico() {
   const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
   try {
-    setReglaReparto(val('regla_categoria'), val('regla_medico') || null, val('regla_porcentaje'), val('regla_vigencia') || hoyISO());
+    setValorMedico(val('valor_categoria'), val('valor_medico') || null, val('valor_monto'), val('valor_vigencia') || (hoyISO().slice(0, 7) + '-01'));
   } catch (e) { alert(e.message); return false; }
-  cerrarModalRegla();
-  renderReglas();
+  cerrarModalValor();
+  renderValoresMedico();
   return true;
 }
 
-// ── Vista previa de honorarios del mes ──
+// ── Vista previa de pagos del mes ──
 function calcularPreviewHonorarios() {
   const cont = document.getElementById('previewHonorarios');
   if (!cont) return;
-  const mes = document.getElementById('prevMes').value;
-  const cotiz = Number(document.getElementById('prevCotiz').value) || null;
+  const mesEl = document.getElementById('prevMes');
+  const mes = mesEl ? mesEl.value : '';
   if (!mes) { cont.innerHTML = '<p class="muted">Elegí un mes.</p>'; return; }
 
-  const meds = honorariosDelMes(mes, cotiz);
+  const meds = honorariosDelMes(mes);
   if (meds.length === 0) { cont.innerHTML = '<p class="vacio">No hay prestaciones activas en ese mes.</p>'; return; }
 
   const rows = meds.map(h => {
-    const flags = [];
-    if (h.requiereCotizacion) flags.push('<span class="badge-inactivo">requiere cotización</span>');
-    if (h.faltaPct.length) flags.push('<span class="badge-inactivo">falta % de ' + h.faltaPct.map(c => escHtml(_catReglaLabel(c))).join(', ') + '</span>');
-    return `
-    <tr>
-      <td>${escHtml(medicoNombre(h.medicoId))}</td>
-      <td class="num">${fmtMoneda(h.total, 'ARS')}</td>
-      <td>${flags.join(' ') || '<span class="muted">ok</span>'}</td>
-    </tr>`;
+    const flags = h.faltaValor.length
+      ? '<span class="badge-inactivo">falta valor de ' + h.faltaValor.map(c => escHtml(_catValLabel(c))).join(', ') + '</span>'
+      : '<span class="muted">ok</span>';
+    return `<tr><td>${escHtml(medicoNombre(h.medicoId))}</td><td class="num">${fmtMoneda(h.total, 'ARS')}</td><td>${flags}</td></tr>`;
   }).join('');
   const totalMes = meds.reduce((s, h) => s + h.total, 0);
-  const reparto = repartoLentesDelMes(mes, cotiz);
-  const bloqueLentes = (reparto.sam || reparto.clinica) ? `
-    <h4 style="margin:18px 0 6px">Reparto de lentes/insumos (aparte de los médicos)</h4>
-    <table class="tabla" style="max-width:520px">
-      <tbody>
-        <tr><td>Comisión <strong>SAM</strong> (externo)</td><td class="num">${fmtMoneda(reparto.sam, 'ARS')}</td></tr>
-        <tr><td>Queda para <strong>SAM Oftalmo</strong> (nosotros)</td><td class="num">${fmtMoneda(reparto.clinica, 'ARS')}</td></tr>
-      </tbody>
-    </table>` : '';
   cont.innerHTML = `
     <table class="tabla">
-      <thead><tr><th>Médico</th><th class="num">Honorarios (ARS)</th><th>Observaciones</th></tr></thead>
+      <thead><tr><th>Médico</th><th class="num">Pago (ARS)</th><th>Observaciones</th></tr></thead>
       <tbody>${rows}</tbody>
       <tfoot><tr><th>Total del mes</th><th class="num">${fmtMoneda(totalMes, 'ARS')}</th><th></th></tr></tfoot>
     </table>
-    ${bloqueLentes}
-    <p class="muted">Vista previa (redondeo hacia abajo al peso). La liquidación formal, el comprobante y el egreso en caja se generan en la Etapa 6.</p>`;
+    <p class="muted">Vista previa. La liquidación formal, el comprobante y el egreso en caja se hacen en Admin ▸ Liquidaciones.</p>`;
 }

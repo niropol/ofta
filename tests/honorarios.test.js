@@ -1,6 +1,5 @@
-// Motor de honorarios: % vigente (general/override/versionado), consulta 100%,
-// cirugía × %, derivador en paralelo, insumo sobre el neto, redondeo hacia abajo,
-// USD con cotización, faltantes de %, y agregación por médico/mes.
+// Pagos a médicos con valores fijos: valor vigente (general/override/versionado),
+// realizador + derivador, extra al médico, faltantes, y agregación por médico/mes.
 import { describe, it, expect, beforeEach } from 'vitest';
 import { loadApp, resetDatos } from './harness.js';
 
@@ -10,169 +9,92 @@ beforeEach(() => {
   app.DB.medicos.push({ id: 501, nombre: 'Dr. Realizador', estado: 'Activo', sedeId: 1 });
   app.DB.medicos.push({ id: 502, nombre: 'Dra. Derivadora', estado: 'Activo', sedeId: 1 });
 });
-function nom(cat, precio, extra = {}) { return app.crearPrestacion({ categoria: cat, descripcion: cat, precio, vigenciaDesde: '2026-01-01', ...extra }); }
+function nom(cat) { return app.crearPrestacion({ categoria: cat, descripcion: cat, vigenciaDesde: '2026-01-01' }); }
 function reg(datos) { return app.registrarPrestacion({ fecha: '2026-03-10', medicoRealizadorId: 501, ...datos }); }
 
-describe('Reglas de reparto (%)', () => {
+describe('Valores fijos a médicos', () => {
   it('override por médico gana sobre el general; sin override cae al general', () => {
-    app.setReglaReparto('cirugia', null, 40, '2026-01-01');
-    app.setReglaReparto('cirugia', 501, 55, '2026-01-01');
-    expect(app.porcentajeReglaVigente('cirugia', 501, '2026-03-10')).toEqual({ porcentaje: 55, origen: 'medico' });
-    expect(app.porcentajeReglaVigente('cirugia', 502, '2026-03-10')).toEqual({ porcentaje: 40, origen: 'general' });
+    app.setValorMedico('cirugia', null, 120000, '2026-01-01');
+    app.setValorMedico('cirugia', 501, 150000, '2026-01-01');
+    expect(app.valorMedicoVigente('cirugia', 501, '2026-03-10')).toEqual({ valor: 150000, origen: 'medico' });
+    expect(app.valorMedicoVigente('cirugia', 502, '2026-03-10')).toEqual({ valor: 120000, origen: 'general' });
   });
 
-  it('% versionado: un cambio no recalcula el pasado', () => {
-    app.setReglaReparto('cirugia', null, 40, '2026-01-01');
-    app.setReglaReparto('cirugia', null, 45, '2026-06-01');
-    expect(app.porcentajeReglaVigente('cirugia', null, '2026-03-10').porcentaje).toBe(40);
-    expect(app.porcentajeReglaVigente('cirugia', null, '2026-07-10').porcentaje).toBe(45);
+  it('versionado: un cambio no recalcula el pasado', () => {
+    app.setValorMedico('cirugia', null, 120000, '2026-01-01');
+    app.setValorMedico('cirugia', null, 200000, '2026-06-01');
+    expect(app.valorMedicoVigente('cirugia', null, '2026-03-10').valor).toBe(120000);
+    expect(app.valorMedicoVigente('cirugia', null, '2026-07-10').valor).toBe(200000);
   });
 
-  it('rechaza una vigencia anterior o igual a la actual', () => {
-    app.setReglaReparto('cirugia', null, 40, '2026-06-01');
-    expect(() => app.setReglaReparto('cirugia', null, 50, '2026-05-01')).toThrow();
-  });
-
-  it('la consulta no lleva regla', () => {
-    expect(() => app.setReglaReparto('consulta', null, 100, '2026-01-01')).toThrow();
+  it('rechaza vigencia anterior o igual a la actual, y valor negativo', () => {
+    app.setValorMedico('cirugia', null, 120000, '2026-06-01');
+    expect(() => app.setValorMedico('cirugia', null, 100000, '2026-05-01')).toThrow();
+    expect(() => app.setValorMedico('cirugia', null, -5, '2027-01-01')).toThrow();
   });
 });
 
-describe('Cálculo de honorarios', () => {
-  it('consulta: 100% del precio, sin regla', () => {
-    const c = nom('consulta', 11000);
+describe('Cálculo de honorarios (valores fijos)', () => {
+  it('consulta = valor fijo', () => {
+    app.setValorMedico('consulta', null, 8000, '2026-01-01');
+    const c = nom('consulta');
     const r = reg({ categoria: 'consulta', grupoNomenclador: c.grupo });
-    expect(app.honorariosDePrestacion(r).realizador.monto).toBe(11000);
+    expect(app.honorariosDePrestacion(r).realizador.monto).toBe(8000);
   });
 
-  it('cirugía: precio × % del realizador', () => {
-    app.setReglaReparto('cirugia', null, 40, '2026-01-01');
-    const faco = nom('cirugia', 500000);
+  it('cirugía = valor fijo del médico (override)', () => {
+    app.setValorMedico('cirugia', null, 120000, '2026-01-01');
+    app.setValorMedico('cirugia', 501, 150000, '2026-01-01');
+    const faco = nom('cirugia');
     const r = reg({ categoria: 'cirugia', grupoNomenclador: faco.grupo });
-    expect(app.honorariosDePrestacion(r).realizador.monto).toBe(200000);
+    expect(app.honorariosDePrestacion(r).realizador.monto).toBe(150000);
   });
 
-  it('redondeo hacia abajo al peso', () => {
-    app.setReglaReparto('cirugia', null, 50, '2026-01-01');
-    const faco = nom('cirugia', 10001); // 50% = 5000,5
-    const r = reg({ categoria: 'cirugia', grupoNomenclador: faco.grupo });
-    expect(app.honorariosDePrestacion(r).realizador.monto).toBe(5000);
-  });
-
-  it('derivador cobra en paralelo sobre la misma base', () => {
-    app.setReglaReparto('cirugia', null, 40, '2026-01-01');
-    app.setReglaReparto('derivacion_cirugia', null, 10, '2026-01-01');
-    const faco = nom('cirugia', 500000);
+  it('derivador cobra un valor fijo de derivación', () => {
+    app.setValorMedico('cirugia', null, 120000, '2026-01-01');
+    app.setValorMedico('derivacion', null, 20000, '2026-01-01');
+    const faco = nom('cirugia');
     const r = reg({ categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoDerivadorId: 502 });
     const h = app.honorariosDePrestacion(r);
-    expect(h.realizador.monto).toBe(200000);   // 40%
+    expect(h.realizador.monto).toBe(120000);
     expect(h.derivador.medicoId).toBe(502);
-    expect(h.derivador.monto).toBe(50000);      // 10% sobre 500000, en paralelo
+    expect(h.derivador.monto).toBe(20000);
   });
 
-  it('insumo: (precio − costo) neto × % del insumo, al realizador', () => {
-    app.setReglaReparto('cirugia', null, 40, '2026-01-01');
-    app.setReglaReparto('insumo', null, 20, '2026-01-01');
-    const faco = nom('cirugia', 500000);
-    const ins = nom('insumo', 900000); app.setCostoInsumo(ins.grupo, 300000, 'ARS'); // neto 600000
-    const r = reg({ categoria: 'cirugia', grupoNomenclador: faco.grupo, insumos: [ins.grupo] });
-    // base 200000 + insumo 20% de 600000 = 120000 → 320000
-    expect(app.honorariosDePrestacion(r).realizador.monto).toBe(320000);
+  it('extra al médico se suma al valor fijo', () => {
+    app.setValorMedico('consulta', null, 8000, '2026-01-01');
+    const c = nom('consulta');
+    const r = reg({ categoria: 'consulta', grupoNomenclador: c.grupo, extraMedico: 5000 });
+    expect(app.honorariosDePrestacion(r).realizador.monto).toBe(13000);
   });
 
-  it('neto de insumo nunca negativo (costo > precio → 0)', () => {
-    app.setReglaReparto('cirugia', null, 40, '2026-01-01');
-    app.setReglaReparto('insumo', null, 20, '2026-01-01');
-    const faco = nom('cirugia', 500000);
-    const ins = nom('insumo', 100000); app.setCostoInsumo(ins.grupo, 300000, 'ARS'); // neto negativo → 0
-    const r = reg({ categoria: 'cirugia', grupoNomenclador: faco.grupo, insumos: [ins.grupo] });
-    expect(app.honorariosDePrestacion(r).realizador.monto).toBe(200000); // solo la base
-  });
-
-  it('USD: sin cotización marca requiereCotizacion; con cotización convierte', () => {
-    app.setReglaReparto('cirugia', null, 40, '2026-01-01');
-    app.setReglaReparto('insumo', null, 20, '2026-01-01');
-    const faco = nom('cirugia', 500000);
-    const ins = nom('insumo', 400, { moneda: 'USD' }); app.setCostoInsumo(ins.grupo, 100, 'USD'); // neto 300 USD
-    const r = reg({ categoria: 'cirugia', grupoNomenclador: faco.grupo, insumos: [ins.grupo] });
-    const sin = app.honorariosDePrestacion(r);
-    expect(sin.realizador.requiereCotizacion).toBe(true);
-    expect(sin.realizador.monto).toBe(200000); // insumo no sumado sin cotización
-    const con = app.honorariosDePrestacion(r, 1000); // 1 USD = 1000 ARS → neto 300000; 20% = 60000
-    expect(con.realizador.requiereCotizacion).toBe(false);
-    expect(con.realizador.monto).toBe(260000);
-  });
-
-  it('sin % definido: monto 0 y faltaPct informado', () => {
-    const faco = nom('cirugia', 500000);
+  it('sin valor configurado: monto 0 y faltaValor informado', () => {
+    const faco = nom('cirugia');
     const r = reg({ categoria: 'cirugia', grupoNomenclador: faco.grupo });
     const h = app.honorariosDePrestacion(r);
     expect(h.realizador.monto).toBe(0);
-    expect(h.realizador.faltaPct).toContain('cirugia');
+    expect(h.realizador.faltaValor).toContain('cirugia');
   });
 
-  it('% de la fecha de la prestación (aumento posterior no la afecta)', () => {
-    app.setReglaReparto('cirugia', null, 40, '2026-01-01');
-    app.setReglaReparto('cirugia', null, 60, '2026-06-01');
-    const faco = nom('cirugia', 500000);
+  it('usa el valor de la fecha (cambio futuro no la afecta)', () => {
+    app.setValorMedico('cirugia', null, 120000, '2026-01-01');
+    app.setValorMedico('cirugia', null, 200000, '2026-06-01');
+    const faco = nom('cirugia');
     const r = reg({ categoria: 'cirugia', grupoNomenclador: faco.grupo, fecha: '2026-03-10' });
-    expect(app.honorariosDePrestacion(r).realizador.monto).toBe(200000); // 40%, no 60%
-  });
-});
-
-describe('Reparto de la lente en 3 partes (médico / SAM / SAM Oftalmo)', () => {
-  it('médico %neto, SAM %(neto−médico), SAM Oftalmo el sobrante', () => {
-    app.setReglaReparto('cirugia', null, 40, '2026-01-01');
-    app.setReglaReparto('insumo', null, 20, '2026-01-01');
-    app.setReglaReparto('sam_insumo', null, 50, '2026-01-01');
-    const faco = nom('cirugia', 500000);
-    const ins = nom('insumo', 900000); app.setCostoInsumo(ins.grupo, 300000, 'ARS'); // neto 600000
-    const r = reg({ categoria: 'cirugia', grupoNomenclador: faco.grupo, insumos: [ins.grupo] });
-    const h = app.honorariosDePrestacion(r);
-    // médico: 200000 (cirugía) + 120000 (20% de 600000) = 320000
-    expect(h.realizador.monto).toBe(320000);
-    // SAM: 50% de (600000 − 120000) = 240000
-    expect(h.sam.monto).toBe(240000);
-    // SAM Oftalmo: el sobrante = 480000 − 240000 = 240000
-    expect(h.clinica.monto).toBe(240000);
-  });
-
-  it('sin % de SAM: SAM 0 y todo el resto para SAM Oftalmo (con faltaPct)', () => {
-    app.setReglaReparto('insumo', null, 20, '2026-01-01');
-    const faco = nom('cirugia', 500000);
-    const ins = nom('insumo', 900000); app.setCostoInsumo(ins.grupo, 300000, 'ARS');
-    const r = reg({ categoria: 'cirugia', grupoNomenclador: faco.grupo, insumos: [ins.grupo] });
-    const h = app.honorariosDePrestacion(r);
-    expect(h.sam.monto).toBe(0);
-    expect(h.clinica.monto).toBe(480000); // neto − médico
-    expect(h.realizador.faltaPct).toContain('sam_insumo');
-  });
-
-  it('repartoLentesDelMes suma SAM y SAM Oftalmo del período', () => {
-    app.setReglaReparto('cirugia', null, 40, '2026-01-01');
-    app.setReglaReparto('insumo', null, 20, '2026-01-01');
-    app.setReglaReparto('sam_insumo', null, 50, '2026-01-01');
-    const faco = nom('cirugia', 500000);
-    const ins = nom('insumo', 900000); app.setCostoInsumo(ins.grupo, 300000, 'ARS');
-    reg({ categoria: 'cirugia', grupoNomenclador: faco.grupo, insumos: [ins.grupo] });
-    reg({ categoria: 'cirugia', grupoNomenclador: faco.grupo, insumos: [ins.grupo] });
-    const rep = app.repartoLentesDelMes('2026-03');
-    expect(rep.sam).toBe(480000);      // 240000 × 2
-    expect(rep.clinica).toBe(480000);  // 240000 × 2
+    expect(app.honorariosDePrestacion(r).realizador.monto).toBe(120000);
   });
 });
 
 describe('Agregación por médico / mes', () => {
   it('suma realizador + derivador e ignora anuladas', () => {
-    app.setReglaReparto('cirugia', null, 40, '2026-01-01');
-    app.setReglaReparto('derivacion_cirugia', null, 10, '2026-01-01');
-    const faco = nom('cirugia', 500000);
-    reg({ categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoDerivadorId: 502 }); // 501:200000, 502:50000
+    app.setValorMedico('cirugia', null, 120000, '2026-01-01');
+    app.setValorMedico('derivacion', null, 20000, '2026-01-01');
+    const faco = nom('cirugia');
+    reg({ categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoDerivadorId: 502 }); // 501:120000, 502:20000
     const anul = reg({ categoria: 'cirugia', grupoNomenclador: faco.grupo });
     app.anularPrestacion(anul.id, 'test');
-    expect(app.honorariosDeMedico(501, '2026-03').total).toBe(200000);
-    expect(app.honorariosDeMedico(502, '2026-03').total).toBe(50000);
-    const mes = app.honorariosDelMes('2026-03');
-    expect(mes.length).toBe(2);
+    expect(app.honorariosDeMedico(501, '2026-03').total).toBe(120000);
+    expect(app.honorariosDeMedico(502, '2026-03').total).toBe(20000);
+    expect(app.honorariosDelMes('2026-03').length).toBe(2);
   });
 });
