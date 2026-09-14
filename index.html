@@ -244,7 +244,10 @@
       </div>
       <div class="tabla-wrap"><div id="contratosTabla"></div></div>
       <h4 style="margin-top:24px">Cobro de SAM del mes</h4>
-      <div class="filtros"><label class="muted">Mes <input type="month" id="ctrMes" onchange="renderCobroSAM()"></label></div>
+      <div class="filtros">
+        <label class="muted">Mes <input type="month" id="ctrMes" onchange="renderCobroSAM()"></label>
+        <label class="muted">Cotización USD→ARS (para costo de insumos) <input type="number" id="ctrCotiz" step="0.01" style="width:120px" placeholder="opcional" onchange="renderCobroSAM()"></label>
+      </div>
       <div id="cobroSAM"></div>
     </div>
 

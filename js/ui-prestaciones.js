@@ -165,8 +165,8 @@ function agregarInsumoReg() {
   const ver = item ? precioVigente(item.grupo, fecha) : null;
   if (!ver) { alert('Ese insumo no tiene precio vigente a la fecha.'); return; }
   const ingEl = document.getElementById('reg_insumo_ingreso');
-  const ing = ingEl && ingEl.value !== '' ? Number(ingEl.value) : (ver.precio || 0);
-  _regInsumos.push({ grupo: item.grupo, descripcion: ver.descripcion, costo: ver.costo != null ? ver.costo : 0, costoMoneda: ver.costoMoneda || 'ARS', ingreso: ing, ingresoMoneda: ver.moneda || 'ARS' });
+  const ing = ingEl && ingEl.value !== '' ? Number(ingEl.value) : (ver.moneda === 'ARS' ? (ver.precio || 0) : 0);
+  _regInsumos.push({ grupo: item.grupo, descripcion: ver.descripcion, costo: ver.costo != null ? ver.costo : 0, costoMoneda: ver.costoMoneda || 'ARS', ingreso: ing });
   document.getElementById('reg_insumo_sel').value = '';
   if (ingEl) ingEl.value = '';
   _renderInsumosReg();
@@ -180,7 +180,7 @@ function _renderInsumosReg() {
   if (_regInsumos.length === 0) { cont.innerHTML = '<p class="muted">Sin insumos.</p>'; return; }
   cont.innerHTML = _regInsumos.map((ins, i) => `
     <div class="ins-item">
-      <span>${escHtml(ins.descripcion)} — ingreso ${fmtMoneda(ins.ingreso, ins.ingresoMoneda)} <span class="muted">(costo ${fmtMoneda(ins.costo, ins.costoMoneda)})</span></span>
+      <span>${escHtml(ins.descripcion)} — factura SAM ${fmtMoneda(ins.ingreso, 'ARS')} <span class="muted">(nuestro costo ${fmtMoneda(ins.costo, ins.costoMoneda)})</span></span>
       <button onclick="quitarInsumoReg(${i})">Quitar</button>
     </div>`).join('');
 }
@@ -250,7 +250,7 @@ function guardarPrestacionReg() {
     sedeId: Number(val('reg_sede')) || sedeActiva(),
     consultorioId: val('reg_consultorio') || null,
     extraMedico: val('reg_extra') || 0,
-    insumos: _regInsumos.map(i => ({ grupo: i.grupo, ingreso: i.ingreso, ingresoMoneda: i.ingresoMoneda })),
+    insumos: _regInsumos.map(i => ({ grupo: i.grupo, ingreso: i.ingreso })),
     paciente: { apellido: val('reg_pac_apellido'), nombre: val('reg_pac_nombre'), dni: val('reg_pac_dni') },
   };
   const idEdit = val('reg_id');

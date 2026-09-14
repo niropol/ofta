@@ -60,17 +60,25 @@ function renderCobroSAM() {
   const mes = document.getElementById('ctrMes') ? document.getElementById('ctrMes').value : '';
   if (!mes) { cont.innerHTML = '<p class="muted">Elegí un mes.</p>'; return; }
   const r = ingresoSAMDelMes(mes);
+  const cotEl = document.getElementById('ctrCotiz');
+  const cotiz = cotEl ? (Number(cotEl.value) || null) : null;
+  const ci = costoInsumosDelMes(mes, cotiz);
   const yaCobrado = DB.cajaMovimientos.some(m => m.origen === 'cobro_sam' && m.referenciaId === mes);
+  const yaCosto = DB.cajaMovimientos.some(m => m.origen === 'costo_insumos' && m.referenciaId === mes);
   cont.innerHTML = `
     <div class="saldos">
-      <div class="saldo-card"><div class="saldo-titulo">Facturado a las OS</div><div class="saldo-monto">${fmtMoneda(r.facturado, 'ARS')}</div></div>
+      <div class="saldo-card"><div class="saldo-titulo">Facturado a las OS (incluye insumos)</div><div class="saldo-monto">${fmtMoneda(r.facturado, 'ARS')}</div></div>
       <div class="saldo-card total"><div class="saldo-titulo">SAM te paga (${r.porcentaje}%)</div><div class="saldo-monto">${fmtMoneda(r.ingreso, 'ARS')}</div></div>
+      <div class="saldo-card"><div class="saldo-titulo">Costo de insumos (comprás)</div><div class="saldo-monto neg">${ci.requiereCotizacion ? 'falta cotización USD' : fmtMoneda(ci.costo, 'ARS')}</div></div>
     </div>
-    ${r.sinContrato ? `<p class="nota">${r.sinContrato} prestación(es) del mes sin valor de contrato cargado (no suman al ingreso).</p>` : ''}
+    ${r.sinContrato ? `<p class="nota">${r.sinContrato} prestación(es) del mes sin valor de contrato cargado (solo suman sus insumos).</p>` : ''}
     <div class="btn-group">
       ${yaCobrado
-        ? '<span class="diag-ok" style="margin:0">✅ Cobro de SAM ya registrado en la caja para este mes.</span> <button class="btn secundario" onclick="quitarCobroSAMUI()">Deshacer</button>'
-        : `<button class="btn" onclick="registrarCobroSAMUI()">Registrar cobro de SAM en caja</button>`}
+        ? '<span class="diag-ok" style="margin:0">✅ Cobro de SAM registrado.</span> <button class="btn secundario" onclick="quitarCobroSAMUI()">Deshacer</button>'
+        : `<button class="btn" onclick="registrarCobroSAMUI()">Registrar cobro de SAM (ingreso)</button>`}
+      ${yaCosto
+        ? '<span class="diag-ok" style="margin:0">✅ Costo de insumos registrado.</span> <button class="btn secundario" onclick="quitarCostoInsumosUI()">Deshacer</button>'
+        : `<button class="btn" onclick="registrarCostoInsumosUI()">Registrar costo de insumos (egreso)</button>`}
     </div>`;
 }
 
@@ -83,6 +91,19 @@ function registrarCobroSAMUI() {
 function quitarCobroSAMUI() {
   const mes = document.getElementById('ctrMes').value;
   quitarCobroSAM(mes);
+  renderCobroSAM();
+  if (typeof renderCaja === 'function') renderCaja();
+}
+function registrarCostoInsumosUI() {
+  const mes = document.getElementById('ctrMes').value;
+  const cotEl = document.getElementById('ctrCotiz');
+  try { registrarCostoInsumos(mes, cotEl ? cotEl.value : null); } catch (e) { alert(e.message); return; }
+  renderCobroSAM();
+  if (typeof renderCaja === 'function') renderCaja();
+}
+function quitarCostoInsumosUI() {
+  const mes = document.getElementById('ctrMes').value;
+  quitarCostoInsumos(mes);
   renderCobroSAM();
   if (typeof renderCaja === 'function') renderCaja();
 }

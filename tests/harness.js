@@ -83,6 +83,7 @@ const EXPONER = [
   // contratos (ingreso)
   'porcentajeSAM', 'valorContrato', 'setContrato', 'eliminarContrato', 'contratosDeOS',
   'ingresoSAMDePrestacion', 'ingresoSAMDelMes', 'registrarCobroSAM', 'quitarCobroSAM',
+  'costoInsumosDelMes', 'registrarCostoInsumos', 'quitarCostoInsumos',
   'renderContratos', 'guardarValorContratoUI', 'registrarCobroSAMUI',
   // diagnóstico (Etapa 9)
   'runSelfTests', 'diagnosticoDatos', 'estadoNube', 'verificarNube',

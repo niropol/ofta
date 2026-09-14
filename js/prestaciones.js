@@ -52,9 +52,11 @@ function medicoNombre(id) { const m = DB.medicos.find(x => x.id === Number(id));
 // Resuelve los insumos usados (grupos del nomenclador) a snapshots con precio y
 // costo vigentes a la fecha. El neto (precio − costo) se calcula en Etapa 4/6
 // (puede requerir cotización si precio y costo están en monedas distintas).
-//  Cada item puede ser un grupo (número) o {grupo, ingreso, ingresoMoneda}.
-//  El COSTO sale del catálogo (lo que nos cuesta); el INGRESO es customizable por
-//  prestación (a veces se cobra, a veces no) y por defecto toma el precio del catálogo.
+//  Cada item puede ser un grupo (número) o {grupo, ingreso}.
+//  - costo   = lo que nos cuesta comprarlo (del catálogo; puede ser ARS o USD) → egreso nuestro.
+//  - ingreso = lo que SAM factura por el insumo (EN PESOS, customizable por prestación;
+//    a veces hay, a veces no). SAM nos paga el 40% de eso (no lo cobramos directo).
+//    Por defecto toma el precio del catálogo si está en pesos, si no queda en 0.
 function _resolverInsumos(items, fecha, permite) {
   if (!permite || !Array.isArray(items) || items.length === 0) return [];
   return items.map(it => {
@@ -64,13 +66,13 @@ function _resolverInsumos(items, fecha, permite) {
     const ver = precioVigente(item.grupo, fecha);
     if (!ver) throw new Error('No hay precio vigente para el insumo "' + item.descripcion + '" en la fecha ' + fecha + '.');
     const tieneIngreso = (it && typeof it === 'object' && it.ingreso != null && it.ingreso !== '');
+    const ingresoDefault = ver.moneda === 'ARS' ? (ver.precio || 0) : 0;
     return {
       grupo: item.grupo,
       nomencladorId: ver.id,
       descripcion: ver.descripcion,
       costo: ver.costo != null ? ver.costo : 0, costoMoneda: ver.costoMoneda || 'ARS',
-      ingreso: tieneIngreso ? (Number(it.ingreso) || 0) : (ver.precio || 0),
-      ingresoMoneda: (it && typeof it === 'object' && it.ingresoMoneda) ? it.ingresoMoneda : (ver.moneda || 'ARS'),
+      ingreso: tieneIngreso ? (Number(it.ingreso) || 0) : ingresoDefault,   // en pesos, lo factura SAM
     };
   });
 }
@@ -151,7 +153,7 @@ function editarPrestacionRealizada(id, datos) {
     medicoDerivadorId: datos.medicoDerivadorId !== undefined ? datos.medicoDerivadorId : reg.medicoDerivadorId,
     obraSocial: datos.obraSocial ?? reg.obraSocial,
     extraMedico: datos.extraMedico !== undefined ? datos.extraMedico : reg.extraMedico,
-    insumos: datos.insumos !== undefined ? datos.insumos : (reg.insumos || []).map(i => ({ grupo: i.grupo, ingreso: i.ingreso, ingresoMoneda: i.ingresoMoneda })),
+    insumos: datos.insumos !== undefined ? datos.insumos : (reg.insumos || []).map(i => ({ grupo: i.grupo, ingreso: i.ingreso })),
     paciente: datos.paciente ?? { nombre: '', apellido: '', dni: '' },
   });
   // registrarPrestacion agregó uno nuevo: lo fusionamos sobre el existente y quitamos el temporal.

@@ -6,7 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 function _labelOrigen(o) {
-  return { manual: 'Manual', gasto: 'Gasto', pago_medico: 'Pago médico (auto)', cobro_sam: 'Cobro SAM (auto)' }[o] || o;
+  return { manual: 'Manual', gasto: 'Gasto', pago_medico: 'Pago médico (auto)', cobro_sam: 'Cobro SAM (auto)', costo_insumos: 'Costo insumos (auto)' }[o] || o;
 }
 
 function renderCaja() {

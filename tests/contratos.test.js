@@ -55,6 +55,30 @@ describe('Contratos e ingreso de SAM', () => {
     expect(r.sinContrato).toBe(1);
   });
 
+  it('SAM también factura los insumos: el 40% incluye el ingreso de los insumos', () => {
+    const faco = nomFaco();
+    app.setContrato('OSDE', faco.grupo, 1000000, '2026-01-01');
+    const ins = app.crearPrestacion({ categoria: 'insumo', descripcion: 'Lente', precio: 500000, moneda: 'ARS', costo: 200000, costoMoneda: 'ARS', vigenciaDesde: '2026-01-01' });
+    const reg = app.registrarPrestacion({ fecha: '2026-03-10', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 501, obraSocial: 'OSDE', insumos: [ins.grupo] });
+    const i = app.ingresoSAMDePrestacion(reg);
+    expect(i.facturado).toBe(1500000);          // contrato 1.000.000 + insumo 500.000
+    expect(i.ingreso).toBe(600000);             // 40%
+  });
+
+  it('costoInsumosDelMes suma el costo (USD con cotización) y se registra como egreso', () => {
+    const faco = nomFaco();
+    const insA = app.crearPrestacion({ categoria: 'insumo', descripcion: 'Sutura', precio: 20000, moneda: 'ARS', costo: 8000, costoMoneda: 'ARS', vigenciaDesde: '2026-01-01' });
+    const insU = app.crearPrestacion({ categoria: 'insumo', descripcion: 'Lente USD', precio: 0, moneda: 'ARS', costo: 500, costoMoneda: 'USD', vigenciaDesde: '2026-01-01' });
+    app.registrarPrestacion({ fecha: '2026-03-01', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 501, obraSocial: 'OSDE', insumos: [insA.grupo, insU.grupo] });
+    expect(app.costoInsumosDelMes('2026-03').requiereCotizacion).toBe(true);
+    const c = app.costoInsumosDelMes('2026-03', 1000);
+    expect(c.costo).toBe(508000); // 8000 + 500×1000
+    const mov = app.registrarCostoInsumos('2026-03', 1000, '2026-03-31');
+    expect(mov.monto).toBe(508000);
+    expect(app.saldosCaja().ARS.transferencia).toBe(-508000);
+    expect(app.quitarCostoInsumos('2026-03')).toBe(1);
+  });
+
   it('registrarCobroSAM carga el ingreso en caja y no duplica; quitarCobroSAM lo deshace', () => {
     const faco = nomFaco();
     app.setContrato('OSDE', faco.grupo, 1000000, '2026-01-01');
