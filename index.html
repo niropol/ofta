@@ -93,6 +93,14 @@
   .saldos { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 18px; }
   .saldo-card { background: var(--panel); border: 1px solid var(--borde); border-radius: 8px; padding: 14px; }
   .saldo-card.total { background: #f0f6ff; border-color: #c7dbf5; }
+  .saldo-card.alerta { background: #fef2f2; border-color: #fecaca; }
+  .aviso { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 10px 12px; border-radius: 6px; font-size: 13px; }
+  .cd-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+  .cd-card { background: var(--panel); border: 1px solid var(--borde); border-radius: 8px; padding: 14px; }
+  .cd-card h4 { margin-top: 0; }
+  .cd-form { display: flex; flex-direction: column; gap: 8px; }
+  .cd-form input, .cd-form select { padding: 8px 10px; border: 1px solid var(--borde); border-radius: 6px; font-size: 14px; width: 100%; }
+  .cd-form button { margin-top: 4px; }
   .saldo-titulo { font-size: 12px; color: var(--muted); }
   .saldo-monto { font-size: 20px; font-weight: 600; margin-top: 4px; }
   .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -123,24 +131,90 @@
 </header>
 
 <nav class="tabs" id="navTabs">
-  <button class="active" data-sec="section-prestaciones" onclick="showSection('section-prestaciones')">Prestaciones</button>
+  <button class="active" data-sec="section-prestaciones" onclick="showSection('section-prestaciones')">Carga diaria</button>
   <button data-sec="section-configuracion" onclick="showSection('section-configuracion')">Configuración</button>
   <button data-sec="section-admin" onclick="showSection('section-admin')">Admin 🔒</button>
 </nav>
 
 <main>
-  <!-- ── PRESTACIONES REALIZADAS (uso diario) ── -->
+  <!-- ── CARGA DIARIA (uso de la secretaria) ── -->
   <section id="section-prestaciones" class="section active">
-    <div class="section-head">
-      <h2>Prestaciones realizadas</h2>
-      <button class="btn" onclick="abrirNuevaPrestacionRealizada()">+ Cargar prestación</button>
+    <div class="section-head"><h2>Carga diaria</h2></div>
+    <div class="subtabs" id="visTabs">
+      <button class="active" data-p="dia" onclick="visTab('dia')">Día</button>
+      <button data-p="todas" onclick="visTab('todas')">Todas las prestaciones</button>
+      <button data-p="agenda" onclick="visTab('agenda')">Agenda</button>
     </div>
-    <div class="filtros">
-      <label class="muted">Mes <input type="month" id="regFiltroMes" onchange="irPaginaPrestaciones(0)"></label>
-      <select id="regFiltroMedico" onchange="irPaginaPrestaciones(0)"></select>
-      <select id="regFiltroCat" onchange="irPaginaPrestaciones(0)"></select>
+
+    <!-- Día: alta rápida -->
+    <div class="vispanel" data-p="dia">
+      <div class="filtros">
+        <label class="muted">Día <input type="date" id="cd_fecha" onchange="renderCargaDiaria()"></label>
+        <label class="muted">Médico <select id="cd_medico"></select></label>
+        <label class="muted">Sede <select id="cd_sede" onchange="cdSedeChange()"></select></label>
+        <label class="muted">Consultorio <select id="cd_consultorio"></select></label>
+      </div>
+
+      <div class="cd-grid">
+        <div class="cd-card">
+          <h4>Consultas y estudios</h4>
+          <p class="muted">Elegí el tipo y el paciente. Valor único (no depende de la OS).</p>
+          <div class="cd-form">
+            <select id="cd_ce_tipo"></select>
+            <select id="cd_ce_os" title="Obra social"></select>
+            <input id="cd_ce_ap" placeholder="Apellido">
+            <input id="cd_ce_nom" placeholder="Nombre">
+            <input id="cd_ce_dni" placeholder="DNI">
+            <button class="btn" onclick="cdAgregarCE()">+ Agregar</button>
+          </div>
+        </div>
+
+        <div class="cd-card">
+          <h4>Prácticas</h4>
+          <p class="muted">Una por una, indicando quién la derivó.</p>
+          <div class="cd-form">
+            <select id="cd_pr_tipo"></select>
+            <select id="cd_pr_os" title="Obra social"></select>
+            <select id="cd_pr_deriv" title="Médico derivador"></select>
+            <input id="cd_pr_ap" placeholder="Apellido">
+            <input id="cd_pr_nom" placeholder="Nombre">
+            <input id="cd_pr_dni" placeholder="DNI">
+            <button class="btn" onclick="cdAgregarPractica()">+ Agregar</button>
+          </div>
+        </div>
+
+        <div class="cd-card">
+          <h4>Cirugías</h4>
+          <p class="muted">Cada cirugía lleva su insumo y, si corresponde, el derivador.</p>
+          <button class="btn" onclick="cdNuevaCirugia()">+ Cargar cirugía</button>
+        </div>
+      </div>
+
+      <div class="section-head" style="margin-top:22px"><h3 style="margin:0">Cargado el <span id="cd_fecha_lbl">—</span></h3></div>
+      <div class="tabla-wrap"><div id="cd_tabla"></div></div>
     </div>
-    <div class="tabla-wrap"><div id="prestacionesTabla"></div></div>
+
+    <!-- Todas: tabla mensual con filtros y edición -->
+    <div class="vispanel" data-p="todas" hidden>
+      <div class="section-head">
+        <h3 style="margin:0">Todas las prestaciones</h3>
+        <button class="btn" onclick="abrirNuevaPrestacionRealizada()">+ Cargar prestación</button>
+      </div>
+      <div class="filtros">
+        <label class="muted">Mes <input type="month" id="regFiltroMes" onchange="irPaginaPrestaciones(0)"></label>
+        <select id="regFiltroMedico" onchange="irPaginaPrestaciones(0)"></select>
+        <select id="regFiltroCat" onchange="irPaginaPrestaciones(0)"></select>
+      </div>
+      <div class="tabla-wrap"><div id="prestacionesTabla"></div></div>
+    </div>
+
+    <!-- Agenda: horarios de los médicos -->
+    <div class="vispanel" data-p="agenda" hidden>
+      <div class="section-head"><h3 style="margin:0">Horarios de los médicos</h3>
+        <button class="btn" onclick="abrirNuevoHorario()">+ Nuevo horario</button></div>
+      <p class="muted" style="margin-top:0">Agenda: qué médico atiende, qué día, en qué horario y consultorio.</p>
+      <div class="tabla-wrap"><div id="horariosTabla"></div></div>
+    </div>
   </section>
 
   <!-- ── CONFIGURACIÓN (datos maestros) ── -->
@@ -152,7 +226,6 @@
       <button data-p="obras" onclick="configTab('obras')">Obras sociales</button>
       <button data-p="pagos" onclick="configTab('pagos')">Pagos a médicos</button>
       <button data-p="sedes" onclick="configTab('sedes')">Sedes y consultorios</button>
-      <button data-p="horarios" onclick="configTab('horarios')">Horarios</button>
       <button data-p="estadisticas" onclick="configTab('estadisticas')">Estadísticas</button>
     </div>
 
@@ -204,13 +277,6 @@
       <div class="tabla-wrap"><div id="consultoriosTabla"></div></div>
     </div>
 
-    <div class="configpanel" data-p="horarios" hidden>
-      <div class="section-head"><h3 style="margin:0">Horarios de los médicos</h3>
-        <button class="btn" onclick="abrirNuevoHorario()">+ Nuevo horario</button></div>
-      <p class="muted" style="margin-top:0">Agenda: qué médico atiende, qué día, en qué horario y consultorio.</p>
-      <div class="tabla-wrap"><div id="horariosTabla"></div></div>
-    </div>
-
     <div class="configpanel" data-p="estadisticas" hidden>
       <div class="section-head"><h3 style="margin:0">Estadísticas</h3></div>
       <div class="filtros">
@@ -229,11 +295,22 @@
   <section id="section-admin" class="section">
     <div class="section-head"><h2>Admin <span class="muted" style="font-size:13px">· acceso restringido</span></h2></div>
     <div class="subtabs" id="adminTabs">
-      <button class="active" data-p="caja" onclick="adminTab('caja')">Caja</button>
+      <button class="active" data-p="panel" onclick="adminTab('panel')">Panel del mes</button>
+      <button data-p="caja" onclick="adminTab('caja')">Caja</button>
       <button data-p="contratos" onclick="adminTab('contratos')">Contratos</button>
       <button data-p="liquidaciones" onclick="adminTab('liquidaciones')">Liquidaciones</button>
       <button data-p="honorarios" onclick="adminTab('honorarios')">Insumos</button>
       <button data-p="seguridad" onclick="adminTab('seguridad')">Seguridad</button>
+    </div>
+
+    <div class="adminpanel" data-p="panel">
+      <div class="section-head"><h3 style="margin:0">Panel del mes</h3></div>
+      <p class="muted" style="margin-top:0">Resumen calculado: qué factura SAM, cuánto te debe pagar (40%), cuánto te pagó, costo de insumos, honorarios y margen.</p>
+      <div class="filtros">
+        <label class="muted">Mes <input type="month" id="panelMes" onchange="renderPanelMes()"></label>
+        <label class="muted">Cotización USD→ARS <input type="number" id="panelCotiz" step="0.01" style="width:120px" placeholder="opcional" onchange="renderPanelMes()"></label>
+      </div>
+      <div id="panelContenido"></div>
     </div>
 
     <div class="adminpanel" data-p="contratos" hidden>
@@ -251,7 +328,7 @@
       <div id="cobroSAM"></div>
     </div>
 
-    <div class="adminpanel" data-p="caja">
+    <div class="adminpanel" data-p="caja" hidden>
     <div class="section-head">
       <h3 style="margin:0">Caja</h3>
       <div class="btn-group">
@@ -683,6 +760,8 @@
 <script src="js/ui-caja.js?v=1"></script>
 <script src="js/ui-liquidaciones.js?v=1"></script>
 <script src="js/ui-estadisticas.js?v=1"></script>
+<script src="js/ui-carga-diaria.js?v=1"></script>
+<script src="js/ui-panel.js?v=1"></script>
 <script src="js/ui-usuarios.js?v=1"></script>
 <script src="js/diagnostico.js?v=1"></script>
 <script src="js/ui-diagnostico.js?v=1"></script>
@@ -708,15 +787,23 @@ function configTab(p) {
   document.querySelectorAll('#configTabs button').forEach(b => b.classList.toggle('active', b.dataset.p === p));
 }
 
+// Sub-pestañas de la parte visible (Día / Todas / Agenda).
+function visTab(p) {
+  document.querySelectorAll('#section-prestaciones .vispanel').forEach(el => { el.hidden = el.dataset.p !== p; });
+  document.querySelectorAll('#visTabs button').forEach(b => b.classList.toggle('active', b.dataset.p === p));
+}
+
 // ── init(): se llama tras cargar la nube (o en modo local). Renderiza todo. ──
 function init() {
   _poblarFiltroCategoria();
   // Por defecto, filtrar por el mes actual (con muchos datos, evita listas enormes).
   const mesActual = new Date().toISOString().slice(0, 7);
-  ['regFiltroMes', 'statMes', 'liqMes', 'prevMes', 'ctrMes'].forEach(id => {
+  ['regFiltroMes', 'statMes', 'liqMes', 'prevMes', 'ctrMes', 'panelMes'].forEach(id => {
     const el = document.getElementById(id);
     if (el && !el.value) el.value = mesActual;
   });
+  const cdFecha = document.getElementById('cd_fecha');
+  if (cdFecha && !cdFecha.value) cdFecha.value = hoyISO();
   sincronizarUI();
   renderUsuariosYAuditoria();
 }
@@ -728,10 +815,10 @@ function init() {
 function sincronizarUI() {
   const run = fns => fns.forEach(f => { try { if (typeof window[f] === 'function') window[f](); } catch (e) { console.error(f, e); } });
   run([
-    '_poblarFiltrosPrestaciones', 'renderPrestaciones',
+    '_poblarFiltrosPrestaciones', 'renderPrestaciones', 'renderCargaDiaria',
     'renderMedicos', 'renderNomenclador', 'renderOS', 'renderSedes', 'renderConsultorios',
     'renderHorarios', 'renderContratos', 'renderValoresMedico', 'renderAdmin', 'renderCaja',
-    'renderLiquidaciones', 'renderEstadisticas', 'poblarActuandoComo',
+    'renderLiquidaciones', 'renderEstadisticas', 'renderPanelMes', 'poblarActuandoComo',
   ]);
 }
 </script>

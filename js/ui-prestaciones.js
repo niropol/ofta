@@ -197,18 +197,22 @@ function onSedeChangeReg() {
   if (el) el.innerHTML = _optsConsultorios(Number(sede));
 }
 
-function abrirNuevaPrestacionRealizada() {
+// preset (opcional, desde Carga diaria): { categoria, fecha, medicoRealizadorId, sedeId, consultorioId }
+function abrirNuevaPrestacionRealizada(preset) {
+  preset = preset || {};
   document.getElementById('modalRegTitulo').textContent = 'Cargar prestación';
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v == null ? '' : v; };
   set('reg_id', '');
-  set('reg_fecha', hoyISO()); set('reg_hora', ''); set('reg_extra', '');
+  set('reg_fecha', preset.fecha || hoyISO()); set('reg_hora', ''); set('reg_extra', '');
   _regInsumos = [];
-  document.getElementById('reg_categoria').innerHTML = CATEGORIAS_REALIZADAS.map(c => `<option value="${c.id}">${escHtml(c.label)}</option>`).join('');
-  document.getElementById('reg_realizador').innerHTML = _optsMedicos(null, true, 'Elegí el médico…');
+  const catSel = preset.categoria || null;
+  document.getElementById('reg_categoria').innerHTML = CATEGORIAS_REALIZADAS.map(c => `<option value="${c.id}"${c.id === catSel ? ' selected' : ''}>${escHtml(c.label)}</option>`).join('');
+  document.getElementById('reg_realizador').innerHTML = _optsMedicos(preset.medicoRealizadorId ? Number(preset.medicoRealizadorId) : null, true, 'Elegí el médico…');
   document.getElementById('reg_derivador').innerHTML = _optsMedicos(null, true, '— sin derivación —');
   document.getElementById('reg_os').innerHTML = _optsOS('Particular');
-  document.getElementById('reg_sede').innerHTML = _optsSedes(sedeActiva());
-  document.getElementById('reg_consultorio').innerHTML = _optsConsultorios(sedeActiva());
+  const sede = preset.sedeId ? Number(preset.sedeId) : sedeActiva();
+  document.getElementById('reg_sede').innerHTML = _optsSedes(sede);
+  document.getElementById('reg_consultorio').innerHTML = _optsConsultorios(sede, preset.consultorioId ? Number(preset.consultorioId) : null);
   set('reg_pac_apellido', ''); set('reg_pac_nombre', ''); set('reg_pac_dni', '');
   onCategoriaChangeReg();
   _mostrarModalReg(true);
@@ -263,6 +267,7 @@ function guardarPrestacionReg() {
   }
   cerrarModalReg();
   renderPrestaciones();
+  if (typeof renderCargaDiaria === 'function') renderCargaDiaria();
   return true;
 }
 
@@ -272,14 +277,17 @@ function anularPrestacionUI(id) {
   if (motivo === null) return; // canceló
   anularPrestacion(id, motivo);
   renderPrestaciones();
+  if (typeof renderCargaDiaria === 'function') renderCargaDiaria();
 }
 function reactivarPrestacionUI(id) {
   if (typeof confirm === 'function' && !confirm('¿Reactivar esta prestación anulada?')) return;
   reactivarPrestacion(id);
   renderPrestaciones();
+  if (typeof renderCargaDiaria === 'function') renderCargaDiaria();
 }
 function eliminarPrestacionRealizadaUI(id) {
   if (typeof confirm === 'function' && !confirm('¿Eliminar definitivamente esta prestación? Para dejar constancia, conviene «Anular» en su lugar. Queda registrado en auditoría.')) return;
   eliminarPrestacionRealizada(id);
   renderPrestaciones();
+  if (typeof renderCargaDiaria === 'function') renderCargaDiaria();
 }
