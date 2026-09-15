@@ -119,6 +119,9 @@
   .subtabs { display: flex; gap: 6px; margin-bottom: 16px; border-bottom: 1px solid var(--borde); }
   .subtabs button { background: none; border: none; padding: 8px 14px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; font-size: 13px; }
   .subtabs button.active { color: var(--primario); border-bottom-color: var(--primario); font-weight: 600; }
+  .subtabs.areas { border-bottom: 2px solid var(--borde); gap: 2px; margin-bottom: 6px; }
+  .subtabs.areas button { font-size: 14px; padding: 10px 18px; }
+  #adminSubtabs { margin-bottom: 16px; }
   h4 { margin: 8px 0; font-size: 14px; }
   .pager { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
   .pager button { background: #eef2f7; border: 1px solid var(--borde); border-radius: 6px; padding: 6px 12px; cursor: pointer; font-size: 13px; }
@@ -228,17 +231,23 @@
   <!-- ── ADMIN (todo lo restringido: caja, plata y datos maestros) ── -->
   <section id="section-admin" class="section">
     <div class="section-head"><h2>Admin <span class="muted" style="font-size:13px">· acceso restringido</span></h2></div>
-    <div class="subtabs" id="adminTabs">
-      <button class="active" data-p="panel" onclick="adminTab('panel')">Panel del mes</button>
-      <button data-p="caja" onclick="adminTab('caja')">Caja</button>
-      <button data-p="liquidaciones" onclick="adminTab('liquidaciones')">Liquidaciones</button>
-      <button data-p="nomcon" onclick="adminTab('nomcon')">Nomenclador y contratos</button>
-      <button data-p="pagos" onclick="adminTab('pagos')">Pagos a médicos</button>
-      <button data-p="honorarios" onclick="adminTab('honorarios')">Insumos</button>
-      <button data-p="medicos" onclick="adminTab('medicos')">Médicos</button>
-      <button data-p="sedes" onclick="adminTab('sedes')">Sedes y consultorios</button>
-      <button data-p="estadisticas" onclick="adminTab('estadisticas')">Estadísticas</button>
-      <button data-p="seguridad" onclick="adminTab('seguridad')">Seguridad</button>
+    <div class="subtabs areas" id="adminAreas">
+      <button class="active" data-area="resumen" onclick="adminArea('resumen')">📊 Resumen</button>
+      <button data-area="finanzas" onclick="adminArea('finanzas')">💸 Finanzas</button>
+      <button data-area="config" onclick="adminArea('config')">⚙️ Configuración</button>
+      <button data-area="seguridad" onclick="adminArea('seguridad')">🔒 Seguridad</button>
+    </div>
+    <div class="subtabs" id="adminSubtabs"></div>
+
+    <!-- Cobros de SAM del mes (área Finanzas) -->
+    <div class="adminpanel" data-p="cobros" hidden>
+      <div class="section-head"><h3 style="margin:0">Cobros de SAM del mes</h3></div>
+      <p class="muted" style="margin-top:0">Lo que SAM te debe pagar (40% de lo facturado) por cada obra social, y el registro de lo que efectivamente te transfirió. También el costo de insumos del mes.</p>
+      <div class="filtros">
+        <label class="muted">Mes <input type="month" id="ctrMes" onchange="renderCobroSAM()"></label>
+        <label class="muted">Cotización USD→ARS (para costo de insumos) <input type="number" id="ctrCotiz" step="0.01" style="width:120px" placeholder="opcional" onchange="renderCobroSAM()"></label>
+      </div>
+      <div id="cobroSAM"></div>
     </div>
 
     <div class="adminpanel" data-p="medicos" hidden>
@@ -286,12 +295,7 @@
         </div>
         <div id="ctrImportMsg"></div>
         <div class="tabla-wrap"><div id="contratosTabla"></div></div>
-        <h4 style="margin-top:24px">Cobro de SAM del mes</h4>
-        <div class="filtros">
-          <label class="muted">Mes <input type="month" id="ctrMes" onchange="renderCobroSAM()"></label>
-          <label class="muted">Cotización USD→ARS (para costo de insumos) <input type="number" id="ctrCotiz" step="0.01" style="width:120px" placeholder="opcional" onchange="renderCobroSAM()"></label>
-        </div>
-        <div id="cobroSAM"></div>
+        <p class="muted" style="margin-top:10px">El cobro mensual (lo que SAM te paga y lo que te transfirió) está en <strong>Finanzas ▸ Cobros de SAM</strong>.</p>
       </div>
     </div>
 
@@ -785,9 +789,27 @@ function showSection(id) {
 }
 
 // Sub-pestañas dentro de Admin (Caja / Liquidaciones / Honorarios y precios / Seguridad).
+// Admin en 2 niveles: áreas (Resumen / Finanzas / Configuración / Seguridad) →
+// cada una con sus sub-pestañas (paneles).
+const ADMIN_AREAS = {
+  resumen:   { tabs: [['panel', 'Panel del mes'], ['estadisticas', 'Estadísticas']] },
+  finanzas:  { tabs: [['cobros', 'Cobros de SAM'], ['liquidaciones', 'Liquidaciones'], ['caja', 'Caja']] },
+  config:    { tabs: [['nomcon', 'Nomenclador y contratos'], ['pagos', 'Valores a médicos'], ['honorarios', 'Insumos'], ['medicos', 'Médicos'], ['sedes', 'Sedes y consultorios']] },
+  seguridad: { tabs: [['seguridad', 'Seguridad']] },
+};
+
+function adminArea(area) {
+  const cfg = ADMIN_AREAS[area]; if (!cfg) return;
+  document.querySelectorAll('#adminAreas button').forEach(b => b.classList.toggle('active', b.dataset.area === area));
+  const sub = document.getElementById('adminSubtabs');
+  sub.innerHTML = cfg.tabs.map((t, i) => `<button class="${i === 0 ? 'active' : ''}" data-p="${t[0]}" onclick="adminTab('${t[0]}')">${t[1]}</button>`).join('');
+  sub.style.display = cfg.tabs.length > 1 ? 'flex' : 'none';
+  adminTab(cfg.tabs[0][0]);
+}
+
 function adminTab(p) {
   document.querySelectorAll('#section-admin .adminpanel').forEach(el => { el.hidden = el.dataset.p !== p; });
-  document.querySelectorAll('#adminTabs button').forEach(b => b.classList.toggle('active', b.dataset.p === p));
+  document.querySelectorAll('#adminSubtabs button').forEach(b => b.classList.toggle('active', b.dataset.p === p));
 }
 
 // Sub-pestañas de la parte visible (Día / Todas / Agenda).
@@ -815,6 +837,7 @@ function init() {
   if (cdFecha && !cdFecha.value) cdFecha.value = hoyISO();
   sincronizarUI();
   renderUsuariosYAuditoria();
+  if (typeof adminArea === 'function') adminArea('resumen');
 }
 
 // ── sincronizarUI(): re-renderiza TODO para que la info viaje entre las partes.
