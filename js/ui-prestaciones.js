@@ -25,15 +25,13 @@ function _optsSedes(sel) {
   return getSedesActivas().map(s => `<option value="${s.id}"${s.id === sel ? ' selected' : ''}>${escHtml(s.nombre)}</option>`).join('');
 }
 
-// Opciones del nomenclador para una categoría, mostrando el precio vigente a `fecha`.
+// Opciones del nomenclador para una categoría (solo descripción; los valores
+// quedan para la parte restringida).
 function _optsPrestacionesCat(categoria, fecha, sel) {
   const items = listarPrestaciones({ categoria, incluirInactivos: false });
   if (items.length === 0) return '<option value="">(no hay prestaciones de esta categoría en el nomenclador)</option>';
-  return '<option value="">Elegí la prestación…</option>' + items.map(v => {
-    const pv = precioVigente(v.grupo, fecha);
-    const precio = pv ? fmtMoneda(pv.precio, pv.moneda) : 'sin precio a la fecha';
-    return `<option value="${v.grupo}"${v.grupo === sel ? ' selected' : ''}>${escHtml(v.descripcion)} — ${precio}</option>`;
-  }).join('');
+  return '<option value="">Elegí la prestación…</option>' + items.map(v =>
+    `<option value="${v.grupo}"${v.grupo === sel ? ' selected' : ''}>${escHtml(v.descripcion)}</option>`).join('');
 }
 
 // ── Render de la tabla (paginada) ──
@@ -150,11 +148,8 @@ function _poblarSelectInsumos(fecha) {
   if (!sel) return;
   const items = listarPrestaciones({ categoria: 'insumo', incluirInactivos: false });
   if (items.length === 0) { sel.innerHTML = '<option value="">(no hay insumos cargados en el nomenclador)</option>'; return; }
-  sel.innerHTML = '<option value="">Elegí un insumo…</option>' + items.map(v => {
-    const pv = precioVigente(v.grupo, fecha);
-    const precio = pv ? fmtMoneda(pv.precio, pv.moneda) : 'sin precio';
-    return `<option value="${v.grupo}">${escHtml(v.descripcion)} — ${precio}</option>`;
-  }).join('');
+  sel.innerHTML = '<option value="">Elegí un insumo…</option>' + items.map(v =>
+    `<option value="${v.grupo}">${escHtml(v.descripcion)}</option>`).join('');
 }
 
 // Agregar el insumo elegido a la lista (con ingreso opcional; costo del catálogo).
@@ -181,7 +176,7 @@ function _renderInsumosReg() {
   if (_regInsumos.length === 0) { cont.innerHTML = '<p class="muted">Sin insumos.</p>'; return; }
   cont.innerHTML = _regInsumos.map((ins, i) => `
     <div class="ins-item">
-      <span>${escHtml(ins.descripcion)} — factura SAM ${fmtMoneda(ins.ingreso, 'ARS')} <span class="muted">(nuestro costo ${fmtMoneda(ins.costo, ins.costoMoneda)})</span></span>
+      <span>${escHtml(ins.descripcion)}</span>
       <button onclick="quitarInsumoReg(${i})">Quitar</button>
     </div>`).join('');
 }

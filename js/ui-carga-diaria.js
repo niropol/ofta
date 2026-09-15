@@ -14,16 +14,14 @@
 function _cdGet(id) { const el = document.getElementById(id); return el ? el.value : ''; }
 function _cdSet(id, v) { const el = document.getElementById(id); if (el) el.value = v == null ? '' : v; }
 
-// Opciones del nomenclador de una categoría (o varias), con precio a la fecha.
+// Opciones del nomenclador de una categoría (o varias). En la parte visible solo
+// se muestra la descripción — los valores quedan para la parte restringida.
 function _optsNomencladorCats(cats, fecha, sel) {
   let items = [];
   cats.forEach(c => { items = items.concat(listarPrestaciones({ categoria: c, incluirInactivos: false })); });
   if (items.length === 0) return '<option value="">(cargá el nomenclador primero)</option>';
-  return '<option value="">Elegí…</option>' + items.map(v => {
-    const pv = precioVigente(v.grupo, fecha);
-    const p = pv ? fmtMoneda(pv.precio, pv.moneda) : 'sin precio';
-    return `<option value="${v.grupo}"${v.grupo === sel ? ' selected' : ''}>${escHtml(v.descripcion)} — ${p}</option>`;
-  }).join('');
+  return '<option value="">Elegí…</option>' + items.map(v =>
+    `<option value="${v.grupo}"${v.grupo === sel ? ' selected' : ''}>${escHtml(v.descripcion)}</option>`).join('');
 }
 
 function cdSedeChange() {
@@ -66,7 +64,6 @@ function renderCargaDiaria() {
   const rows = filas.map(r => {
     const anulada = r.estado === 'anulada';
     const esCir = r.categoria === 'cirugia';
-    const i = (typeof ingresoSAMDePrestacion === 'function') ? ingresoSAMDePrestacion(r) : { ingreso: 0 };
     const deriv = r.medicoDerivadorId ? medicoNombre(r.medicoDerivadorId) : '—';
     const cant = Math.max(1, Math.floor(Number(r.cantidad) || 1));
     return `
@@ -77,7 +74,6 @@ function renderCargaDiaria() {
       <td class="num">${esCir ? '1' : cant}</td>
       <td>${escHtml(medicoNombre(r.medicoRealizadorId))}</td>
       <td>${escHtml(deriv)}</td>
-      <td class="num muted">${fmtMoneda(i.ingreso, 'ARS')}</td>
       <td class="acc">
         ${anulada
           ? `<button onclick="reactivarPrestacionUI(${r.id})">Reactivar</button>`
@@ -94,7 +90,7 @@ function renderCargaDiaria() {
     <table class="tabla">
       <thead><tr>
         <th>Tipo</th><th>Descripción</th><th>Obra social</th><th class="num">Cant.</th>
-        <th>Realizador</th><th>Derivador</th><th class="num">SAM 40%</th><th>Acciones</th>
+        <th>Realizador</th><th>Derivador</th><th>Acciones</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
