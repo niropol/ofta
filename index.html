@@ -101,6 +101,16 @@
   .cd-form { display: flex; flex-direction: column; gap: 8px; }
   .cd-form input, .cd-form select { padding: 8px 10px; border: 1px solid var(--borde); border-radius: 6px; font-size: 14px; width: 100%; }
   .cd-form button { margin-top: 4px; }
+  .ag-grid { display: grid; gap: 10px; overflow-x: auto; }
+  .ag-col { background: var(--panel); border: 1px solid var(--borde); border-radius: 8px; padding: 8px; min-width: 0; }
+  .ag-dia { font-weight: 600; font-size: 13px; text-align: center; padding-bottom: 6px; margin-bottom: 6px; border-bottom: 1px solid var(--borde); }
+  .ag-bloque { position: relative; background: #f8fafc; border: 1px solid var(--borde); border-left: 4px solid #64748b; border-radius: 6px; padding: 6px 8px; margin-bottom: 6px; }
+  .ag-hora { font-weight: 600; font-size: 13px; }
+  .ag-medico { font-size: 13px; }
+  .ag-cons { font-size: 12px; color: var(--muted); }
+  .ag-vacio { color: var(--muted); text-align: center; font-size: 12px; padding: 8px 0; }
+  .ag-del { position: absolute; top: 4px; right: 4px; border: none; background: none; color: var(--muted); cursor: pointer; font-size: 12px; line-height: 1; padding: 2px; }
+  .ag-del:hover { color: #b91c1c; }
   .saldo-titulo { font-size: 12px; color: var(--muted); }
   .saldo-monto { font-size: 20px; font-weight: 600; margin-top: 4px; }
   .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -208,12 +218,15 @@
       <div class="tabla-wrap"><div id="prestacionesTabla"></div></div>
     </div>
 
-    <!-- Agenda: horarios de los médicos -->
+    <!-- Agenda: grilla semanal de horarios de los médicos -->
     <div class="vispanel" data-p="agenda" hidden>
-      <div class="section-head"><h3 style="margin:0">Horarios de los médicos</h3>
+      <div class="section-head"><h3 style="margin:0">Agenda semanal</h3>
         <button class="btn" onclick="abrirNuevoHorario()">+ Nuevo horario</button></div>
-      <p class="muted" style="margin-top:0">Agenda: qué médico atiende, qué día, en qué horario y consultorio.</p>
-      <div class="tabla-wrap"><div id="horariosTabla"></div></div>
+      <p class="muted" style="margin-top:0">Qué médico atiende cada día, en qué horario y consultorio. Cada color es un médico.</p>
+      <div class="filtros">
+        <label class="muted">Consultorio <select id="agFiltroConsultorio" onchange="renderHorarios()"></select></label>
+      </div>
+      <div id="horariosTabla"></div>
     </div>
   </section>
 

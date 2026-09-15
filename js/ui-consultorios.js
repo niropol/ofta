@@ -102,26 +102,58 @@ function eliminarConsultorio(id) {
   if (typeof sincronizarUI === 'function') sincronizarUI(); else renderConsultorios();
 }
 
-// ── Horarios (agenda de médicos) ──
+// ── Agenda semanal (grilla): columnas = días, bloques por médico ──
+function _medicoColor(id) { const m = DB.medicos.find(x => x.id === Number(id)); return (m && m.color) || '#64748b'; }
+
+// Puebla el filtro de consultorio (Todos + activos), preservando la selección.
+function _poblarFiltroConsultorioAgenda() {
+  const sel = document.getElementById('agFiltroConsultorio');
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Todos los consultorios</option>' +
+    getConsultoriosActivos().map(c => `<option value="${c.id}">${escHtml(c.nombre)} · ${escHtml(_nombreSede(c.sedeId))}</option>`).join('');
+  if (cur) sel.value = cur;
+}
+
 function renderHorarios() {
   const cont = document.getElementById('horariosTabla');
   if (!cont) return;
-  const lista = [...DB.horarios].sort((a, b) =>
-    (DIAS_SEMANA.indexOf(a.dia) - DIAS_SEMANA.indexOf(b.dia)) || (a.horaDesde || '').localeCompare(b.horaDesde || ''));
-  if (lista.length === 0) { cont.innerHTML = '<p class="vacio">No hay horarios cargados. Usá «+ Nuevo horario».</p>'; return; }
-  const rows = lista.map(h => `
-    <tr>
-      <td>${escHtml(h.dia)}</td>
-      <td>${escHtml(h.horaDesde || '')}${h.horaHasta ? ' – ' + escHtml(h.horaHasta) : ''}</td>
-      <td>${escHtml(medicoNombre(h.medicoId))}</td>
-      <td>${escHtml(_nombreConsultorio(h.consultorioId))}</td>
-      <td class="acc"><button class="danger" onclick="eliminarHorario(${h.id})">Eliminar</button></td>
-    </tr>`).join('');
-  cont.innerHTML = `
-    <table class="tabla">
-      <thead><tr><th>Día</th><th>Horario</th><th>Médico</th><th>Consultorio</th><th></th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
+  _poblarFiltroConsultorioAgenda();
+  const filtroCons = (document.getElementById('agFiltroConsultorio') || {}).value || '';
+
+  let lista = DB.horarios.slice();
+  if (filtroCons) lista = lista.filter(h => Number(h.consultorioId) === Number(filtroCons));
+
+  if (lista.length === 0) {
+    cont.innerHTML = '<p class="vacio">No hay horarios cargados' + (filtroCons ? ' para este consultorio' : '') + '. Usá «+ Nuevo horario».</p>';
+    return;
+  }
+
+  // Días a mostrar: Lun–Vie siempre; Sáb/Dom solo si tienen turnos.
+  const conTurnos = new Set(lista.map(h => h.dia));
+  const dias = DIAS_SEMANA.filter((d, i) => i < 5 || conTurnos.has(d));
+
+  const cols = dias.map(dia => {
+    const delDia = lista
+      .filter(h => h.dia === dia)
+      .sort((a, b) => (a.horaDesde || '').localeCompare(b.horaDesde || ''));
+    const bloques = delDia.length === 0
+      ? '<div class="ag-vacio">—</div>'
+      : delDia.map(h => {
+          const color = _medicoColor(h.medicoId);
+          const horas = (h.horaDesde || '') + (h.horaHasta ? '–' + h.horaHasta : '');
+          return `
+          <div class="ag-bloque" style="border-left-color:${color}">
+            <button class="ag-del" title="Eliminar" onclick="eliminarHorario(${h.id})">✕</button>
+            <div class="ag-hora">${escHtml(horas || 'sin hora')}</div>
+            <div class="ag-medico">${escHtml(medicoNombre(h.medicoId))}</div>
+            <div class="ag-cons">${escHtml(_nombreConsultorio(h.consultorioId))}</div>
+          </div>`;
+        }).join('');
+    return `<div class="ag-col"><div class="ag-dia">${escHtml(dia)}</div>${bloques}</div>`;
+  }).join('');
+
+  cont.innerHTML = `<div class="ag-grid" style="grid-template-columns:repeat(${dias.length},minmax(140px,1fr))">${cols}</div>`;
 }
 
 function _mostrarModalHorario(on) { const m = document.getElementById('modalHorario'); if (m) m.style.display = on ? 'flex' : 'none'; }

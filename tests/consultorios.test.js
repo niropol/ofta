@@ -40,6 +40,26 @@ describe('Horarios', () => {
     app.eliminarHorario(app.DB.horarios[0].id);
     expect(app.DB.horarios.length).toBe(0);
   });
+
+  it('la grilla de agenda muestra los días con turnos y el médico, y filtra por consultorio', () => {
+    app.DB.medicos.push({ id: 502, nombre: 'Dra. Y', estado: 'Activo', sedeId: 1, color: '#ff0000' });
+    app.DB.consultorios.push({ id: 2, sedeId: 1, nombre: 'Consultorio 2', estado: 'Activa' });
+    app.DB.horarios.push({ id: 9001, medicoId: 501, consultorioId: 1, dia: 'Lunes', horaDesde: '09:00', horaHasta: '13:00' });
+    app.DB.horarios.push({ id: 9002, medicoId: 502, consultorioId: 2, dia: 'Sábado', horaDesde: '10:00', horaHasta: '12:00' });
+    app.renderHorarios();
+    const html = window.document.getElementById('horariosTabla').innerHTML;
+    expect(html).toContain('Lunes');
+    expect(html).toContain('Sábado');          // sábado se muestra porque tiene turno
+    expect(html).not.toContain('Domingo');      // domingo sin turnos: oculto
+    expect(html).toContain('Dr. X');
+    expect(html).toContain('09:00–13:00');
+    // Filtrar por consultorio 1 deja fuera a la Dra. Y (consultorio 2).
+    setInput(window, 'agFiltroConsultorio', '1');
+    app.renderHorarios();
+    const html2 = window.document.getElementById('horariosTabla').innerHTML;
+    expect(html2).toContain('Dr. X');
+    expect(html2).not.toContain('Dra. Y');
+  });
 });
 
 describe('Prestación: hora, consultorio, extra e insumo con ingreso', () => {
