@@ -13,7 +13,7 @@ const ROL_LABEL = { admin: 'Administrador', secretaria_1: 'Secretaria (nivel 1)'
 
 const PERMISOS_SECCIONES = {
   admin: ['*'],
-  secretaria_1: ['section-prestaciones', 'section-configuracion'],
+  secretaria_1: ['section-prestaciones'],
   secretaria_2: ['section-prestaciones'],
 };
 

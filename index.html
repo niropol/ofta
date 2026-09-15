@@ -142,7 +142,6 @@
 
 <nav class="tabs" id="navTabs">
   <button class="active" data-sec="section-prestaciones" onclick="showSection('section-prestaciones')">Carga diaria</button>
-  <button data-sec="section-configuracion" onclick="showSection('section-configuracion')">Configuración</button>
   <button data-sec="section-admin" onclick="showSection('section-admin')">Admin 🔒</button>
 </nav>
 
@@ -199,11 +198,11 @@
       <div class="tabla-wrap"><div id="cd_tabla"></div></div>
     </div>
 
-    <!-- Todas: tabla mensual con filtros y edición -->
+    <!-- Todas: tabla mensual con filtros y edición (la carga se hace en "Día") -->
     <div class="vispanel" data-p="todas" hidden>
       <div class="section-head">
         <h3 style="margin:0">Todas las prestaciones</h3>
-        <button class="btn" onclick="abrirNuevaPrestacionRealizada()">+ Cargar prestación</button>
+        <span class="muted">Para cargar, usá la pestaña «Día».</span>
       </div>
       <div class="filtros">
         <label class="muted">Mes <input type="month" id="regFiltroMes" onchange="irPaginaPrestaciones(0)"></label>
@@ -225,25 +224,31 @@
     </div>
   </section>
 
-  <!-- ── CONFIGURACIÓN (datos maestros) ── -->
-  <section id="section-configuracion" class="section">
-    <div class="section-head"><h2>Configuración</h2></div>
-    <div class="subtabs" id="configTabs">
-      <button class="active" data-p="medicos" onclick="configTab('medicos')">Médicos</button>
-      <button data-p="nomenclador" onclick="configTab('nomenclador')">Nomenclador</button>
-      <button data-p="obras" onclick="configTab('obras')">Obras sociales</button>
-      <button data-p="pagos" onclick="configTab('pagos')">Pagos a médicos</button>
-      <button data-p="sedes" onclick="configTab('sedes')">Sedes y consultorios</button>
-      <button data-p="estadisticas" onclick="configTab('estadisticas')">Estadísticas</button>
+  <!-- ── ADMIN (todo lo restringido: caja, plata y datos maestros) ── -->
+  <section id="section-admin" class="section">
+    <div class="section-head"><h2>Admin <span class="muted" style="font-size:13px">· acceso restringido</span></h2></div>
+    <div class="subtabs" id="adminTabs">
+      <button class="active" data-p="panel" onclick="adminTab('panel')">Panel del mes</button>
+      <button data-p="caja" onclick="adminTab('caja')">Caja</button>
+      <button data-p="liquidaciones" onclick="adminTab('liquidaciones')">Liquidaciones</button>
+      <button data-p="contratos" onclick="adminTab('contratos')">Contratos</button>
+      <button data-p="nomenclador" onclick="adminTab('nomenclador')">Nomenclador</button>
+      <button data-p="obras" onclick="adminTab('obras')">Obras sociales</button>
+      <button data-p="pagos" onclick="adminTab('pagos')">Pagos a médicos</button>
+      <button data-p="honorarios" onclick="adminTab('honorarios')">Insumos</button>
+      <button data-p="medicos" onclick="adminTab('medicos')">Médicos</button>
+      <button data-p="sedes" onclick="adminTab('sedes')">Sedes y consultorios</button>
+      <button data-p="estadisticas" onclick="adminTab('estadisticas')">Estadísticas</button>
+      <button data-p="seguridad" onclick="adminTab('seguridad')">Seguridad</button>
     </div>
 
-    <div class="configpanel" data-p="medicos">
+    <div class="adminpanel" data-p="medicos" hidden>
       <div class="section-head"><h3 style="margin:0">Médicos</h3>
         <button class="btn" onclick="abrirNuevoMedico()">+ Nuevo médico</button></div>
       <div id="medicosGrid" class="grid"></div>
     </div>
 
-    <div class="configpanel" data-p="nomenclador" hidden>
+    <div class="adminpanel" data-p="nomenclador" hidden>
       <div class="section-head"><h3 style="margin:0">Nomenclador de prestaciones</h3>
         <button class="btn" onclick="abrirNuevaPrestacion()">+ Nueva prestación</button></div>
       <div class="filtros">
@@ -253,13 +258,13 @@
       <div class="tabla-wrap"><div id="nomencladorTabla"></div></div>
     </div>
 
-    <div class="configpanel" data-p="obras" hidden>
+    <div class="adminpanel" data-p="obras" hidden>
       <div class="section-head"><h3 style="margin:0">Obras sociales</h3>
         <button class="btn" onclick="abrirNuevaOS()">+ Nueva obra social</button></div>
       <div class="tabla-wrap"><div id="osTabla"></div></div>
     </div>
 
-    <div class="configpanel" data-p="pagos" hidden>
+    <div class="adminpanel" data-p="pagos" hidden>
       <div class="section-head"><h3 style="margin:0">Valores fijos a médicos</h3>
         <button class="btn" onclick="abrirNuevoValorMedico()">+ Definir valor</button></div>
       <p class="muted" style="margin-top:0">Monto fijo que cobra el médico por tipo (consulta, estudio, cirugía, práctica, derivación). General (todos) u override por médico, con vigencia.</p>
@@ -273,7 +278,7 @@
       <div class="tabla-wrap"><div id="previewHonorarios"></div></div>
     </div>
 
-    <div class="configpanel" data-p="sedes" hidden>
+    <div class="adminpanel" data-p="sedes" hidden>
       <div class="section-head"><h3 style="margin:0">Sedes</h3>
         <button class="btn" onclick="abrirNuevaSede()">+ Nueva sede</button></div>
       <p class="muted" style="margin-top:0">Hoy hay una sola sede. Podés agregar más y elegir cuál es la activa por defecto.</p>
@@ -285,7 +290,7 @@
       <div class="tabla-wrap"><div id="consultoriosTabla"></div></div>
     </div>
 
-    <div class="configpanel" data-p="estadisticas" hidden>
+    <div class="adminpanel" data-p="estadisticas" hidden>
       <div class="section-head"><h3 style="margin:0">Estadísticas</h3></div>
       <div class="filtros">
         <label class="muted">Mes <input type="month" id="statMes" onchange="renderEstadisticas()"></label>
@@ -296,19 +301,6 @@
         <button data-v="control" onclick="switchStatView('control')">Control interno</button>
       </div>
       <div id="statContenido"></div>
-    </div>
-  </section>
-
-  <!-- ── CAJA (acceso restringido) ── -->
-  <section id="section-admin" class="section">
-    <div class="section-head"><h2>Admin <span class="muted" style="font-size:13px">· acceso restringido</span></h2></div>
-    <div class="subtabs" id="adminTabs">
-      <button class="active" data-p="panel" onclick="adminTab('panel')">Panel del mes</button>
-      <button data-p="caja" onclick="adminTab('caja')">Caja</button>
-      <button data-p="contratos" onclick="adminTab('contratos')">Contratos</button>
-      <button data-p="liquidaciones" onclick="adminTab('liquidaciones')">Liquidaciones</button>
-      <button data-p="honorarios" onclick="adminTab('honorarios')">Insumos</button>
-      <button data-p="seguridad" onclick="adminTab('seguridad')">Seguridad</button>
     </div>
 
     <div class="adminpanel" data-p="panel">
@@ -352,9 +344,6 @@
       <select id="cajaFTipo" onchange="renderMovimientosCaja()">
         <option value="">Todos</option><option value="ingreso">Ingresos</option><option value="egreso">Egresos</option>
       </select>
-      <select id="cajaFMoneda" onchange="renderMovimientosCaja()">
-        <option value="">Toda moneda</option><option value="ARS">Pesos</option><option value="USD">Dólares</option>
-      </select>
       <select id="cajaFMedio" onchange="renderMovimientosCaja()">
         <option value="">Todo medio</option><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option>
       </select>
@@ -366,7 +355,7 @@
 
     <div class="adminpanel" data-p="liquidaciones" hidden>
     <div class="section-head"><h3 style="margin:0">Liquidaciones a médicos</h3></div>
-    <p class="muted" style="margin-top:0">Elegí el mes → <strong>Generar</strong> arma el borrador con los valores fijos de cada médico (Configuración ▸ Pagos a médicos) → <strong>Cerrar y pagar</strong> carga el egreso en la Caja y bloquea el período. Si dice «falta valor fijo», cargalo en Pagos a médicos.</p>
+    <p class="muted" style="margin-top:0">Elegí el mes → <strong>Generar</strong> arma el borrador con los valores fijos de cada médico (pestaña «Pagos a médicos») → <strong>WhatsApp</strong> avisa al médico → <strong>Cerrar y pagar</strong> carga el egreso en la Caja y bloquea el período. El médico manda la factura y se transfiere.</p>
     <div class="filtros">
       <label class="muted">Mes <input type="month" id="liqMes" onchange="renderLiquidaciones()"></label>
     </div>
@@ -607,18 +596,13 @@
     </div>
     <div class="campo"><label>Descripción *</label><input id="mov_desc" placeholder="Ej.: Pago de SAM marzo / Alquiler consultorio"></div>
     <div class="row2">
-      <div class="campo"><label>Monto *</label><input id="mov_monto" type="number" step="0.01"></div>
-      <div class="campo"><label>Moneda</label>
-        <select id="mov_moneda"><option value="ARS">Pesos (ARS)</option><option value="USD">Dólares (USD)</option></select>
-      </div>
-    </div>
-    <div class="row2">
+      <div class="campo"><label>Monto (pesos) *</label><input id="mov_monto" type="number" step="0.01"></div>
       <div class="campo"><label>Medio de pago</label>
         <select id="mov_medio"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option></select>
       </div>
-      <div class="campo" id="mov_gasto_box" style="display:none"><label>Categoría de gasto (opcional)</label>
-        <select id="mov_categoria"></select>
-      </div>
+    </div>
+    <div class="campo" id="mov_gasto_box" style="display:none"><label>Categoría de gasto (opcional)</label>
+      <select id="mov_categoria"></select>
     </div>
     <div class="modal-acciones">
       <button class="btn secundario" onclick="cerrarModalMov()">Cancelar</button>
@@ -633,13 +617,11 @@
     <h3>Cierre de caja (arqueo)</h3>
     <div class="row2">
       <div class="campo"><label>Fecha *</label><input id="cierre_fecha" type="date" onchange="_actualizarSaldoSistemaCierre()"></div>
-      <div class="campo"><label>Moneda</label>
-        <select id="cierre_moneda" onchange="_actualizarSaldoSistemaCierre()"><option value="ARS">Pesos (ARS)</option><option value="USD">Dólares (USD)</option></select>
+      <div class="campo"><label>Medio</label>
+        <select id="cierre_medio" onchange="_actualizarSaldoSistemaCierre()"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option></select>
       </div>
     </div>
-    <div class="campo"><label>Medio</label>
-      <select id="cierre_medio" onchange="_actualizarSaldoSistemaCierre()"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option></select>
-    </div>
+    <input type="hidden" id="cierre_moneda" value="ARS">
     <p class="muted">Saldo según el sistema: <strong id="cierre_sistema">—</strong></p>
     <div class="campo"><label>Monto contado (real) *</label><input id="cierre_contado" type="number" step="0.01"></div>
     <div class="campo"><label>Observación</label><input id="cierre_obs"></div>
@@ -791,12 +773,6 @@ function showSection(id) {
 function adminTab(p) {
   document.querySelectorAll('#section-admin .adminpanel').forEach(el => { el.hidden = el.dataset.p !== p; });
   document.querySelectorAll('#adminTabs button').forEach(b => b.classList.toggle('active', b.dataset.p === p));
-}
-
-// Sub-pestañas dentro de Configuración (Médicos / Nomenclador / Obras sociales).
-function configTab(p) {
-  document.querySelectorAll('#section-configuracion .configpanel').forEach(el => { el.hidden = el.dataset.p !== p; });
-  document.querySelectorAll('#configTabs button').forEach(b => b.classList.toggle('active', b.dataset.p === p));
 }
 
 // Sub-pestañas de la parte visible (Día / Todas / Agenda).

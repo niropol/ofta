@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 //  SAM — UI de PAGOS A MÉDICOS (valores fijos)
 // ───────────────────────────────────────────────────────────────────────────
-//  Vive en la parte VISIBLE (Configuración ▸ Pagos a médicos). Dos bloques:
+//  Vive en Admin ▸ Pagos a médicos. Dos bloques:
 //   1) Valores fijos por tipo (consulta/estudio/cirugía/práctica/derivación):
 //      general + override por médico, con vigencia.
 //   2) Vista previa: cuánto le toca a cada médico en el mes.

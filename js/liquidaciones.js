@@ -118,6 +118,6 @@ function mensajeLiquidacionWhatsApp(l) {
   const porRol = { realizador: 0, derivador: 0 };
   l.detalle.forEach(d => { porRol[d.rol] = (porRol[d.rol] || 0) + d.monto; });
   const lineaDeriv = porRol.derivador > 0 ? `↪️ Derivaciones → *${fmtMoneda(porRol.derivador, 'ARS')}*\n` : '';
-  const cant = l.detalle.length;
+  const cant = l.detalle.reduce((s, d) => s + (Math.max(1, Math.floor(Number(d.cantidad) || 1))), 0);
   return `👁 *SAM Oftalmología*\n📋 *Liquidación ${l.mes}*\n\n👨‍⚕️ ${nombre}\n\n🧾 Prestaciones: ${cant}\n\n💰 *Honorarios:*\n🩺 Realizador → *${fmtMoneda(porRol.realizador, 'ARS')}*\n${lineaDeriv}\n*A depositar (transferencia): ${fmtMoneda(l.total, 'ARS')}*\n\nPor favor remitir factura para procesar el pago. ¡Gracias!`;
 }

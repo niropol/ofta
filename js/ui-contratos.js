@@ -26,7 +26,7 @@ function renderContratosTabla() {
   const cont = document.getElementById('contratosTabla');
   if (!cont) return;
   const os = document.getElementById('ctrOS') ? document.getElementById('ctrOS').value : '';
-  if (!os) { cont.innerHTML = '<p class="vacio">Cargá una obra social primero (Configuración ▸ Obras sociales).</p>'; return; }
+  if (!os) { cont.innerHTML = '<p class="vacio">Cargá una obra social primero (pestaña «Obras sociales»).</p>'; return; }
   const filas = contratosDeOS(os);
   if (filas.length === 0) { cont.innerHTML = '<p class="vacio">No hay cirugías en el nomenclador. (Solo las cirugías facturan por contrato de OS; consulta/estudio/práctica van por valor único, con el precio del nomenclador.)</p>'; return; }
   const rows = filas.map(f => `

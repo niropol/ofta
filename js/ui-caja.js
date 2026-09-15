@@ -20,22 +20,16 @@ function renderSaldosCaja() {
   const cont = document.getElementById('cajaSaldos');
   if (!cont) return;
   const s = saldosCaja();
-  const card = (titulo, mon, sub) => `
-    <div class="saldo-card">
+  const card = (titulo, sub, cls) => `
+    <div class="saldo-card ${cls || ''}">
       <div class="saldo-titulo">${escHtml(titulo)}</div>
-      <div class="saldo-monto ${sub < 0 ? 'neg' : ''}">${fmtMoneda(sub, mon)}</div>
+      <div class="saldo-monto ${sub < 0 ? 'neg' : ''}">${fmtMoneda(sub, 'ARS')}</div>
     </div>`;
+  // Caja en pesos: efectivo + transferencia.
   cont.innerHTML =
-    card('Pesos · Efectivo', 'ARS', s.ARS.efectivo) +
-    card('Pesos · Transferencia', 'ARS', s.ARS.transferencia) +
-    card('Dólares · Efectivo', 'USD', s.USD.efectivo) +
-    card('Dólares · Transferencia', 'USD', s.USD.transferencia) +
-    `<div class="saldo-card total">
-       <div class="saldo-titulo">Total pesos</div>
-       <div class="saldo-monto ${s.ARS.total < 0 ? 'neg' : ''}">${fmtMoneda(s.ARS.total, 'ARS')}</div>
-       <div class="saldo-titulo" style="margin-top:6px">Total dólares</div>
-       <div class="saldo-monto ${s.USD.total < 0 ? 'neg' : ''}">${fmtMoneda(s.USD.total, 'USD')}</div>
-     </div>`;
+    card('Efectivo', s.ARS.efectivo) +
+    card('Transferencia', s.ARS.transferencia) +
+    card('Total en caja', s.ARS.total, 'total');
 }
 
 // ── Movimientos ──

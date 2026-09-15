@@ -44,16 +44,15 @@ describe('Permisos por rol', () => {
     expect(app.puedeVerSeccion('section-caja')).toBe(true);
     expect(app.puedeVerSeccion('section-admin')).toBe(true);
 
+    // Ahora solo "Carga diaria" es visible para las secretarias; todo lo demás es admin.
     const s1 = app.guardarUsuarioDatos({ nombre: 'Sec1', rol: 'secretaria_1' });
     app.setUsuarioActual(s1.id);
     expect(app.puedeVerSeccion('section-prestaciones')).toBe(true);
-    expect(app.puedeVerSeccion('section-configuracion')).toBe(true); // incluye estadísticas
     expect(app.puedeVerSeccion('section-admin')).toBe(false);
 
     const s2 = app.guardarUsuarioDatos({ nombre: 'Sec2', rol: 'secretaria_2' });
     app.setUsuarioActual(s2.id);
     expect(app.puedeVerSeccion('section-prestaciones')).toBe(true);
-    expect(app.puedeVerSeccion('section-configuracion')).toBe(false); // solo carga del día
     expect(app.puedeVerSeccion('section-admin')).toBe(false);
   });
 });
