@@ -9,9 +9,12 @@
 function _labelCategoria(id) { return (CATEGORIAS.find(c => c.id === id) || {}).label || id; }
 function _primerDiaMesActual() { return hoyISO().slice(0, 7) + '-01'; }
 
+// Categorías del nomenclador SIN insumos (los insumos se cargan en su propia solapa).
+function _catsNomenclador() { return CATEGORIAS_NOMENCLADOR.filter(c => c.id !== 'insumo'); }
+
 function _opcionesCategoria(sel) {
-  // Solo categorías con precio (las de derivación no son ítems del nomenclador).
-  return CATEGORIAS_NOMENCLADOR.map(c => `<option value="${c.id}"${c.id === sel ? ' selected' : ''}>${escHtml(c.label)}</option>`).join('');
+  // Solo categorías con precio (las de derivación no son ítems del nomenclador; insumos van aparte).
+  return _catsNomenclador().map(c => `<option value="${c.id}"${c.id === sel ? ' selected' : ''}>${escHtml(c.label)}</option>`).join('');
 }
 
 // ── Render de la tabla ──
@@ -23,7 +26,8 @@ function renderNomenclador() {
   const categoria = catSel && catSel.value ? catSel.value : null;
   const texto = txtSel ? txtSel.value : '';
 
-  const filas = listarPrestaciones({ categoria, texto, incluirInactivos: true });
+  const filas = listarPrestaciones({ categoria, texto, incluirInactivos: true })
+    .filter(v => v.categoria !== 'insumo'); // los insumos se gestionan en la solapa «Insumos»
 
   if (filas.length === 0) {
     cont.innerHTML = '<p class="vacio">No hay prestaciones cargadas. Usá «+ Nueva prestación».</p>';
@@ -65,7 +69,7 @@ function _poblarFiltroCategoria() {
   const sel = document.getElementById('nomFiltroCat');
   if (!sel || sel.dataset.listo) return;
   sel.innerHTML = '<option value="">Todas las categorías</option>' +
-    CATEGORIAS_NOMENCLADOR.map(c => `<option value="${c.id}">${escHtml(c.label)}</option>`).join('');
+    _catsNomenclador().map(c => `<option value="${c.id}">${escHtml(c.label)}</option>`).join('');
   sel.dataset.listo = '1';
 }
 

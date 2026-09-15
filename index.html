@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SAM — Gestión Oftalmología</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   :root {
     --bg: #f4f6f9; --panel: #ffffff; --texto: #1f2937; --muted: #6b7280;
@@ -231,9 +232,7 @@
       <button class="active" data-p="panel" onclick="adminTab('panel')">Panel del mes</button>
       <button data-p="caja" onclick="adminTab('caja')">Caja</button>
       <button data-p="liquidaciones" onclick="adminTab('liquidaciones')">Liquidaciones</button>
-      <button data-p="contratos" onclick="adminTab('contratos')">Contratos</button>
-      <button data-p="nomenclador" onclick="adminTab('nomenclador')">Nomenclador</button>
-      <button data-p="obras" onclick="adminTab('obras')">Obras sociales</button>
+      <button data-p="nomcon" onclick="adminTab('nomcon')">Nomenclador y contratos</button>
       <button data-p="pagos" onclick="adminTab('pagos')">Pagos a médicos</button>
       <button data-p="honorarios" onclick="adminTab('honorarios')">Insumos</button>
       <button data-p="medicos" onclick="adminTab('medicos')">Médicos</button>
@@ -248,20 +247,52 @@
       <div id="medicosGrid" class="grid"></div>
     </div>
 
-    <div class="adminpanel" data-p="nomenclador" hidden>
-      <div class="section-head"><h3 style="margin:0">Nomenclador de prestaciones</h3>
-        <button class="btn" onclick="abrirNuevaPrestacion()">+ Nueva prestación</button></div>
-      <div class="filtros">
-        <select id="nomFiltroCat" onchange="renderNomenclador()"></select>
-        <input type="search" id="nomBuscar" placeholder="Buscar por descripción o código…" oninput="renderNomenclador()">
+    <div class="adminpanel" data-p="nomcon" hidden>
+      <div class="section-head"><h3 style="margin:0">Nomenclador y contratos</h3></div>
+      <div class="subtabs" id="nomconTabs">
+        <button class="active" data-p="prest" onclick="nomconTab('prest')">Prestaciones</button>
+        <button data-p="os" onclick="nomconTab('os')">Obras sociales</button>
+        <button data-p="contr" onclick="nomconTab('contr')">Contratos</button>
       </div>
-      <div class="tabla-wrap"><div id="nomencladorTabla"></div></div>
-    </div>
 
-    <div class="adminpanel" data-p="obras" hidden>
-      <div class="section-head"><h3 style="margin:0">Obras sociales</h3>
-        <button class="btn" onclick="abrirNuevaOS()">+ Nueva obra social</button></div>
-      <div class="tabla-wrap"><div id="osTabla"></div></div>
+      <div class="nomconpanel" data-p="prest">
+        <div class="section-head"><h4 style="margin:0">Prestaciones y precios (valor único)</h4>
+          <button class="btn" onclick="abrirNuevaPrestacion()">+ Nueva prestación</button></div>
+        <p class="muted" style="margin-top:0">Consulta, estudio, práctica y cirugía. El precio es el valor único que factura SAM (para cirugía, el valor real se define por obra social en «Contratos»). Los insumos se cargan en la solapa «Insumos».</p>
+        <div class="filtros">
+          <select id="nomFiltroCat" onchange="renderNomenclador()"></select>
+          <input type="search" id="nomBuscar" placeholder="Buscar por descripción o código…" oninput="renderNomenclador()">
+        </div>
+        <div class="tabla-wrap"><div id="nomencladorTabla"></div></div>
+      </div>
+
+      <div class="nomconpanel" data-p="os" hidden>
+        <div class="section-head"><h4 style="margin:0">Obras sociales</h4>
+          <button class="btn" onclick="abrirNuevaOS()">+ Nueva obra social</button></div>
+        <div class="tabla-wrap"><div id="osTabla"></div></div>
+      </div>
+
+      <div class="nomconpanel" data-p="contr" hidden>
+        <div class="section-head"><h4 style="margin:0">Contratos de cirugía por obra social</h4></div>
+        <p class="muted" style="margin-top:0">Valor real que SAM factura por cada cirugía según la obra social (SAM te paga el 40%). Consulta/estudio/práctica no usan contrato: van por el valor único de «Prestaciones».</p>
+        <div class="filtros">
+          <label class="muted">Obra social <select id="ctrOS" onchange="renderContratosTabla()"></select></label>
+          <label class="muted">Aumentar esta OS <input type="number" id="ctrAumento" step="0.01" style="width:70px" placeholder="%"> %</label>
+          <button class="btn secundario" onclick="aumentarContratosOSUI()">Aplicar aumento</button>
+        </div>
+        <div class="filtros">
+          <label class="muted">Importar (.csv/.xlsx) <input type="file" id="ctrArchivo" accept=".csv,.xlsx,.xls" onchange="importarContratosArchivo(this)"></label>
+          <button class="btn secundario" onclick="descargarPlantillaContratos()">Descargar plantilla CSV</button>
+        </div>
+        <div id="ctrImportMsg"></div>
+        <div class="tabla-wrap"><div id="contratosTabla"></div></div>
+        <h4 style="margin-top:24px">Cobro de SAM del mes</h4>
+        <div class="filtros">
+          <label class="muted">Mes <input type="month" id="ctrMes" onchange="renderCobroSAM()"></label>
+          <label class="muted">Cotización USD→ARS (para costo de insumos) <input type="number" id="ctrCotiz" step="0.01" style="width:120px" placeholder="opcional" onchange="renderCobroSAM()"></label>
+        </div>
+        <div id="cobroSAM"></div>
+      </div>
     </div>
 
     <div class="adminpanel" data-p="pagos" hidden>
@@ -311,21 +342,6 @@
         <label class="muted">Cotización USD→ARS <input type="number" id="panelCotiz" step="0.01" style="width:120px" placeholder="opcional" onchange="renderPanelMes()"></label>
       </div>
       <div id="panelContenido"></div>
-    </div>
-
-    <div class="adminpanel" data-p="contratos" hidden>
-      <div class="section-head"><h3 style="margin:0">Contratos (ingreso)</h3></div>
-      <p class="muted" style="margin-top:0">Valor real que SAM factura por cada prestación según la obra social. SAM te paga un % de eso (config: 40%).</p>
-      <div class="filtros">
-        <label class="muted">Obra social <select id="ctrOS" onchange="renderContratosTabla()"></select></label>
-      </div>
-      <div class="tabla-wrap"><div id="contratosTabla"></div></div>
-      <h4 style="margin-top:24px">Cobro de SAM del mes</h4>
-      <div class="filtros">
-        <label class="muted">Mes <input type="month" id="ctrMes" onchange="renderCobroSAM()"></label>
-        <label class="muted">Cotización USD→ARS (para costo de insumos) <input type="number" id="ctrCotiz" step="0.01" style="width:120px" placeholder="opcional" onchange="renderCobroSAM()"></label>
-      </div>
-      <div id="cobroSAM"></div>
     </div>
 
     <div class="adminpanel" data-p="caja" hidden>
@@ -779,6 +795,12 @@ function adminTab(p) {
 function visTab(p) {
   document.querySelectorAll('#section-prestaciones .vispanel').forEach(el => { el.hidden = el.dataset.p !== p; });
   document.querySelectorAll('#visTabs button').forEach(b => b.classList.toggle('active', b.dataset.p === p));
+}
+
+// Sub-pestañas de "Nomenclador y contratos" (Prestaciones / Obras sociales / Contratos).
+function nomconTab(p) {
+  document.querySelectorAll('.nomconpanel').forEach(el => { el.hidden = el.dataset.p !== p; });
+  document.querySelectorAll('#nomconTabs button').forEach(b => b.classList.toggle('active', b.dataset.p === p));
 }
 
 // ── init(): se llama tras cargar la nube (o en modo local). Renderiza todo. ──

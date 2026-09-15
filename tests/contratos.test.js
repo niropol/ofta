@@ -163,6 +163,33 @@ describe('Contratos e ingreso de SAM', () => {
     expect(r.ingreso).toBe(8000);           // 40% de la consulta (la cirugía sin contrato aporta 0)
   });
 
+  // ── Aumento por OS e importación de contratos ──
+  it('aumentarContratosOS sube todos los contratos de una OS (redondeo abajo) y versiona', () => {
+    const faco = nomFaco();
+    const otra = app.crearPrestacion({ categoria: 'cirugia', descripcion: 'Pterigión', precio: 0, vigenciaDesde: '2026-01-01' });
+    app.setContrato('OSDE', faco.grupo, 1000000, '2026-01-01');
+    app.setContrato('OSDE', otra.grupo, 500001, '2026-01-01');
+    app.setContrato('IOMA', faco.grupo, 800000, '2026-01-01');
+    const r = app.aumentarContratosOS('OSDE', 15, '2026-06-01');
+    expect(r.actualizados).toBe(2);
+    expect(app.valorContrato('OSDE', faco.grupo, '2026-07-01')).toBe(1150000);   // +15%
+    expect(app.valorContrato('OSDE', otra.grupo, '2026-07-01')).toBe(575001);    // 575001.15 → 575001
+    expect(app.valorContrato('OSDE', faco.grupo, '2026-03-01')).toBe(1000000);   // el pasado no cambia
+    expect(app.valorContrato('IOMA', faco.grupo, '2026-07-01')).toBe(800000);    // otra OS intacta
+  });
+
+  it('importarContratos matchea por descripción o código y reporta errores', () => {
+    const faco = nomFaco(); // descripción "Faco"
+    const r = app.importarContratos([
+      { obraSocial: 'OSDE', ref: 'Faco', valor: 900000 },
+      { obraSocial: 'OSDE', ref: 'Inexistente', valor: 100000 },
+      { obraSocial: 'IOMA', ref: 'faco', valor: 'abc' },
+    ], '2026-01-01');
+    expect(r.ok).toBe(1);
+    expect(r.errores.length).toBe(2);
+    expect(app.valorContrato('OSDE', faco.grupo, '2026-03-01')).toBe(900000);
+  });
+
   // ── Control: comparar el 40% esperado contra lo que SAM efectivamente transfirió ──
   it('registrarCobroSAM acepta el monto recibido y calcula la diferencia; comparacionCobroSAM la reporta', () => {
     const faco = nomFaco();

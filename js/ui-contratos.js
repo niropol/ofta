@@ -54,6 +54,93 @@ function guardarValorContratoUI(grupo) {
   renderContratos();
 }
 
+// ── Aumento por OS, importación de archivo y plantilla ──
+function _msgImport(text, isError) {
+  const el = document.getElementById('ctrImportMsg');
+  if (el) el.innerHTML = '<div class="' + (isError ? 'diag-err' : 'diag-ok') + '" style="margin:8px 0">' + escHtml(text) + '</div>';
+}
+
+function aumentarContratosOSUI() {
+  const os = (document.getElementById('ctrOS') || {}).value;
+  const pct = (document.getElementById('ctrAumento') || {}).value;
+  if (!os) { alert('Elegí una obra social.'); return; }
+  if (pct === '' || isNaN(Number(pct))) { alert('Ingresá el porcentaje.'); return; }
+  if (typeof confirm === 'function' && !confirm('¿Aumentar un ' + pct + '% todos los contratos de ' + os + '? Rige desde el 1° de este mes.')) return;
+  let r; try { r = aumentarContratosOS(os, pct, hoyISO().slice(0, 7) + '-01'); }
+  catch (e) { alert(e.message); return; }
+  document.getElementById('ctrAumento').value = '';
+  _msgImport('Actualizados ' + r.actualizados + ' contrato(s) de ' + os + ' (+' + pct + '%).', false);
+  renderContratos();
+  if (typeof renderPanelMes === 'function') renderPanelMes();
+}
+
+// CSV simple → objetos (separador coma o punto y coma).
+function _csvAObjetos(text) {
+  const lines = String(text).split(/\r?\n/).filter(l => l.trim());
+  if (!lines.length) return [];
+  const sep = (lines[0].includes(';') && !lines[0].includes(',')) ? ';' : ',';
+  const heads = lines[0].split(sep).map(h => h.trim());
+  return lines.slice(1).map(l => { const c = l.split(sep); const o = {}; heads.forEach((h, i) => o[h] = (c[i] || '').trim()); return o; });
+}
+
+// Reconoce las columnas por nombre (sin importar acentos/mayúsculas).
+function _normalizarFilaContrato(row) {
+  const keys = Object.keys(row);
+  const norm = s => (s == null ? '' : String(s)).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const find = re => { const k = keys.find(k => re.test(norm(k))); return k != null ? row[k] : ''; };
+  return {
+    obraSocial: String(find(/obra|social|^os$/)).trim(),
+    ref: String(find(/prestac|codigo|cirug|descrip|practica|nombre/)).trim(),
+    valor: find(/valor|precio|monto|importe/),
+  };
+}
+
+function _parsearArchivoContratos(data, name) {
+  let rows;
+  if (typeof XLSX !== 'undefined') {
+    const wb = /\.csv$/i.test(name) ? XLSX.read(data, { type: 'string' }) : XLSX.read(new Uint8Array(data), { type: 'array' });
+    rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+  } else {
+    rows = _csvAObjetos(data);
+  }
+  return rows.map(_normalizarFilaContrato).filter(f => f.obraSocial || f.ref);
+}
+
+function importarContratosArchivo(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    let filas;
+    try { filas = _parsearArchivoContratos(e.target.result, file.name); }
+    catch (err) { _msgImport('No se pudo leer el archivo: ' + err.message, true); return; }
+    if (!filas.length) { _msgImport('No se reconocieron filas. El archivo necesita encabezados: obra social, prestación (o código), valor.', true); return; }
+    const r = importarContratos(filas, hoyISO().slice(0, 7) + '-01');
+    const errTxt = r.errores.length ? ' ' + r.errores.length + ' con error: ' + r.errores.slice(0, 4).map(x => 'fila ' + x.fila + ' (' + x.motivo + ')').join('; ') + (r.errores.length > 4 ? '…' : '') : '';
+    _msgImport('Importados ' + r.ok + ' contrato(s).' + errTxt, r.ok === 0 && r.errores.length > 0);
+    input.value = '';
+    renderContratos();
+    if (typeof renderPanelMes === 'function') renderPanelMes();
+  };
+  if (/\.csv$/i.test(file.name)) reader.readAsText(file); else reader.readAsArrayBuffer(file);
+}
+
+function descargarPlantillaContratos() {
+  const cirugias = listarPrestaciones({ categoria: 'cirugia', incluirInactivos: false });
+  const os = (document.getElementById('ctrOS') || {}).value || 'OSDE';
+  const filas = [['obra social', 'prestacion', 'valor']];
+  if (cirugias.length) cirugias.forEach(c => filas.push([os, c.descripcion, '']));
+  else filas.push([os, '(cargá cirugías en Prestaciones)', '']);
+  const esc = x => /[",;\n]/.test(String(x)) ? '"' + String(x).replace(/"/g, '""') + '"' : String(x);
+  const csv = filas.map(f => f.map(esc).join(',')).join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'plantilla-contratos.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 // ── Cobro de SAM del mes, obra social por obra social ──
 // Cada OS paga en su momento: se registra (y controla esperado vs recibido) por
 // separado. _cobroOS mapea el índice de fila (para los ids de inputs) a la OS.

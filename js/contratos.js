@@ -54,6 +54,58 @@ function setContrato(obraSocial, grupo, valor, vigenciaDesde) {
   return nuevo;
 }
 
+// Sube o versiona el valor de contrato sin fallar si la vigencia coincide con la
+// actual (en ese caso corrige el valor en su lugar). Usado por import y aumentos.
+function _upsertContrato(obraSocial, grupo, valor, desde) {
+  const g = Number(grupo);
+  const actual = _contratoActual(obraSocial, g);
+  if (actual && actual.vigenciaDesde === desde) {
+    const antes = JSON.parse(JSON.stringify(actual));
+    actual.valor = Number(valor);
+    registrarAuditoria('edicion', 'contrato', actual.id, antes, actual);
+    marcarCambios('contratos');
+    return actual;
+  }
+  return setContrato(obraSocial, grupo, valor, desde);
+}
+
+// Aumento porcentual a TODOS los contratos vigentes de UNA obra social (cada OS se
+// ajusta por separado; nunca hay aumento global). Redondeo hacia abajo.
+function aumentarContratosOS(obraSocial, porcentaje, vigenciaDesde) {
+  const pct = Number(porcentaje);
+  if (isNaN(pct)) throw new Error('El porcentaje debe ser un número.');
+  const desde = vigenciaDesde || (hoyISO().slice(0, 7) + '-01');
+  const grupos = [...new Set(DB.contratos.filter(c => c.obraSocial === obraSocial).map(c => c.grupoNomenclador))];
+  let n = 0;
+  grupos.forEach(g => {
+    const actual = _contratoActual(obraSocial, g);
+    if (!actual || actual.estado === 'Inactivo') return;
+    _upsertContrato(obraSocial, g, Math.floor(actual.valor * (1 + pct / 100)), desde);
+    n++;
+  });
+  return { obraSocial, porcentaje: pct, actualizados: n, vigenciaDesde: desde };
+}
+
+// Importa contratos de cirugía desde filas normalizadas [{obraSocial, ref, valor}].
+// `ref` matchea la prestación por código o por descripción. Devuelve {ok, errores}.
+function importarContratos(filas, vigenciaDesde) {
+  const desde = vigenciaDesde || (hoyISO().slice(0, 7) + '-01');
+  const items = listarPrestaciones({ categoria: 'cirugia', incluirInactivos: false });
+  const res = { ok: 0, errores: [] };
+  (filas || []).forEach((f, i) => {
+    const os = (f.obraSocial || '').trim();
+    const ref = (f.ref != null ? String(f.ref) : '').trim();
+    const valor = Number(f.valor);
+    if (!os || !ref) { res.errores.push({ fila: i + 1, motivo: 'faltan obra social o prestación' }); return; }
+    if (isNaN(valor) || valor < 0) { res.errores.push({ fila: i + 1, motivo: 'valor inválido (' + f.valor + ')' }); return; }
+    const item = items.find(n => String(n.codigo || '') === ref || (n.descripcion || '').toLowerCase() === ref.toLowerCase());
+    if (!item) { res.errores.push({ fila: i + 1, motivo: 'cirugía no encontrada: ' + ref }); return; }
+    try { _upsertContrato(os, item.grupo, valor, desde); res.ok++; }
+    catch (e) { res.errores.push({ fila: i + 1, motivo: e.message }); }
+  });
+  return res;
+}
+
 function eliminarContrato(obraSocial, grupo) {
   const g = Number(grupo);
   const filas = _contratosDe(obraSocial, g);
