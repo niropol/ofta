@@ -25,18 +25,36 @@ function renderValoresMedico() {
     cont.innerHTML = aviso + '<p class="vacio">No hay valores cargados. Usá «+ Definir valor».</p>';
     return;
   }
-  const rows = valores.map(v => `
+  const nomLabel = g => { const it = versionActual(Number(g)); return it ? it.descripcion : ('#' + g); };
+  const rows = valores
+    .sort((a, b) => (a.categoria.localeCompare(b.categoria) || ((a.grupo || 0) - (b.grupo || 0)) || ((a.medicoId || 0) - (b.medicoId || 0))))
+    .map(v => `
     <tr>
       <td>${escHtml(_catValLabel(v.categoria))}</td>
+      <td>${v.grupo == null ? '<span class="muted">toda la categoría</span>' : escHtml(nomLabel(v.grupo))}</td>
       <td>${v.medicoId == null ? '<strong>General</strong>' : escHtml(medicoNombre(v.medicoId))}</td>
       <td class="num">${fmtMoneda(v.valor, 'ARS')}</td>
       <td>${escHtml(v.vigenciaDesde)}</td>
     </tr>`).join('');
   cont.innerHTML = aviso + `
     <table class="tabla">
-      <thead><tr><th>Tipo</th><th>Alcance</th><th class="num">Valor fijo</th><th>Vigente desde</th></tr></thead>
+      <thead><tr><th>Tipo</th><th>Prestación</th><th>Alcance</th><th class="num">Valor fijo</th><th>Vigente desde</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
+}
+
+// Al cambiar la categoría en el modal: repuebla la lista de prestaciones específicas.
+function onValorCategoriaChange() {
+  const cat = document.getElementById('valor_categoria').value;
+  const box = document.getElementById('valor_prestacion_box');
+  const sel = document.getElementById('valor_prestacion');
+  if (!sel || !box) return;
+  const conNomenclador = (categoriaInfo(cat) || {}).nomenclador && cat !== 'derivacion';
+  box.style.display = conNomenclador ? 'block' : 'none';
+  if (!conNomenclador) { sel.innerHTML = ''; return; }
+  const items = listarPrestaciones({ categoria: cat, incluirInactivos: false });
+  sel.innerHTML = '<option value="">— toda la categoría (valor general) —</option>' +
+    items.map(v => `<option value="${v.grupo}">${escHtml(v.descripcion)}</option>`).join('');
 }
 
 function _mostrarModalValor(on) { const m = document.getElementById('modalValor'); if (m) m.style.display = on ? 'flex' : 'none'; }
@@ -51,13 +69,14 @@ function abrirNuevoValorMedico() {
     getMedicosActivos().sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es'))
       .map(m => `<option value="${m.id}">${escHtml(m.nombre)}</option>`).join('');
   set('valor_monto', ''); set('valor_vigencia', hoyISO().slice(0, 7) + '-01');
+  onValorCategoriaChange();
   _mostrarModalValor(true);
 }
 
 function guardarValorMedico() {
   const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
   try {
-    setValorMedico(val('valor_categoria'), val('valor_medico') || null, val('valor_monto'), val('valor_vigencia') || (hoyISO().slice(0, 7) + '-01'));
+    setValorMedico(val('valor_categoria'), val('valor_medico') || null, val('valor_monto'), val('valor_vigencia') || (hoyISO().slice(0, 7) + '-01'), val('valor_prestacion') || null);
   } catch (e) { alert(e.message); return false; }
   cerrarModalValor();
   renderValoresMedico();

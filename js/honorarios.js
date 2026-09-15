@@ -10,65 +10,88 @@
 
 function redondearAbajo(monto) { return Math.floor(Number(monto) || 0); }
 
-// ── Valores fijos por categoría + médico (versionados) ──
-function _valoresDe(categoria, medicoId) {
+// ── Valores fijos por categoría + médico + (opcional) cirugía puntual ──
+//  `grupo` = ítem del nomenclador (ej. Catarata). null = valor de la categoría.
+//  Permite pagar distinto por tipo de cirugía (catarata ≠ chalazión ≠ …) sin
+//  perder el valor por categoría como respaldo.
+function _valoresDe(categoria, medicoId, grupo) {
   const mid = medicoId != null ? Number(medicoId) : null;
+  const g = grupo != null ? Number(grupo) : null;
   return DB.valoresMedico
-    .filter(v => v.categoria === categoria && (v.medicoId != null ? Number(v.medicoId) : null) === mid)
+    .filter(v => v.categoria === categoria
+      && (v.medicoId != null ? Number(v.medicoId) : null) === mid
+      && (v.grupo != null ? Number(v.grupo) : null) === g)
     .sort((a, b) => (a.vigenciaDesde < b.vigenciaDesde ? 1 : -1));
 }
-function _valorActual(categoria, medicoId) {
-  const vs = _valoresDe(categoria, medicoId);
+function _valorActual(categoria, medicoId, grupo) {
+  const vs = _valoresDe(categoria, medicoId, grupo);
   return vs.find(v => !v.vigenciaHasta) || vs[0] || null;
 }
 
-// Valor fijo vigente a una fecha: primero el del médico, si no el general.
-function valorMedicoVigente(categoria, medicoId, fecha) {
+// Valor fijo vigente a una fecha. Preferencia (más específico → más general):
+//   grupo+médico → grupo(general) → categoría+médico → categoría(general).
+function valorMedicoVigente(categoria, medicoId, fecha, grupo) {
   const f = fecha || hoyISO();
-  const buscar = (mid) => DB.valoresMedico.find(v =>
+  const g = (grupo != null && grupo !== '') ? Number(grupo) : null;
+  const mid = (medicoId != null && medicoId !== '') ? Number(medicoId) : null;
+  const buscar = (m, gg) => DB.valoresMedico.find(v =>
     v.categoria === categoria &&
-    (v.medicoId != null ? Number(v.medicoId) : null) === mid &&
+    (v.medicoId != null ? Number(v.medicoId) : null) === m &&
+    (v.grupo != null ? Number(v.grupo) : null) === gg &&
     v.estado !== 'Inactivo' &&
     v.vigenciaDesde <= f && (!v.vigenciaHasta || v.vigenciaHasta >= f));
-  const esp = medicoId != null ? buscar(Number(medicoId)) : null;
-  if (esp) return { valor: esp.valor, origen: 'medico' };
-  const gen = buscar(null);
+  if (g != null) {
+    const im = mid != null ? buscar(mid, g) : null;
+    if (im) return { valor: im.valor, origen: 'medico_item' };
+    const ig = buscar(null, g);
+    if (ig) return { valor: ig.valor, origen: 'item' };
+  }
+  const em = mid != null ? buscar(mid, null) : null;
+  if (em) return { valor: em.valor, origen: 'medico' };
+  const gen = buscar(null, null);
   if (gen) return { valor: gen.valor, origen: 'general' };
   return null;
 }
 
-// Define / cambia un valor fijo (general si medicoId=null). Versiona.
-function setValorMedico(categoria, medicoId, valor, vigenciaDesde) {
+// Define / cambia un valor fijo. medicoId=null → general; grupo=ítem del
+// nomenclador → valor por esa cirugía puntual. Versiona por (categoría, médico, grupo).
+function setValorMedico(categoria, medicoId, valor, vigenciaDesde, grupo) {
   if (!CATEGORIAS_VALOR_MEDICO.some(c => c.id === categoria)) throw new Error('Categoría de valor inválida.');
   const val = Number(valor);
   if (isNaN(val) || val < 0) throw new Error('El valor debe ser un número ≥ 0.');
   const mid = (medicoId != null && medicoId !== '') ? Number(medicoId) : null;
+  const g = (grupo != null && grupo !== '') ? Number(grupo) : null;
+  if (g != null) {
+    const item = (typeof versionActual === 'function') ? versionActual(g) : null;
+    if (!item) throw new Error('Prestación del nomenclador inexistente para el valor por ítem.');
+    if (item.categoria !== categoria) throw new Error('La prestación elegida no es de la categoría "' + categoria + '".');
+  }
   const desde = vigenciaDesde || (hoyISO().slice(0, 7) + '-01');
-  const actual = _valorActual(categoria, mid);
+  const actual = _valorActual(categoria, mid, g);
   if (actual && desde <= actual.vigenciaDesde) {
     throw new Error('La vigencia debe ser posterior a la del valor actual (' + actual.vigenciaDesde + ').');
   }
   const antes = actual ? JSON.parse(JSON.stringify(actual)) : null;
   if (actual) actual.vigenciaHasta = _diaAnterior(desde);
-  const nuevo = { id: nuevoId(), categoria, medicoId: mid, valor: val, vigenciaDesde: desde, vigenciaHasta: null, estado: 'Activo' };
+  const nuevo = { id: nuevoId(), categoria, medicoId: mid, grupo: g, valor: val, vigenciaDesde: desde, vigenciaHasta: null, estado: 'Activo' };
   DB.valoresMedico.push(nuevo);
   registrarAuditoria(actual ? 'edicion' : 'alta', 'valorMedico', nuevo.id, antes, nuevo);
   marcarCambios('valoresMedico');
   return nuevo;
 }
 
-// Valores "actuales" (uno por categoría+médico) para la config.
+// Valores "actuales" (uno por categoría+médico+grupo) para la config.
 function listarValoresMedicoActuales() {
-  const claves = new Set(DB.valoresMedico.map(v => v.categoria + '|' + (v.medicoId != null ? v.medicoId : '')));
+  const claves = new Set(DB.valoresMedico.map(v => v.categoria + '|' + (v.medicoId != null ? v.medicoId : '') + '|' + (v.grupo != null ? v.grupo : '')));
   return [...claves].map(k => {
-    const [cat, mid] = k.split('|');
-    return _valorActual(cat, mid === '' ? null : Number(mid));
+    const [cat, mid, g] = k.split('|');
+    return _valorActual(cat, mid === '' ? null : Number(mid), g === '' ? null : Number(g));
   }).filter(Boolean);
 }
 
 // ── Honorarios de UNA prestación (valores fijos + extra opcional al médico) ──
 function honorariosDePrestacion(reg) {
-  const v = valorMedicoVigente(reg.categoria, reg.medicoRealizadorId, reg.fecha);
+  const v = valorMedicoVigente(reg.categoria, reg.medicoRealizadorId, reg.fecha, reg.grupoNomenclador);
   const faltaValor = v ? [] : [reg.categoria];
   const base = v ? v.valor : 0;
   const extra = Number(reg.extraMedico) || 0;

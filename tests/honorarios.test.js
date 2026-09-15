@@ -27,6 +27,26 @@ describe('Valores fijos a médicos', () => {
     expect(app.valorMedicoVigente('cirugia', null, '2026-07-10').valor).toBe(200000);
   });
 
+  it('valor por cirugía puntual gana sobre el valor de la categoría', () => {
+    const catarata = app.crearPrestacion({ categoria: 'cirugia', descripcion: 'Catarata', vigenciaDesde: '2026-01-01' });
+    const pterigion = app.crearPrestacion({ categoria: 'cirugia', descripcion: 'Pterigión', vigenciaDesde: '2026-01-01' });
+    app.setValorMedico('cirugia', null, 100000, '2026-01-01');                 // valor general de cirugía
+    app.setValorMedico('cirugia', null, 160000, '2026-01-01', catarata.grupo); // valor puntual catarata
+    // Catarata usa su valor puntual; pterigión (sin puntual) cae al general.
+    expect(app.valorMedicoVigente('cirugia', 501, '2026-03-10', catarata.grupo)).toEqual({ valor: 160000, origen: 'item' });
+    expect(app.valorMedicoVigente('cirugia', 501, '2026-03-10', pterigion.grupo)).toEqual({ valor: 100000, origen: 'general' });
+    const rc = app.registrarPrestacion({ fecha: '2026-03-10', categoria: 'cirugia', grupoNomenclador: catarata.grupo, medicoRealizadorId: 501 });
+    expect(app.honorariosDePrestacion(rc).realizador.monto).toBe(160000);
+  });
+
+  it('override por médico sobre una cirugía puntual gana sobre el valor puntual general', () => {
+    const catarata = app.crearPrestacion({ categoria: 'cirugia', descripcion: 'Catarata', vigenciaDesde: '2026-01-01' });
+    app.setValorMedico('cirugia', null, 160000, '2026-01-01', catarata.grupo);
+    app.setValorMedico('cirugia', 501, 180000, '2026-01-01', catarata.grupo);
+    expect(app.valorMedicoVigente('cirugia', 501, '2026-03-10', catarata.grupo)).toEqual({ valor: 180000, origen: 'medico_item' });
+    expect(app.valorMedicoVigente('cirugia', 502, '2026-03-10', catarata.grupo)).toEqual({ valor: 160000, origen: 'item' });
+  });
+
   it('rechaza vigencia anterior o igual a la actual, y valor negativo', () => {
     app.setValorMedico('cirugia', null, 120000, '2026-06-01');
     expect(() => app.setValorMedico('cirugia', null, 100000, '2026-05-01')).toThrow();

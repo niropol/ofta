@@ -24,7 +24,7 @@ const EXPONER = [
   // pagos a médicos (valores fijos)
   'redondearAbajo', 'CATEGORIAS_VALOR_MEDICO', 'valorMedicoVigente', 'setValorMedico', 'listarValoresMedicoActuales',
   'honorariosDePrestacion', 'honorariosDeMedico', 'honorariosDelMes',
-  'renderValoresMedico', 'abrirNuevoValorMedico', 'guardarValorMedico', 'calcularPreviewHonorarios',
+  'renderValoresMedico', 'abrirNuevoValorMedico', 'guardarValorMedico', 'calcularPreviewHonorarios', 'onValorCategoriaChange',
   // caja
   'CATEGORIAS_GASTO', 'registrarMovimientoCaja', 'registrarGasto', 'editarMovimientoCaja',
   'eliminarMovimientoCaja', 'registrarEgresoPagoMedico', 'quitarEgresosDeLiquidacion',
