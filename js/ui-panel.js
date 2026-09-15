@@ -16,7 +16,7 @@ function renderPanelMes() {
   const sam = ingresoSAMDelMes(mes);
   const ins = costoInsumosDelMes(mes, cot);
   const hon = honorariosDelMes(mes).reduce((s, h) => s + h.total, 0);
-  const comp = comparacionCobroSAM(mes);
+  const cob = comparacionCobrosMes(mes);
   const costoIns = ins.requiereCotizacion ? 0 : ins.costo;
   const margen = sam.ingreso - costoIns - hon;
 
@@ -27,24 +27,32 @@ function renderPanelMes() {
       ${nota ? `<div class="muted" style="font-size:12px;margin-top:4px">${nota}</div>` : ''}
     </div>`;
 
-  // Cobro: comparación esperado vs recibido.
+  // Cobro: comparación esperado vs recibido, sumando lo cobrado por cada OS.
   let cobroCard;
-  if (!comp.registrado) {
+  if (cob.total === 0) {
+    cobroCard = `
+      <div class="saldo-card">
+        <div class="saldo-titulo">SAM te pagó</div>
+        <div class="saldo-monto muted">—</div>
+      </div>`;
+  } else if (cob.registradas === 0) {
     cobroCard = `
       <div class="saldo-card">
         <div class="saldo-titulo">SAM te pagó</div>
         <div class="saldo-monto muted">pendiente</div>
-        <div class="muted" style="font-size:12px;margin-top:4px">Registrá el cobro en Contratos ▸ Cobro de SAM.</div>
+        <div class="muted" style="font-size:12px;margin-top:4px">${cob.total} OS por cobrar (Contratos ▸ Cobro de SAM).</div>
       </div>`;
   } else {
-    const dif = comp.diferencia;
-    const nota = dif === 0 ? 'Coincide con lo esperado ✓'
-      : (dif > 0 ? `Te pagaron ${fmtMoneda(dif, 'ARS')} de más` : `Te pagaron ${fmtMoneda(-dif, 'ARS')} de menos`);
-    cobroCard = card('SAM te pagó', comp.recibido, dif < 0 ? 'alerta' : '', nota);
+    const dif = cob.diferenciaCobrada;
+    const notas = [`${cob.registradas}/${cob.total} OS cobradas`];
+    if (dif !== 0) notas.push(dif > 0 ? `+${fmtMoneda(dif, 'ARS')} vs esperado` : `${fmtMoneda(dif, 'ARS')} vs esperado`);
+    if (cob.pendientes) notas.push(`${cob.pendientes} pendiente(s)`);
+    cobroCard = card('SAM te pagó (cobrado)', cob.recibido, dif < 0 ? 'alerta' : '', notas.join(' · '));
   }
 
   const alertas = [];
-  if (sam.sinContrato > 0) alertas.push(`${sam.sinContrato} cirugía(s) sin contrato de OS cargado (no facturan).`);
+  if (sam.sinContrato > 0) alertas.push(`${sam.sinContrato} cirugía(s) sin contrato de OS cargado (facturan solo el insumo).`);
+  if (cob.pendientes > 0) alertas.push(`${cob.pendientes} obra(s) social(es) del mes sin cobro registrado.`);
   if (ins.requiereCotizacion) alertas.push('Hay insumos con costo en USD: cargá la cotización para ver el costo y el margen.');
 
   cont.innerHTML = `

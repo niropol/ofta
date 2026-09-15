@@ -64,7 +64,9 @@ function eliminarContrato(obraSocial, grupo) {
   return true;
 }
 
-// Valores de contrato ACTUALES de una OS, uno por prestación del nomenclador.
+// Valores de contrato ACTUALES de una OS, uno por CIRUGÍA del nomenclador.
+// (Solo las cirugías facturan por contrato de OS; consulta/estudio/práctica van
+// por valor único y se configuran con el precio del nomenclador.)
 function contratosDeOS(obraSocial) {
   const grupos = [...new Set(DB.nomenclador.map(n => n.grupo))];
   return grupos.map(g => {
@@ -72,23 +74,19 @@ function contratosDeOS(obraSocial) {
     const actual = _contratoActual(obraSocial, g);
     return { grupo: g, descripcion: item ? item.descripcion : '', categoria: item ? item.categoria : '',
              valor: actual ? actual.valor : null, vigenciaDesde: actual ? actual.vigenciaDesde : null };
-  }).filter(x => x.descripcion);
+  }).filter(x => x.descripcion && x.categoria === 'cirugia');
 }
 
 // ── Ingreso de SAM ──
-// SAM factura la prestación y nos paga el porcentajeSAM% (40%) de lo facturado.
-// Hay DOS motores de facturación según la categoría:
+// SAM factura TODA prestación (incluido Particular) y nos paga el porcentajeSAM%
+// (40%) de lo facturado. Hay DOS motores de facturación según la categoría:
 //   • CIRUGÍA → valor de CONTRATO por obra social (cambia según la OS) + insumos.
 //     Si la OS no tiene contrato cargado, faltaContrato = true (no se puede facturar).
 //   • CONSULTA / ESTUDIO / PRÁCTICA → VALOR ÚNICO = precio del nomenclador (igual
 //     para todas las OS; snapshot pinneado a la fecha) + insumos si hubiera.
 // En ambos casos los insumos usados suman su ingreso (en pesos, lo factura SAM).
-// Particular no pasa por SAM (el paciente paga directo): ingreso 0.
 function ingresoSAMDePrestacion(reg) {
   const insIngreso = (reg.insumos || []).reduce((s, i) => s + (Number(i.ingreso) || 0), 0);  // pesos
-  if (reg.obraSocial === 'Particular') {
-    return { ingreso: 0, facturado: 0, base: 0, valorContrato: null, insumos: insIngreso, faltaContrato: false, modo: 'particular' };
-  }
   if (reg.categoria === 'cirugia') {
     const vc = valorContrato(reg.obraSocial, reg.grupoNomenclador, reg.fecha);
     const facturado = (vc || 0) + insIngreso;
@@ -106,18 +104,33 @@ function ingresoSAMDePrestacion(reg) {
   };
 }
 
-// Ingreso de SAM del mes (suma) + facturado + prestaciones sin contrato.
-function ingresoSAMDelMes(mes) {
-  let facturado = 0, ingreso = 0, sinContrato = 0;
+// Ingreso de SAM del mes (suma). Si se pasa obraSocial, filtra por esa OS —
+// clave para cerrar el cobro de cada obra social por separado.
+function ingresoSAMDelMes(mes, obraSocial) {
+  let facturado = 0, ingreso = 0, sinContrato = 0, cantidad = 0;
   DB.prestacionesRealizadas
-    .filter(r => r.estado === 'activa' && (!mes || (r.fecha || '').slice(0, 7) === mes))
+    .filter(r => r.estado === 'activa' && (!mes || (r.fecha || '').slice(0, 7) === mes) && (!obraSocial || r.obraSocial === obraSocial))
     .forEach(r => {
       const i = ingresoSAMDePrestacion(r);
       if (i.faltaContrato) sinContrato++;
       facturado += i.facturado;
       ingreso += i.ingreso;
+      cantidad++;
     });
-  return { mes, facturado, ingreso, porcentaje: porcentajeSAM(), sinContrato };
+  return { mes, obraSocial: obraSocial || null, facturado, ingreso, porcentaje: porcentajeSAM(), sinContrato, cantidad };
+}
+
+// Obras sociales con prestaciones activas en el mes (incluye 'Particular').
+function _osDelMes(mes) {
+  return [...new Set(DB.prestacionesRealizadas
+    .filter(r => r.estado === 'activa' && (r.fecha || '').slice(0, 7) === mes)
+    .map(r => r.obraSocial || 'Particular'))]
+    .sort((a, b) => a.localeCompare(b, 'es'));
+}
+
+// Ingreso del mes desglosado por obra social (una fila por OS).
+function ingresoSAMPorOS(mes) {
+  return _osDelMes(mes).map(os => ingresoSAMDelMes(mes, os));
 }
 
 // Costo de los insumos del mes (lo que nos cuesta comprarlos) — para registrar el egreso.
@@ -156,49 +169,82 @@ function quitarCostoInsumos(mes) {
   return movs.length;
 }
 
-// Compara lo que SAM DEBERÍA pagarnos (40% de lo facturado) contra lo efectivamente
-// cobrado en caja para ese mes. diferencia = recibido − esperado (negativo = nos pagaron de menos).
-function comparacionCobroSAM(mes) {
-  const esperado = ingresoSAMDelMes(mes).ingreso;
-  const mov = DB.cajaMovimientos.find(m => m.origen === 'cobro_sam' && m.referenciaId === mes);
-  const recibido = mov ? mov.monto : null;
+// Cada obra social paga en su momento → cada una cierra su cobro por separado.
+// La referencia del movimiento es "mes|obraSocial" para no mezclarlas.
+function _refCobro(mes, obraSocial) { return mes + '|' + obraSocial; }
+function _movCobro(mes, obraSocial) {
+  const ref = _refCobro(mes, obraSocial);
+  return DB.cajaMovimientos.find(m => m.origen === 'cobro_sam' && m.referenciaId === ref) || null;
+}
+
+// Compara, para UNA obra social y mes, lo que SAM DEBERÍA pagarte (40% de lo
+// facturado) contra lo efectivamente cobrado. diferencia = recibido − esperado.
+function comparacionCobroSAM(mes, obraSocial) {
+  const esperado = ingresoSAMDelMes(mes, obraSocial).ingreso;
+  const mov = _movCobro(mes, obraSocial);
   return {
-    mes, esperado, recibido, registrado: !!mov,
-    diferencia: mov ? mov.monto - esperado : null,
+    mes, obraSocial, esperado, recibido: mov ? mov.monto : null,
+    registrado: !!mov, diferencia: mov ? mov.monto - esperado : null, fecha: mov ? mov.fecha : null,
   };
 }
 
-// Registra en caja el cobro de SAM del mes (ingreso por transferencia). Evita duplicar.
+// Resumen del mes: una fila por obra social (esperado / recibido / diferencia /
+// estado) + totales, para el control de cobros y el panel.
+function comparacionCobrosMes(mes) {
+  const filas = ingresoSAMPorOS(mes).map(g => {
+    const c = comparacionCobroSAM(mes, g.obraSocial);
+    return {
+      obraSocial: g.obraSocial, facturado: g.facturado, esperado: g.ingreso,
+      cantidad: g.cantidad, sinContrato: g.sinContrato,
+      recibido: c.recibido, diferencia: c.diferencia, registrado: c.registrado, fecha: c.fecha,
+    };
+  }).filter(f => f.esperado > 0 || f.facturado > 0);
+  let esperado = 0, recibido = 0, esperadoCobrado = 0, registradas = 0;
+  filas.forEach(f => {
+    esperado += f.esperado;
+    if (f.registrado) { recibido += f.recibido; esperadoCobrado += f.esperado; registradas++; }
+  });
+  return {
+    mes, filas, esperado, recibido, esperadoCobrado, registradas,
+    total: filas.length, pendientes: filas.length - registradas,
+    diferenciaCobrada: recibido - esperadoCobrado,
+  };
+}
+
+// Registra en caja el cobro de SAM de UNA obra social para el mes. Evita duplicar.
 // montoRecibido: lo que SAM efectivamente transfirió (si se omite, usa el esperado).
-// Guarda esperado/diferencia en el movimiento para el control.
-function registrarCobroSAM(mes, fechaCobro, montoRecibido) {
-  if (DB.cajaMovimientos.some(m => m.origen === 'cobro_sam' && m.referenciaId === mes)) {
-    throw new Error('El cobro de SAM de ' + mes + ' ya está registrado en la caja.');
+function registrarCobroSAM(mes, obraSocial, fechaCobro, montoRecibido) {
+  if (!obraSocial) throw new Error('Indicá la obra social del cobro.');
+  const ref = _refCobro(mes, obraSocial);
+  if (DB.cajaMovimientos.some(m => m.origen === 'cobro_sam' && m.referenciaId === ref)) {
+    throw new Error('El cobro de ' + obraSocial + ' de ' + mes + ' ya está registrado.');
   }
-  const r = ingresoSAMDelMes(mes);
-  const esperado = r.ingreso;
-  if (!(esperado > 0)) throw new Error('No hay ingreso de SAM para ' + mes + ' (cargá los contratos / valores).');
+  const esperado = ingresoSAMDelMes(mes, obraSocial).ingreso;
+  if (!(esperado > 0)) throw new Error('No hay ingreso de SAM para ' + obraSocial + ' en ' + mes + ' (cargá los contratos / valores).');
   const recibido = (montoRecibido == null || montoRecibido === '') ? esperado : Number(montoRecibido);
   if (isNaN(recibido) || recibido < 0) throw new Error('El monto recibido debe ser un número ≥ 0.');
   const dif = recibido - esperado;
-  const desc = 'Cobro SAM ' + mes + ' (' + porcentajeSAM() + '% facturado)' +
+  const desc = 'Cobro SAM · ' + obraSocial + ' ' + mes + ' (' + porcentajeSAM() + '%)' +
     (dif !== 0 ? ' · dif ' + (dif > 0 ? '+' : '') + dif : '');
   const mov = registrarMovimientoCaja({
     fecha: fechaCobro || hoyISO(), tipo: 'ingreso', descripcion: desc,
     monto: recibido, moneda: 'ARS', medioPago: 'transferencia',
-    origen: 'cobro_sam', referenciaId: mes,
+    origen: 'cobro_sam', referenciaId: ref,
   });
   mov.esperado = esperado;
   mov.diferencia = dif;
+  mov.obraSocial = obraSocial;
+  mov.mesCobro = mes;
   marcarCambios('cajaMovimientos');
   return mov;
 }
 
-// Deshace el cobro de SAM de un mes (quita el ingreso de caja).
-function quitarCobroSAM(mes) {
-  const movs = DB.cajaMovimientos.filter(m => m.origen === 'cobro_sam' && m.referenciaId === mes);
+// Deshace el cobro de una obra social en el mes (quita el ingreso de caja).
+function quitarCobroSAM(mes, obraSocial) {
+  const ref = _refCobro(mes, obraSocial);
+  const movs = DB.cajaMovimientos.filter(m => m.origen === 'cobro_sam' && m.referenciaId === ref);
   if (!movs.length) return 0;
-  DB.cajaMovimientos = DB.cajaMovimientos.filter(m => !(m.origen === 'cobro_sam' && m.referenciaId === mes));
+  DB.cajaMovimientos = DB.cajaMovimientos.filter(m => !(m.origen === 'cobro_sam' && m.referenciaId === ref));
   movs.forEach(m => registrarAuditoria('baja', 'cajaMovimiento', m.id, m, null));
   marcarCambios('cajaMovimientos');
   return movs.length;

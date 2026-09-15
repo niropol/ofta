@@ -79,17 +79,39 @@ describe('Contratos e ingreso de SAM', () => {
     expect(app.quitarCostoInsumos('2026-03')).toBe(1);
   });
 
-  it('registrarCobroSAM carga el ingreso en caja y no duplica; quitarCobroSAM lo deshace', () => {
+  it('registrarCobroSAM (por OS) carga el ingreso en caja y no duplica; quitarCobroSAM lo deshace', () => {
     const faco = nomFaco();
     app.setContrato('OSDE', faco.grupo, 1000000, '2026-01-01');
     app.registrarPrestacion({ fecha: '2026-03-01', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 501, obraSocial: 'OSDE' });
-    const mov = app.registrarCobroSAM('2026-03', '2026-03-31');
+    const mov = app.registrarCobroSAM('2026-03', 'OSDE', '2026-03-31');
     expect(mov.tipo).toBe('ingreso');
     expect(mov.monto).toBe(400000);
     expect(app.saldosCaja().ARS.transferencia).toBe(400000);
-    expect(() => app.registrarCobroSAM('2026-03')).toThrow(); // no duplica
-    expect(app.quitarCobroSAM('2026-03')).toBe(1);
+    expect(() => app.registrarCobroSAM('2026-03', 'OSDE')).toThrow(); // no duplica esa OS
+    expect(app.quitarCobroSAM('2026-03', 'OSDE')).toBe(1);
     expect(app.saldosCaja().ARS.transferencia).toBe(0);
+  });
+
+  it('cada OS cierra su cobro por separado (pagan en momentos distintos)', () => {
+    const faco = nomFaco();
+    app.setContrato('OSDE', faco.grupo, 1000000, '2026-01-01');
+    app.setContrato('IOMA', faco.grupo, 500000, '2026-01-01');
+    app.registrarPrestacion({ fecha: '2026-03-01', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 501, obraSocial: 'OSDE' });
+    app.registrarPrestacion({ fecha: '2026-03-02', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 501, obraSocial: 'IOMA' });
+    // Solo paga OSDE, y con una diferencia.
+    app.registrarCobroSAM('2026-03', 'OSDE', '2026-03-31', 390000);
+    const resumen = app.comparacionCobrosMes('2026-03');
+    const osde = resumen.filas.find(f => f.obraSocial === 'OSDE');
+    const ioma = resumen.filas.find(f => f.obraSocial === 'IOMA');
+    expect(osde.registrado).toBe(true);
+    expect(osde.esperado).toBe(400000);
+    expect(osde.recibido).toBe(390000);
+    expect(osde.diferencia).toBe(-10000);
+    expect(ioma.registrado).toBe(false);   // IOMA todavía no pagó
+    expect(ioma.esperado).toBe(200000);
+    expect(resumen.registradas).toBe(1);
+    expect(resumen.pendientes).toBe(1);
+    expect(app.saldosCaja().ARS.transferencia).toBe(390000); // solo entró OSDE
   });
 
   // ── Motor "valor único": consulta / estudio / práctica no dependen de la OS ──
@@ -116,10 +138,19 @@ describe('Contratos e ingreso de SAM', () => {
     expect(i.ingreso).toBe(16000);          // 40%
   });
 
-  it('particular no factura por SAM (ingreso 0) aunque tenga valor de nomenclador', () => {
+  it('particular TAMBIÉN factura por SAM y paga 40% (valor único en consulta)', () => {
     const cons = app.crearPrestacion({ categoria: 'consulta', descripcion: 'Consulta', precio: 20000, vigenciaDesde: '2026-01-01' });
     const r = app.registrarPrestacion({ fecha: '2026-03-10', categoria: 'consulta', grupoNomenclador: cons.grupo, medicoRealizadorId: 501, obraSocial: 'Particular' });
-    expect(app.ingresoSAMDePrestacion(r).ingreso).toBe(0);
+    expect(app.ingresoSAMDePrestacion(r).ingreso).toBe(8000);
+  });
+
+  it('particular en cirugía usa su propio contrato (como una OS más)', () => {
+    const faco = nomFaco();
+    app.setContrato('Particular', faco.grupo, 800000, '2026-01-01');
+    const r = app.registrarPrestacion({ fecha: '2026-03-10', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 501, obraSocial: 'Particular' });
+    const i = app.ingresoSAMDePrestacion(r);
+    expect(i.valorContrato).toBe(800000);
+    expect(i.ingreso).toBe(320000); // 40%
   });
 
   it('valor único NO cuenta como "sin contrato" en el resumen del mes', () => {
@@ -138,11 +169,11 @@ describe('Contratos e ingreso de SAM', () => {
     app.setContrato('OSDE', faco.grupo, 1000000, '2026-01-01');
     app.registrarPrestacion({ fecha: '2026-03-01', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 501, obraSocial: 'OSDE' });
     // Esperado 400.000, pero SAM transfirió 380.000.
-    const mov = app.registrarCobroSAM('2026-03', '2026-03-31', 380000);
+    const mov = app.registrarCobroSAM('2026-03', 'OSDE', '2026-03-31', 380000);
     expect(mov.monto).toBe(380000);         // en caja entra lo que realmente cobramos
     expect(mov.esperado).toBe(400000);
     expect(mov.diferencia).toBe(-20000);    // nos pagaron de menos
-    const c = app.comparacionCobroSAM('2026-03');
+    const c = app.comparacionCobroSAM('2026-03', 'OSDE');
     expect(c.esperado).toBe(400000);
     expect(c.recibido).toBe(380000);
     expect(c.diferencia).toBe(-20000);
