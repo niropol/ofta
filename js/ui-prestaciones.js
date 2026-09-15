@@ -249,7 +249,6 @@ function guardarPrestacionReg() {
     obraSocial: val('reg_os') || 'Particular',
     sedeId: Number(val('reg_sede')) || sedeActiva(),
     consultorioId: val('reg_consultorio') || null,
-    extraMedico: val('reg_extra') || 0,
     insumos: _regInsumos.map(i => ({ grupo: i.grupo, ingreso: i.ingreso })),
     paciente: { apellido: val('reg_pac_apellido'), nombre: val('reg_pac_nombre'), dni: val('reg_pac_dni') },
   };
