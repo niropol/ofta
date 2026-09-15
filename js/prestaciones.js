@@ -103,9 +103,14 @@ function registrarPrestacion(datos) {
 
   const pac = pacienteFindOrCreate(datos.paciente || {});
 
+  // Cantidad: consulta/estudio/práctica se cargan por cantidad (ej. "5 consultas de IOMA").
+  // La cirugía es siempre individual (1). Entero ≥ 1.
+  const cant = (cat.id === 'cirugia') ? 1 : Math.max(1, Math.floor(Number(datos.cantidad) || 1));
+
   const reg = {
     id: nuevoId(),
     fecha: datos.fecha,
+    cantidad: cant,
     hora: datos.hora || '',
     sedeId: datos.sedeId || sedeActiva(),
     consultorioId: datos.consultorioId != null ? Number(datos.consultorioId) : ((getConsultoriosDeSede(datos.sedeId || sedeActiva())[0] || {}).id || null),
@@ -148,6 +153,7 @@ function editarPrestacionRealizada(id, datos) {
     sedeId: datos.sedeId ?? reg.sedeId,
     consultorioId: datos.consultorioId ?? reg.consultorioId,
     categoria: datos.categoria ?? reg.categoria,
+    cantidad: datos.cantidad !== undefined ? datos.cantidad : reg.cantidad,
     grupoNomenclador: datos.grupoNomenclador ?? reg.grupoNomenclador,
     medicoRealizadorId: datos.medicoRealizadorId ?? reg.medicoRealizadorId,
     medicoDerivadorId: datos.medicoDerivadorId !== undefined ? datos.medicoDerivadorId : reg.medicoDerivadorId,

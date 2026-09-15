@@ -167,35 +167,30 @@
 
       <div class="cd-grid">
         <div class="cd-card">
-          <h4>Consultas y estudios</h4>
-          <p class="muted">Elegí el tipo y el paciente. Valor único (no depende de la OS).</p>
+          <h4>Consultas</h4>
+          <p class="muted">Por cantidad y obra social (ej. 5 de IOMA). Sin paciente.</p>
           <div class="cd-form">
-            <select id="cd_ce_tipo"></select>
-            <select id="cd_ce_os" title="Obra social"></select>
-            <input id="cd_ce_ap" placeholder="Apellido">
-            <input id="cd_ce_nom" placeholder="Nombre">
-            <input id="cd_ce_dni" placeholder="DNI">
-            <button class="btn" onclick="cdAgregarCE()">+ Agregar</button>
+            <select id="cd_con_tipo" title="Tipo de consulta"></select>
+            <select id="cd_con_os" title="Obra social"></select>
+            <input id="cd_con_cant" type="number" min="1" step="1" placeholder="Cantidad" value="1">
+            <button class="btn" onclick="cdAgregarConsulta()">+ Agregar</button>
           </div>
         </div>
 
         <div class="cd-card">
-          <h4>Prácticas</h4>
-          <p class="muted">Una por una, indicando quién la derivó.</p>
+          <h4>Estudios y prácticas</h4>
+          <p class="muted">Por cantidad: elegí el estudio, la obra social y cuántos.</p>
           <div class="cd-form">
-            <select id="cd_pr_tipo"></select>
-            <select id="cd_pr_os" title="Obra social"></select>
-            <select id="cd_pr_deriv" title="Médico derivador"></select>
-            <input id="cd_pr_ap" placeholder="Apellido">
-            <input id="cd_pr_nom" placeholder="Nombre">
-            <input id="cd_pr_dni" placeholder="DNI">
-            <button class="btn" onclick="cdAgregarPractica()">+ Agregar</button>
+            <select id="cd_est_tipo" title="Tipo de estudio/práctica"></select>
+            <select id="cd_est_os" title="Obra social"></select>
+            <input id="cd_est_cant" type="number" min="1" step="1" placeholder="Cantidad" value="1">
+            <button class="btn" onclick="cdAgregarEstudio()">+ Agregar</button>
           </div>
         </div>
 
         <div class="cd-card">
           <h4>Cirugías</h4>
-          <p class="muted">Cada cirugía lleva su insumo y, si corresponde, el derivador.</p>
+          <p class="muted">Detalle por paciente: apellido, nombre, DNI, OS, tipo, insumo y derivador.</p>
           <button class="btn" onclick="cdNuevaCirugia()">+ Cargar cirugía</button>
         </div>
       </div>

@@ -91,16 +91,17 @@ function listarValoresMedicoActuales() {
 
 // ── Honorarios de UNA prestación (valores fijos + extra opcional al médico) ──
 function honorariosDePrestacion(reg) {
+  const cant = Math.max(1, Math.floor(Number(reg.cantidad) || 1));  // consulta/estudio se cargan por cantidad
   const v = valorMedicoVigente(reg.categoria, reg.medicoRealizadorId, reg.fecha, reg.grupoNomenclador);
   const faltaValor = v ? [] : [reg.categoria];
   const base = v ? v.valor : 0;
   const extra = Number(reg.extraMedico) || 0;
-  const realizador = { medicoId: reg.medicoRealizadorId, monto: redondearAbajo(base + extra), extra, faltaValor };
+  const realizador = { medicoId: reg.medicoRealizadorId, monto: redondearAbajo(base + extra) * cant, extra, cantidad: cant, faltaValor };
 
   let derivador = null;
   if (reg.medicoDerivadorId) {
     const vd = valorMedicoVigente('derivacion', reg.medicoDerivadorId, reg.fecha);
-    derivador = { medicoId: reg.medicoDerivadorId, monto: redondearAbajo(vd ? vd.valor : 0), faltaValor: vd ? [] : ['derivacion'] };
+    derivador = { medicoId: reg.medicoDerivadorId, monto: redondearAbajo(vd ? vd.valor : 0) * cant, faltaValor: vd ? [] : ['derivacion'] };
   }
   return { realizador, derivador };
 }
@@ -118,7 +119,7 @@ function honorariosDeMedico(medicoId, mes) {
       if (h.realizador.medicoId === mid) {
         total += h.realizador.monto;
         h.realizador.faltaValor.forEach(c => faltaValor.add(c));
-        detalle.push({ prestacionId: r.id, fecha: r.fecha, rol: 'realizador', descripcion: r.descripcion, monto: h.realizador.monto });
+        detalle.push({ prestacionId: r.id, fecha: r.fecha, rol: 'realizador', descripcion: r.descripcion, cantidad: h.realizador.cantidad, monto: h.realizador.monto });
       }
       if (h.derivador && h.derivador.medicoId === mid) {
         total += h.derivador.monto;

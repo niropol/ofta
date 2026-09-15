@@ -86,21 +86,24 @@ function contratosDeOS(obraSocial) {
 //     para todas las OS; snapshot pinneado a la fecha) + insumos si hubiera.
 // En ambos casos los insumos usados suman su ingreso (en pesos, lo factura SAM).
 function ingresoSAMDePrestacion(reg) {
-  const insIngreso = (reg.insumos || []).reduce((s, i) => s + (Number(i.ingreso) || 0), 0);  // pesos
+  const cant = Math.max(1, Math.floor(Number(reg.cantidad) || 1));  // consulta/estudio se cargan por cantidad
+  const insIngresoU = (reg.insumos || []).reduce((s, i) => s + (Number(i.ingreso) || 0), 0);  // pesos, por unidad
   if (reg.categoria === 'cirugia') {
     const vc = valorContrato(reg.obraSocial, reg.grupoNomenclador, reg.fecha);
-    const facturado = (vc || 0) + insIngreso;
+    const factU = (vc || 0) + insIngresoU;
+    const ingU = Math.floor(factU * porcentajeSAM() / 100);
     return {
-      ingreso: Math.floor(facturado * porcentajeSAM() / 100),
-      facturado, base: vc || 0, valorContrato: vc, insumos: insIngreso, faltaContrato: vc == null, modo: 'contrato',
+      ingreso: ingU * cant, facturado: factU * cant, base: (vc || 0) * cant,
+      valorContrato: vc, insumos: insIngresoU * cant, faltaContrato: vc == null, modo: 'contrato', cantidad: cant,
     };
   }
   // consulta / estudio / práctica → valor único (precio del nomenclador, sin depender de la OS)
-  const base = Number(reg.precioNomenclador) || 0;
-  const facturado = base + insIngreso;
+  const baseU = Number(reg.precioNomenclador) || 0;
+  const factU = baseU + insIngresoU;
+  const ingU = Math.floor(factU * porcentajeSAM() / 100);
   return {
-    ingreso: Math.floor(facturado * porcentajeSAM() / 100),
-    facturado, base, valorContrato: null, insumos: insIngreso, faltaContrato: false, modo: 'valor_unico',
+    ingreso: ingU * cant, facturado: factU * cant, base: baseU * cant,
+    valorContrato: null, insumos: insIngresoU * cant, faltaContrato: false, modo: 'valor_unico', cantidad: cant,
   };
 }
 
@@ -139,10 +142,10 @@ function costoInsumosDelMes(mes, cotizacion) {
   let costo = 0, requiereCotizacion = false;
   DB.prestacionesRealizadas
     .filter(r => r.estado === 'activa' && (!mes || (r.fecha || '').slice(0, 7) === mes))
-    .forEach(r => (r.insumos || []).forEach(i => {
-      if (i.costoMoneda === 'USD') { if (cot) costo += (Number(i.costo) || 0) * cot; else requiereCotizacion = true; }
-      else costo += Number(i.costo) || 0;
-    }));
+    .forEach(r => { const cant = Math.max(1, Math.floor(Number(r.cantidad) || 1)); (r.insumos || []).forEach(i => {
+      if (i.costoMoneda === 'USD') { if (cot) costo += (Number(i.costo) || 0) * cot * cant; else requiereCotizacion = true; }
+      else costo += (Number(i.costo) || 0) * cant;
+    }); });
   return { mes, costo: Math.round(costo), requiereCotizacion };
 }
 

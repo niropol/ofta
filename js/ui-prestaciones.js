@@ -69,6 +69,7 @@ function renderPrestaciones() {
       <td>${escHtml(r.descripcion)}${anulada ? ' <span class="badge-inactivo">Anulada</span>' : ''}</td>
       <td>${escHtml(r.obraSocial)}</td>
       <td>${escHtml(r.pacienteNombre || '—')}</td>
+      <td class="num">${Math.max(1, Math.floor(Number(r.cantidad) || 1))}</td>
       <td>${escHtml(medicoNombre(r.medicoRealizadorId))}</td>
       <td>${escHtml(deriv)}</td>
       <td class="num">${fmtMoneda(r.precioNomenclador, r.moneda)}</td>
@@ -94,7 +95,7 @@ function renderPrestaciones() {
     <table class="tabla">
       <thead><tr>
         <th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Obra social</th>
-        <th>Paciente</th><th>Realizador</th><th>Derivador</th>
+        <th>Paciente</th><th class="num">Cant.</th><th>Realizador</th><th>Derivador</th>
         <th class="num">Precio nomenclador</th><th>Acciones</th>
       </tr></thead>
       <tbody>${rows}</tbody>

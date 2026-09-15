@@ -12,11 +12,15 @@ function resumenMes(mes) {
   const activas = prest.filter(r => r.estado === 'activa');
   const porCategoria = {};
   const porDia = {};
+  const cantDe = r => Math.max(1, Math.floor(Number(r.cantidad) || 1));
+  let unidades = 0;
   activas.forEach(r => {
-    porCategoria[r.categoria] = (porCategoria[r.categoria] || 0) + 1;
-    porDia[r.fecha] = (porDia[r.fecha] || 0) + 1;
+    const c = cantDe(r);
+    porCategoria[r.categoria] = (porCategoria[r.categoria] || 0) + c;
+    porDia[r.fecha] = (porDia[r.fecha] || 0) + c;
+    unidades += c;
   });
-  const consultas = activas.filter(r => r.categoria === 'consulta').length;
+  const consultas = activas.filter(r => r.categoria === 'consulta').reduce((s, r) => s + cantDe(r), 0);
   const anuladas = prest.filter(r => r.estado === 'anulada').length;
 
   const movs = DB.cajaMovimientos.filter(m => m.estado === 'activo' && (m.fecha || '').slice(0, 7) === mes && m.moneda === 'ARS');
@@ -29,7 +33,7 @@ function resumenMes(mes) {
   const sam = (typeof ingresoSAMDelMes === 'function') ? ingresoSAMDelMes(mes) : { facturado: 0, ingreso: 0 };
 
   return {
-    mes, totalPrestaciones: activas.length, consultas, porCategoria, porDia, anuladas,
+    mes, totalPrestaciones: unidades, registros: activas.length, consultas, porCategoria, porDia, anuladas,
     ingresosMes, egresosMes, gastosMes, honorariosCalc, liquidado,
     facturadoSAM: sam.facturado, ingresoSAM: sam.ingreso, saldos: saldosCaja(),
   };

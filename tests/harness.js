@@ -66,7 +66,7 @@ const EXPONER = [
   '_resolverInsumos', 'renderPrestaciones', 'irPaginaPrestaciones', 'abrirNuevaPrestacionRealizada', 'guardarPrestacionReg',
   'agregarInsumoReg', 'quitarInsumoReg',
   // carga diaria (parte visible) y panel del mes
-  'renderCargaDiaria', 'cdAgregarCE', 'cdAgregarPractica', 'cdNuevaCirugia', 'cdSedeChange', 'renderPanelMes',
+  'renderCargaDiaria', 'cdAgregarConsulta', 'cdAgregarEstudio', 'cdEditarCantidad', 'cdNuevaCirugia', 'cdSedeChange', 'renderPanelMes',
   // liquidaciones
   'liquidacionDe', 'liquidacionCerradaDe', 'prestacionBloqueada', 'generarLiquidacion',
   'cerrarLiquidacion', 'reabrirLiquidacion', 'eliminarLiquidacion', 'listarLiquidaciones',
