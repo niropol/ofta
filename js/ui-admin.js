@@ -44,14 +44,14 @@ function renderAdminInsumos() {
     <tr class="${inactivo ? 'fila-inactiva' : ''}">
       <td>${escHtml(v.descripcion)}${inactivo ? ' <span class="badge-inactivo">Inactivo</span>' : ''}</td>
       <td class="num">${fmtMoneda(v.precio, v.moneda)}</td>
-      <td><input type="number" step="0.01" id="costo_${v.grupo}" value="${v.costo != null ? v.costo : ''}" style="width:130px"></td>
+      <td><input type="number" step="0.01" id="costo_${v.grupo}" value="${v.costo != null ? v.costo : ''}" style="width:120px"></td>
       <td>
         <select id="costoMon_${v.grupo}">
           <option value="ARS"${(v.costoMoneda || 'ARS') === 'ARS' ? ' selected' : ''}>Pesos (ARS)</option>
           <option value="USD"${v.costoMoneda === 'USD' ? ' selected' : ''}>Dólares (USD)</option>
         </select>
       </td>
-      <td class="num">${_netoInsumo(v)}</td>
+      <td><input type="number" step="0.01" id="hon_${v.grupo}" value="${v.honorarioMedico != null ? v.honorarioMedico : ''}" style="width:120px" placeholder="$" title="Fijo al médico por colocarlo"></td>
       <td class="acc"><button onclick="guardarCostoInsumoUI(${v.grupo})">Guardar</button></td>
     </tr>`;
   }).join('');
@@ -59,17 +59,11 @@ function renderAdminInsumos() {
     <table class="tabla">
       <thead><tr>
         <th>Insumo</th><th class="num">Precio (factura SAM)</th>
-        <th>Costo real</th><th>Moneda</th><th class="num">Neto</th><th></th>
+        <th>Costo real</th><th>Moneda</th><th>Pago al médico</th><th></th>
       </tr></thead>
       <tbody>${rows}</tbody>
-    </table>`;
-}
-
-// Neto del insumo (precio − costo) si están en la misma moneda; si no, avisa.
-function _netoInsumo(v) {
-  if (v.costo == null) return '—';
-  if (v.moneda !== v.costoMoneda) return '<span class="muted">a convertir</span>';
-  return fmtMoneda(v.precio - v.costo, v.moneda);
+    </table>
+    <p class="muted" style="margin-top:6px">El «Pago al médico» es un fijo que se le suma al médico por colocar ese insumo (lente A → $X, lente B → $B…).</p>`;
 }
 
 // ── Alta de insumo desde el Admin (crea el ítem + su costo, en un solo paso) ──
@@ -79,7 +73,7 @@ function cerrarModalInsumo() { _mostrarModalInsumo(false); }
 function abrirNuevoInsumo() {
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v == null ? '' : v; };
   set('insu_desc', ''); set('insu_precio', ''); set('insu_moneda', 'ARS');
-  set('insu_costo', ''); set('insu_costoMoneda', 'ARS');
+  set('insu_costo', ''); set('insu_costoMoneda', 'ARS'); set('insu_hon', '');
   set('insu_vigencia', hoyISO().slice(0, 7) + '-01');
   _mostrarModalInsumo(true);
 }
@@ -94,6 +88,7 @@ function guardarNuevoInsumo() {
     categoria: 'insumo', descripcion: desc,
     precio: val('insu_precio'), moneda: val('insu_moneda') || 'ARS',
     costo: val('insu_costo'), costoMoneda: val('insu_costoMoneda') || 'ARS',
+    honorarioMedico: val('insu_hon') || 0,
     vigenciaDesde: val('insu_vigencia') || (hoyISO().slice(0, 7) + '-01'),
   });
   cerrarModalInsumo();
@@ -104,10 +99,13 @@ function guardarNuevoInsumo() {
 function guardarCostoInsumoUI(grupo) {
   const costo = document.getElementById('costo_' + grupo).value;
   const moneda = document.getElementById('costoMon_' + grupo).value;
+  const honEl = document.getElementById('hon_' + grupo);
+  const hon = honEl ? honEl.value : '';
   if (costo === '' || isNaN(Number(costo))) { alert('El costo debe ser un número.'); return false; }
   try {
-    setCostoInsumo(grupo, costo, moneda);
+    setCostoInsumo(grupo, costo, moneda, hon);
   } catch (e) { alert(e.message); return false; }
   renderAdminInsumos();
+  if (typeof sincronizarUI === 'function') sincronizarUI();
   return true;
 }

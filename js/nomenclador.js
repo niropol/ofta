@@ -82,6 +82,7 @@ function crearPrestacion(datos) {
     moneda: datos.moneda || 'ARS',
     costo: esLIO ? (Number(datos.costo) || 0) : null,
     costoMoneda: esLIO ? (datos.costoMoneda || 'ARS') : null,
+    honorarioMedico: esLIO ? (Number(datos.honorarioMedico) || 0) : null,  // fijo al médico por colocar el insumo
     vigenciaDesde: datos.vigenciaDesde || hoyISO(),
     vigenciaHasta: null,
     estado: 'Activo',
@@ -118,6 +119,7 @@ function editarPrestacion(grupo, datos) {
     if (esLIO) {
       if (datos.costo != null) actual.costo = Number(datos.costo) || 0;
       if (datos.costoMoneda != null) actual.costoMoneda = datos.costoMoneda;
+      if (datos.honorarioMedico != null) actual.honorarioMedico = Number(datos.honorarioMedico) || 0;
     }
   }
 
@@ -149,6 +151,7 @@ function versionarPrecio(grupo, { vigenciaDesde, precio, moneda, costo, costoMon
     moneda: moneda || actual.moneda || 'ARS',
     costo: esLIO ? (costo != null ? Number(costo) : actual.costo) : null,
     costoMoneda: esLIO ? (costoMoneda || actual.costoMoneda || 'ARS') : null,
+    honorarioMedico: esLIO ? (actual.honorarioMedico || 0) : null,
     vigenciaDesde: desde,
     vigenciaHasta: null,
     estado: actual.estado,
@@ -162,13 +165,14 @@ function versionarPrecio(grupo, { vigenciaDesde, precio, moneda, costo, costoMon
 // ── Costo real de un insumo (ADMIN): edita el costo de la versión vigente.
 //    El costo es sensible y se gestiona en el área admin, no en el nomenclador
 //    general. Se aplica sobre la versión actual (los aumentos lo arrastran). ──
-function setCostoInsumo(grupo, costo, costoMoneda) {
+function setCostoInsumo(grupo, costo, costoMoneda, honorarioMedico) {
   const actual = versionActual(grupo);
   if (!actual) return false;
   if (!(categoriaInfo(actual.categoria) || {}).usaCosto) throw new Error('Solo los insumos tienen costo real.');
   const antes = JSON.parse(JSON.stringify(actual));
   actual.costo = Number(costo) || 0;
   actual.costoMoneda = costoMoneda || actual.costoMoneda || 'ARS';
+  if (honorarioMedico != null && honorarioMedico !== '') actual.honorarioMedico = Number(honorarioMedico) || 0;
   registrarAuditoria('edicion', 'nomenclador_costo', grupo, antes, actual);
   marcarCambios('nomenclador');
   return actual;

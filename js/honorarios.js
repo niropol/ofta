@@ -96,7 +96,9 @@ function honorariosDePrestacion(reg) {
   const faltaValor = v ? [] : [reg.categoria];
   const base = v ? v.valor : 0;
   const extra = Number(reg.extraMedico) || 0;
-  const realizador = { medicoId: reg.medicoRealizadorId, monto: redondearAbajo(base + extra) * cant, extra, cantidad: cant, faltaValor };
+  // Fijo al médico por cada insumo colocado (lente A → $X, lente B → $B…).
+  const insHon = (reg.insumos || []).reduce((s, i) => s + (Number(i.honorarioMedico) || 0), 0);
+  const realizador = { medicoId: reg.medicoRealizadorId, monto: (redondearAbajo(base + extra) + insHon) * cant, extra, insumos: insHon, cantidad: cant, faltaValor };
 
   let derivador = null;
   if (reg.medicoDerivadorId) {

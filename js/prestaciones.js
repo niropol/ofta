@@ -73,6 +73,7 @@ function _resolverInsumos(items, fecha, permite) {
       descripcion: ver.descripcion,
       costo: ver.costo != null ? ver.costo : 0, costoMoneda: ver.costoMoneda || 'ARS',
       ingreso: tieneIngreso ? (Number(it.ingreso) || 0) : ingresoDefault,   // en pesos, lo factura SAM
+      honorarioMedico: Number(ver.honorarioMedico) || 0,   // fijo al médico por colocar este insumo
     };
   });
 }

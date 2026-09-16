@@ -55,6 +55,17 @@ describe('Valores fijos a médicos', () => {
 });
 
 describe('Cálculo de honorarios (valores fijos)', () => {
+  it('el pago fijo por insumo se suma al honorario del médico realizador', () => {
+    app.setValorMedico('cirugia', null, 100000, '2026-01-01');
+    const faco = nom('cirugia');
+    const lenteA = app.crearPrestacion({ categoria: 'insumo', descripcion: 'Lente A', precio: 500000, costo: 250000, honorarioMedico: 30000, vigenciaDesde: '2026-01-01' });
+    const lenteB = app.crearPrestacion({ categoria: 'insumo', descripcion: 'Lente B', precio: 700000, costo: 300000, honorarioMedico: 50000, vigenciaDesde: '2026-01-01' });
+    const rA = app.registrarPrestacion({ fecha: '2026-03-10', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 501, insumos: [lenteA.grupo] });
+    expect(app.honorariosDePrestacion(rA).realizador.monto).toBe(130000); // 100.000 + 30.000
+    const rB = app.registrarPrestacion({ fecha: '2026-03-11', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 501, insumos: [lenteB.grupo] });
+    expect(app.honorariosDePrestacion(rB).realizador.monto).toBe(150000); // 100.000 + 50.000
+  });
+
   it('consulta = valor fijo', () => {
     app.setValorMedico('consulta', null, 8000, '2026-01-01');
     const c = nom('consulta');
