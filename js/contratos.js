@@ -95,10 +95,12 @@ function aumentarContratosOS(obraSocial, porcentaje, vigenciaDesde) {
   return { obraSocial, porcentaje: pct, actualizados: n, vigenciaDesde: desde };
 }
 
-// Alta manual de un contrato: crea la cirugía (código + descripción) si no existe
-// y le fija el valor para esa obra social. Devuelve { grupo, creada }.
-function agregarContratoManual(obraSocial, codigo, descripcion, valor, vigenciaDesde) {
+// Alta manual de un contrato: crea la prestación (categoría + código + descripción)
+// si no existe y le fija el valor para esa obra social. Devuelve { grupo, creada }.
+function agregarContratoManual(obraSocial, categoria, codigo, descripcion, valor, vigenciaDesde) {
   if (!obraSocial) throw new Error('Elegí la obra social.');
+  const cat = categoria || 'consulta';
+  if (!CATEGORIAS_NOMENCLADOR.some(c => c.id === cat) || cat === 'insumo') throw new Error('Categoría inválida.');
   const cod = (codigo || '').trim();
   const desc = (descripcion || '').trim();
   if (!desc) throw new Error('La descripción es obligatoria.');
@@ -106,22 +108,22 @@ function agregarContratoManual(obraSocial, codigo, descripcion, valor, vigenciaD
   if (isNaN(val) || val < 0) throw new Error('El valor debe ser un número ≥ 0.');
   const desde = vigenciaDesde || (hoyISO().slice(0, 7) + '-01');
 
-  const cirugias = listarPrestaciones({ categoria: 'cirugia', incluirInactivos: false });
-  let item = cirugias.find(n => (cod && String(n.codigo || '') === cod) || (n.descripcion || '').toLowerCase() === desc.toLowerCase());
+  const items = listarPrestaciones({ incluirInactivos: false }).filter(n => n.categoria !== 'insumo');
+  let item = items.find(n => (cod && String(n.codigo || '') === cod) || (n.descripcion || '').toLowerCase() === desc.toLowerCase());
   let creada = false;
   if (!item) {
-    item = crearPrestacion({ categoria: 'cirugia', codigo: cod, descripcion: desc, precio: 0, vigenciaDesde: desde });
+    item = crearPrestacion({ categoria: cat, codigo: cod, descripcion: desc, precio: 0, vigenciaDesde: desde });
     creada = true;
   }
   _upsertContrato(obraSocial, item.grupo, val, desde);
   return { grupo: item.grupo, creada };
 }
 
-// Importa contratos de cirugía desde filas normalizadas [{obraSocial, ref, valor}].
+// Importa contratos desde filas normalizadas [{obraSocial, ref, valor}].
 // `ref` matchea la prestación por código o por descripción. Devuelve {ok, errores}.
 function importarContratos(filas, vigenciaDesde) {
   const desde = vigenciaDesde || (hoyISO().slice(0, 7) + '-01');
-  const items = listarPrestaciones({ categoria: 'cirugia', incluirInactivos: false });
+  const items = listarPrestaciones({ incluirInactivos: false }).filter(n => n.categoria !== 'insumo');
   const res = { ok: 0, errores: [] };
   (filas || []).forEach((f, i) => {
     const os = (f.obraSocial || '').trim();
@@ -147,9 +149,8 @@ function eliminarContrato(obraSocial, grupo) {
   return true;
 }
 
-// Valores de contrato ACTUALES de una OS, uno por CIRUGÍA del nomenclador.
-// (Solo las cirugías facturan por contrato de OS; consulta/estudio/práctica van
-// por valor único y se configuran con el precio del nomenclador.)
+// Valores de contrato ACTUALES de una OS, uno por prestación del nomenclador
+// (todas menos insumos: cada OS tiene su propio valor por prestación).
 function contratosDeOS(obraSocial) {
   const grupos = [...new Set(DB.nomenclador.map(n => n.grupo))];
   return grupos.map(g => {
@@ -157,17 +158,14 @@ function contratosDeOS(obraSocial) {
     const actual = _contratoActual(obraSocial, g);
     return { grupo: g, codigo: item ? (item.codigo || '') : '', descripcion: item ? item.descripcion : '', categoria: item ? item.categoria : '',
              valor: actual ? actual.valor : null, vigenciaDesde: actual ? actual.vigenciaDesde : null };
-  }).filter(x => x.descripcion && x.categoria === 'cirugia');
+  }).filter(x => x.descripcion && x.categoria !== 'insumo');
 }
 
 // ── Ingreso de SAM ──
-// SAM factura TODA prestación (incluido Particular) y nos paga el porcentajeSAM%
-// (40%) de lo facturado. Hay DOS motores de facturación según la categoría:
-//   • CIRUGÍA → valor de CONTRATO por obra social (cambia según la OS) + insumos.
-//     Si la OS no tiene contrato cargado, faltaContrato = true (no se puede facturar).
-//   • CONSULTA / ESTUDIO / PRÁCTICA → VALOR ÚNICO = precio del nomenclador (igual
-//     para todas las OS; snapshot pinneado a la fecha) + insumos si hubiera.
-// En ambos casos los insumos usados suman su ingreso (en pesos, lo factura SAM).
+// SAM factura TODA prestación (consulta, estudio, práctica y cirugía, incluido
+// Particular) por su VALOR DE CONTRATO según la obra social (cada OS su valor), y
+// nos paga el porcentajeSAM% (40%). Si la OS no tiene contrato para esa prestación,
+// faltaContrato = true. Los insumos usados suman su ingreso (según el mecanismo).
 function ingresoSAMDePrestacion(reg) {
   const cant = Math.max(1, Math.floor(Number(reg.cantidad) || 1));  // consulta/estudio se cargan por cantidad
   const insMode = insumoModo();
@@ -181,24 +179,13 @@ function ingresoSAMDePrestacion(reg) {
     insReparto += (insMode === 'margen') ? (ing - (Number(i.costo) || 0)) : ing;  // costo en pesos
   });
 
-  if (reg.categoria === 'cirugia') {
-    const vc = valorContrato(reg.obraSocial, reg.grupoNomenclador, reg.fecha);
-    const factU = (vc || 0) + insBilling;
-    const baseU = (vc || 0) + insReparto;
-    const ingU = Math.floor(baseU * porcentajeSAM() / 100);
-    return {
-      ingreso: ingU * cant, facturado: factU * cant, base: baseU * cant,
-      valorContrato: vc, insumos: insBilling * cant, faltaContrato: vc == null, modo: 'contrato', cantidad: cant,
-    };
-  }
-  // consulta / estudio / práctica → valor único (precio del nomenclador, sin depender de la OS)
-  const precioU = Number(reg.precioNomenclador) || 0;
-  const factU = precioU + insBilling;
-  const baseU = precioU + insReparto;
+  const vc = valorContrato(reg.obraSocial, reg.grupoNomenclador, reg.fecha);
+  const factU = (vc || 0) + insBilling;
+  const baseU = (vc || 0) + insReparto;
   const ingU = Math.floor(baseU * porcentajeSAM() / 100);
   return {
     ingreso: ingU * cant, facturado: factU * cant, base: baseU * cant,
-    valorContrato: null, insumos: insBilling * cant, faltaContrato: false, modo: 'valor_unico', cantidad: cant,
+    valorContrato: vc, insumos: insBilling * cant, faltaContrato: vc == null, cantidad: cant,
   };
 }
 

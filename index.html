@@ -264,9 +264,9 @@
       </div>
 
       <div class="nomconpanel" data-p="prest">
-        <div class="section-head"><h4 style="margin:0">Prestaciones y precios (valor único)</h4>
+        <div class="section-head"><h4 style="margin:0">Prestaciones (catálogo)</h4>
           <button class="btn" onclick="abrirNuevaPrestacion()">+ Nueva prestación</button></div>
-        <p class="muted" style="margin-top:0">Consulta, estudio, práctica y cirugía. El precio es el valor único que factura SAM (para cirugía, el valor real se define por obra social en «Contratos»). Los insumos se cargan en la solapa «Insumos».</p>
+        <p class="muted" style="margin-top:0">Solo el catálogo: código, descripción y categoría. El <strong>valor de cada una se carga por obra social en «Contratos»</strong>. Los insumos se cargan en la solapa «Insumos».</p>
         <div class="filtros">
           <select id="nomFiltroCat" onchange="renderNomenclador()"></select>
           <input type="search" id="nomBuscar" placeholder="Buscar por descripción o código…" oninput="renderNomenclador()">
@@ -281,8 +281,8 @@
       </div>
 
       <div class="nomconpanel" data-p="contr" hidden>
-        <div class="section-head"><h4 style="margin:0">Contratos de cirugía por obra social</h4></div>
-        <p class="muted" style="margin-top:0">Valor real que SAM factura por cada cirugía según la obra social (SAM te paga el 40%). Consulta/estudio/práctica no usan contrato: van por el valor único de «Prestaciones».</p>
+        <div class="section-head"><h4 style="margin:0">Contratos por obra social</h4></div>
+        <p class="muted" style="margin-top:0">Valor real que SAM factura por <strong>cada prestación según la obra social</strong> (cada OS su valor; SAM te paga el 40%). Podés editar un valor, aplicar un aumento a toda la OS, importar un archivo o cargar una prestación manual (tipo + código + descripción + valor).</p>
         <div class="filtros">
           <label class="muted">Obra social <select id="ctrOS" onchange="renderContratosTabla()"></select></label>
           <label class="muted">Aumentar esta OS <input type="number" id="ctrAumento" step="0.01" style="width:70px" placeholder="%"> %</label>
@@ -293,10 +293,11 @@
           <button class="btn secundario" onclick="descargarPlantillaContratos()">Descargar plantilla CSV</button>
         </div>
         <div class="filtros" style="align-items:flex-end">
-          <label class="muted">Código <input id="ctrNuevoCodigo" style="width:110px" placeholder="ej. 660101"></label>
-          <label class="muted">Descripción <input id="ctrNuevoDesc" style="width:240px" placeholder="ej. Facoemulsificación"></label>
-          <label class="muted">Valor <input id="ctrNuevoValor" type="number" step="0.01" style="width:130px" placeholder="$"></label>
-          <button class="btn" onclick="agregarContratoManualUI()">+ Agregar contrato</button>
+          <label class="muted">Tipo <select id="ctrNuevoCat"></select></label>
+          <label class="muted">Código <input id="ctrNuevoCodigo" style="width:100px" placeholder="ej. 660101"></label>
+          <label class="muted">Descripción <input id="ctrNuevoDesc" style="width:220px" placeholder="ej. Facoemulsificación"></label>
+          <label class="muted">Valor <input id="ctrNuevoValor" type="number" step="0.01" style="width:120px" placeholder="$"></label>
+          <button class="btn" onclick="agregarContratoManualUI()">+ Agregar</button>
         </div>
         <div id="ctrImportMsg"></div>
         <div class="tabla-wrap"><div id="contratosTabla"></div></div>
@@ -461,10 +462,7 @@
   <div class="modal-box">
     <h3 id="modalPrestTitulo">Nueva prestación</h3>
     <input type="hidden" id="prest_grupo">
-    <div id="prest_correccion_nota" class="nota" style="display:none">
-      El precio de acá <strong>corrige</strong> el precio actual (por si se cargó mal). Para un
-      aumento con fecha usá el botón «Nuevo precio», que conserva el historial.
-    </div>
+    <p class="muted">El catálogo solo lleva código, descripción y categoría. El <strong>valor se carga por obra social en «Contratos»</strong>.</p>
     <div class="row2">
       <div class="campo"><label>Categoría</label>
         <select id="prest_categoria" onchange="onCategoriaChangePrest()"></select>
@@ -472,13 +470,13 @@
       <div class="campo"><label>Código (opcional)</label><input id="prest_codigo"></div>
     </div>
     <div class="campo"><label>Descripción *</label><input id="prest_descripcion"></div>
-    <div class="row2">
-      <div class="campo"><label>Precio</label><input id="prest_precio" type="number" step="0.01"></div>
+    <div class="row2" style="display:none">
+      <div class="campo"><label>Precio</label><input id="prest_precio" type="number" step="0.01" value="0"></div>
       <div class="campo"><label>Moneda</label>
         <select id="prest_moneda"><option value="ARS">Pesos (ARS)</option><option value="USD">Dólares (USD)</option></select>
       </div>
     </div>
-    <div id="prest_vigencia_box" class="campo"><label>Vigente desde</label><input id="prest_vigencia" type="date"></div>
+    <div id="prest_vigencia_box" class="campo"><label>Alta / vigente desde</label><input id="prest_vigencia" type="date"></div>
     <div class="modal-acciones">
       <button class="btn secundario" onclick="cerrarModalPrest()">Cancelar</button>
       <button class="btn" onclick="guardarPrestacion()">Guardar</button>

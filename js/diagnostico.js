@@ -56,10 +56,11 @@ function runSelfTests() {
     const rOS = registrarPrestacion({ fecha: '2026-03-06', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 90001, obraSocial: 'OSDE' });
     check('SAM paga 40% del contrato (cirugía)', ingresoSAMDePrestacion(rOS).ingreso, 400000);
 
-    // Consulta/estudio/práctica: valor único (precio de nomenclador, sin depender de la OS).
-    const consVal = crearPrestacion({ categoria: 'consulta', descripcion: 'Consulta valor', precio: 20000, vigenciaDesde: '2026-01-01' });
-    const rConVU = registrarPrestacion({ fecha: '2026-03-07', categoria: 'consulta', grupoNomenclador: consVal.grupo, medicoRealizadorId: 90001, obraSocial: 'IOMA' });
-    check('SAM paga 40% del valor único (consulta, sin contrato)', ingresoSAMDePrestacion(rConVU).ingreso, 8000);
+    // Consulta: también factura por contrato de OS (cada OS su valor).
+    const consVal = crearPrestacion({ categoria: 'consulta', descripcion: 'Consulta valor', vigenciaDesde: '2026-01-01' });
+    setContrato('IOMA', consVal.grupo, 20000, '2026-01-01');
+    const rCon = registrarPrestacion({ fecha: '2026-03-07', categoria: 'consulta', grupoNomenclador: consVal.grupo, medicoRealizadorId: 90001, obraSocial: 'IOMA' });
+    check('SAM paga 40% del contrato (consulta por OS)', ingresoSAMDePrestacion(rCon).ingreso, 8000);
 
     registrarMovimientoCaja({ tipo: 'ingreso', descripcion: 't', monto: 1000, moneda: 'ARS', medioPago: 'efectivo' });
     registrarMovimientoCaja({ tipo: 'egreso', descripcion: 't', monto: 300, moneda: 'ARS', medioPago: 'efectivo' });

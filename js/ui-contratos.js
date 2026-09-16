@@ -18,8 +18,19 @@ function _poblarSelectOSContratos() {
 
 function renderContratos() {
   _poblarSelectOSContratos();
+  _poblarSelectCatContrato();
   renderContratosTabla();
   renderCobroSAM();
+}
+
+// Categorías para el alta manual (todas menos insumo).
+function _poblarSelectCatContrato() {
+  const sel = document.getElementById('ctrNuevoCat');
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = CATEGORIAS_NOMENCLADOR.filter(c => c.id !== 'insumo')
+    .map(c => `<option value="${c.id}">${escHtml(c.label)}</option>`).join('');
+  if (cur) sel.value = cur;
 }
 
 function renderContratosTabla() {
@@ -27,19 +38,22 @@ function renderContratosTabla() {
   if (!cont) return;
   const os = document.getElementById('ctrOS') ? document.getElementById('ctrOS').value : '';
   if (!os) { cont.innerHTML = '<p class="vacio">Cargá una obra social primero (pestaña «Obras sociales»).</p>'; return; }
-  const filas = contratosDeOS(os);
-  if (filas.length === 0) { cont.innerHTML = '<p class="vacio">No hay cirugías en el nomenclador. (Solo las cirugías facturan por contrato de OS; consulta/estudio/práctica van por valor único, con el precio del nomenclador.)</p>'; return; }
+  const orden = { consulta: 0, realizacion_estudio: 1, practica: 2, cirugia: 3 };
+  const filas = contratosDeOS(os).sort((a, b) =>
+    ((orden[a.categoria] ?? 9) - (orden[b.categoria] ?? 9)) || (a.descripcion || '').localeCompare(b.descripcion || '', 'es'));
+  if (filas.length === 0) { cont.innerHTML = '<p class="vacio">No hay prestaciones en el nomenclador. Cargalas en «Prestaciones» o con el alta manual de acá.</p>'; return; }
   const rows = filas.map(f => `
     <tr>
+      <td>${escHtml((categoriaInfo(f.categoria) || {}).label || f.categoria)}</td>
       <td>${escHtml(f.codigo || '—')}</td>
       <td>${escHtml(f.descripcion)}</td>
-      <td><input type="number" step="0.01" id="ctr_${f.grupo}" value="${f.valor != null ? f.valor : ''}" style="width:150px" placeholder="sin cargar"></td>
+      <td><input type="number" step="0.01" id="ctr_${f.grupo}" value="${f.valor != null ? f.valor : ''}" style="width:140px" placeholder="sin cargar"></td>
       <td class="num">${f.valor != null ? fmtMoneda(Math.floor(f.valor * porcentajeSAM() / 100), 'ARS') : '—'}</td>
       <td class="acc"><button onclick="guardarValorContratoUI(${f.grupo})">Guardar</button></td>
     </tr>`).join('');
   cont.innerHTML = `
     <table class="tabla">
-      <thead><tr><th>Código</th><th>Descripción</th><th>Valor de contrato</th>
+      <thead><tr><th>Tipo</th><th>Código</th><th>Descripción</th><th>Valor de contrato</th>
         <th class="num">Nos paga (${porcentajeSAM()}%)</th><th></th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
@@ -48,12 +62,13 @@ function renderContratosTabla() {
 // Alta manual: crea la cirugía (código + descripción) y le pone el valor para la OS elegida.
 function agregarContratoManualUI() {
   const os = (document.getElementById('ctrOS') || {}).value;
+  const cat = (document.getElementById('ctrNuevoCat') || {}).value || 'consulta';
   const cod = (document.getElementById('ctrNuevoCodigo') || {}).value || '';
   const desc = (document.getElementById('ctrNuevoDesc') || {}).value || '';
   const val = (document.getElementById('ctrNuevoValor') || {}).value || '';
   try {
-    const r = agregarContratoManual(os, cod, desc, val, hoyISO().slice(0, 7) + '-01');
-    _msgImport((r.creada ? 'Cirugía creada y ' : '') + 'contrato cargado para ' + os + '.', false);
+    const r = agregarContratoManual(os, cat, cod, desc, val, hoyISO().slice(0, 7) + '-01');
+    _msgImport((r.creada ? 'Prestación creada y ' : '') + 'contrato cargado para ' + os + '.', false);
   } catch (e) { alert(e.message); return; }
   ['ctrNuevoCodigo', 'ctrNuevoDesc', 'ctrNuevoValor'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   renderContratos();
@@ -141,11 +156,11 @@ function importarContratosArchivo(input) {
 }
 
 function descargarPlantillaContratos() {
-  const cirugias = listarPrestaciones({ categoria: 'cirugia', incluirInactivos: false });
+  const items = listarPrestaciones({ incluirInactivos: false }).filter(n => n.categoria !== 'insumo');
   const os = (document.getElementById('ctrOS') || {}).value || 'OSDE';
-  const filas = [['obra social', 'prestacion', 'valor']];
-  if (cirugias.length) cirugias.forEach(c => filas.push([os, c.descripcion, '']));
-  else filas.push([os, '(cargá cirugías en Prestaciones)', '']);
+  const filas = [['obra social', 'codigo', 'prestacion', 'valor']];
+  if (items.length) items.forEach(c => filas.push([os, c.codigo || '', c.descripcion, '']));
+  else filas.push([os, '', '(cargá prestaciones primero)', '']);
   const esc = x => /[",;\n]/.test(String(x)) ? '"' + String(x).replace(/"/g, '""') + '"' : String(x);
   const csv = filas.map(f => f.map(esc).join(',')).join('\n');
   const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });

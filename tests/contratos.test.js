@@ -125,53 +125,33 @@ describe('Contratos e ingreso de SAM', () => {
     expect(app.saldosCaja().ARS.transferencia).toBe(390000); // solo entró OSDE
   });
 
-  // ── Motor "valor único": consulta / estudio / práctica no dependen de la OS ──
-  it('consulta/estudio/práctica facturan el VALOR ÚNICO del nomenclador (sin contrato, igual para toda OS)', () => {
-    const cons = app.crearPrestacion({ categoria: 'consulta', descripcion: 'Consulta', precio: 20000, vigenciaDesde: '2026-01-01' });
-    // Misma consulta, dos OS distintas → mismo facturado, no hace falta contrato.
+  // ── Cada OS su valor: TODAS las prestaciones facturan por contrato de OS ──
+  it('la consulta factura por contrato de OS (cada OS su valor)', () => {
+    const cons = app.crearPrestacion({ categoria: 'consulta', descripcion: 'Consulta', vigenciaDesde: '2026-01-01' });
+    app.setContrato('OSDE', cons.grupo, 20000, '2026-01-01');
+    app.setContrato('IOMA', cons.grupo, 15000, '2026-01-01');
     const rA = app.registrarPrestacion({ fecha: '2026-03-10', categoria: 'consulta', grupoNomenclador: cons.grupo, medicoRealizadorId: 501, obraSocial: 'OSDE' });
     const rB = app.registrarPrestacion({ fecha: '2026-03-10', categoria: 'consulta', grupoNomenclador: cons.grupo, medicoRealizadorId: 501, obraSocial: 'IOMA' });
-    const iA = app.ingresoSAMDePrestacion(rA);
-    const iB = app.ingresoSAMDePrestacion(rB);
-    expect(iA.modo).toBe('valor_unico');
-    expect(iA.facturado).toBe(20000);
-    expect(iA.ingreso).toBe(8000);          // 40%
-    expect(iA.faltaContrato).toBe(false);   // valor único no exige contrato
-    expect(iB.ingreso).toBe(8000);          // otra OS, mismo valor
+    expect(app.ingresoSAMDePrestacion(rA).ingreso).toBe(8000);   // 40% de 20.000
+    expect(app.ingresoSAMDePrestacion(rB).ingreso).toBe(6000);   // 40% de 15.000 (otra OS, otro valor)
   });
 
-  it('la práctica valor único suma el insumo a lo facturado', () => {
-    const prac = app.crearPrestacion({ categoria: 'practica', descripcion: 'Práctica', precio: 30000, vigenciaDesde: '2026-01-01' });
+  it('la consulta/estudio sin contrato para su OS marca faltaContrato', () => {
+    const cons = app.crearPrestacion({ categoria: 'consulta', descripcion: 'Consulta', vigenciaDesde: '2026-01-01' });
+    const r = app.registrarPrestacion({ fecha: '2026-03-10', categoria: 'consulta', grupoNomenclador: cons.grupo, medicoRealizadorId: 501, obraSocial: 'OSDE' });
+    const i = app.ingresoSAMDePrestacion(r);
+    expect(i.ingreso).toBe(0);
+    expect(i.faltaContrato).toBe(true);
+  });
+
+  it('el insumo suma a lo facturado también en una práctica con contrato', () => {
+    const prac = app.crearPrestacion({ categoria: 'practica', descripcion: 'Práctica', vigenciaDesde: '2026-01-01' });
+    app.setContrato('OSDE', prac.grupo, 30000, '2026-01-01');
     const ins = app.crearPrestacion({ categoria: 'insumo', descripcion: 'Descartable', precio: 10000, moneda: 'ARS', costo: 4000, costoMoneda: 'ARS', vigenciaDesde: '2026-01-01' });
     const r = app.registrarPrestacion({ fecha: '2026-03-10', categoria: 'practica', grupoNomenclador: prac.grupo, medicoRealizadorId: 501, obraSocial: 'OSDE', insumos: [ins.grupo] });
     const i = app.ingresoSAMDePrestacion(r);
-    expect(i.facturado).toBe(40000);        // 30.000 valor único + 10.000 insumo
+    expect(i.facturado).toBe(40000);        // contrato 30.000 + insumo 10.000
     expect(i.ingreso).toBe(16000);          // 40%
-  });
-
-  it('particular TAMBIÉN factura por SAM y paga 40% (valor único en consulta)', () => {
-    const cons = app.crearPrestacion({ categoria: 'consulta', descripcion: 'Consulta', precio: 20000, vigenciaDesde: '2026-01-01' });
-    const r = app.registrarPrestacion({ fecha: '2026-03-10', categoria: 'consulta', grupoNomenclador: cons.grupo, medicoRealizadorId: 501, obraSocial: 'Particular' });
-    expect(app.ingresoSAMDePrestacion(r).ingreso).toBe(8000);
-  });
-
-  it('particular en cirugía usa su propio contrato (como una OS más)', () => {
-    const faco = nomFaco();
-    app.setContrato('Particular', faco.grupo, 800000, '2026-01-01');
-    const r = app.registrarPrestacion({ fecha: '2026-03-10', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 501, obraSocial: 'Particular' });
-    const i = app.ingresoSAMDePrestacion(r);
-    expect(i.valorContrato).toBe(800000);
-    expect(i.ingreso).toBe(320000); // 40%
-  });
-
-  it('valor único NO cuenta como "sin contrato" en el resumen del mes', () => {
-    const cons = app.crearPrestacion({ categoria: 'consulta', descripcion: 'Consulta', precio: 20000, vigenciaDesde: '2026-01-01' });
-    app.registrarPrestacion({ fecha: '2026-03-01', categoria: 'consulta', grupoNomenclador: cons.grupo, medicoRealizadorId: 501, obraSocial: 'OSDE' });
-    const faco = nomFaco();
-    app.registrarPrestacion({ fecha: '2026-03-02', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 501, obraSocial: 'IOMA' }); // cirugía sin contrato
-    const r = app.ingresoSAMDelMes('2026-03');
-    expect(r.sinContrato).toBe(1);          // solo la cirugía, no la consulta
-    expect(r.ingreso).toBe(8000);           // 40% de la consulta (la cirugía sin contrato aporta 0)
   });
 
   // ── Aumento por OS e importación de contratos ──
@@ -189,18 +169,18 @@ describe('Contratos e ingreso de SAM', () => {
     expect(app.valorContrato('IOMA', faco.grupo, '2026-07-01')).toBe(800000);    // otra OS intacta
   });
 
-  it('agregarContratoManual crea la cirugía (código+descripción) y le pone el valor de la OS', () => {
-    const r = app.agregarContratoManual('OSDE', '660101', 'Facoemulsificación', 950000, '2026-01-01');
+  it('agregarContratoManual crea la prestación (categoría+código+descripción) y le pone el valor de la OS', () => {
+    const r = app.agregarContratoManual('OSDE', 'consulta', 'C01', 'Consulta oftalmológica', 20000, '2026-01-01');
     expect(r.creada).toBe(true);
-    const item = app.listarPrestaciones({ categoria: 'cirugia' }).find(c => c.codigo === '660101');
+    const item = app.listarPrestaciones({ categoria: 'consulta' }).find(c => c.codigo === 'C01');
     expect(item).toBeTruthy();
-    expect(item.descripcion).toBe('Facoemulsificación');
-    expect(app.valorContrato('OSDE', item.grupo, '2026-03-01')).toBe(950000);
+    expect(item.descripcion).toBe('Consulta oftalmológica');
+    expect(app.valorContrato('OSDE', item.grupo, '2026-03-01')).toBe(20000);
     // Reusar la misma (por código) para otra OS: no la duplica
-    const r2 = app.agregarContratoManual('IOMA', '660101', 'Facoemulsificación', 700000, '2026-01-01');
+    const r2 = app.agregarContratoManual('IOMA', 'consulta', 'C01', 'Consulta oftalmológica', 15000, '2026-01-01');
     expect(r2.creada).toBe(false);
     expect(r2.grupo).toBe(item.grupo);
-    expect(app.valorContrato('IOMA', item.grupo, '2026-03-01')).toBe(700000);
+    expect(app.valorContrato('IOMA', item.grupo, '2026-03-01')).toBe(15000);
   });
 
   it('importarContratos matchea por descripción o código y reporta errores', () => {

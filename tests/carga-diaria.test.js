@@ -19,6 +19,7 @@ function seedNom(cat, desc, precio) {
 describe('Carga diaria por cantidad', () => {
   it('agrega consultas por cantidad y obra social (sin paciente); el ingreso escala', () => {
     const cons = seedNom('consulta', 'Consulta', 20000);
+    app.setContrato('IOMA', cons.grupo, 20000, '2026-01-01');  // cada OS su valor (por contrato)
     app.renderCargaDiaria();
     setInput(win, 'cd_fecha', '2026-03-10'); app.renderCargaDiaria();
     setInput(win, 'cd_medico', '501');

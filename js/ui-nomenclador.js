@@ -29,8 +29,9 @@ function renderNomenclador() {
   const filas = listarPrestaciones({ categoria, texto, incluirInactivos: true })
     .filter(v => v.categoria !== 'insumo'); // los insumos se gestionan en la solapa «Insumos»
 
+  const nota = '<p class="muted" style="margin-top:0">Catálogo de prestaciones (qué se hace). El <strong>valor de cada una se carga por obra social en «Contratos»</strong> — acá solo el código, la descripción y la categoría.</p>';
   if (filas.length === 0) {
-    cont.innerHTML = '<p class="vacio">No hay prestaciones cargadas. Usá «+ Nueva prestación».</p>';
+    cont.innerHTML = nota + '<p class="vacio">No hay prestaciones cargadas. Usá «+ Nueva prestación».</p>';
     return;
   }
 
@@ -41,24 +42,20 @@ function renderNomenclador() {
       <td>${escHtml(_labelCategoria(v.categoria))}</td>
       <td>${escHtml(v.codigo || '—')}</td>
       <td>${escHtml(v.descripcion)}${inactivo ? ' <span class="badge-inactivo">Inactiva</span>' : ''}</td>
-      <td class="num">${fmtMoneda(v.precio, v.moneda)}</td>
       <td>${escHtml(v.vigenciaDesde)}</td>
       <td class="acc">
         <button onclick="editarPrestacionUI(${v.grupo})">Editar</button>
-        <button onclick="abrirNuevoPrecio(${v.grupo})">Nuevo precio</button>
-        <button onclick="verHistorialPrestacion(${v.grupo})">Historial</button>
         <button onclick="inactivarPrestacionUI(${v.grupo})">${inactivo ? 'Reactivar' : 'Inactivar'}</button>
         <button class="danger" onclick="eliminarPrestacionUI(${v.grupo})">Eliminar</button>
       </td>
     </tr>`;
   }).join('');
 
-  cont.innerHTML = `
+  cont.innerHTML = nota + `
     <table class="tabla">
       <thead><tr>
         <th>Categoría</th><th>Código</th><th>Descripción</th>
-        <th class="num">Precio vigente</th>
-        <th>Vigente desde</th><th>Acciones</th>
+        <th>Alta</th><th>Acciones</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
@@ -87,11 +84,10 @@ function abrirNuevaPrestacion() {
   set('prest_grupo', '');
   document.getElementById('prest_categoria').innerHTML = _opcionesCategoria('consulta');
   set('prest_codigo', ''); set('prest_descripcion', '');
-  set('prest_precio', ''); set('prest_moneda', 'ARS');
+  set('prest_precio', '0'); set('prest_moneda', 'ARS');
   set('prest_costo', ''); set('prest_costoMoneda', 'ARS');
   set('prest_vigencia', _primerDiaMesActual());   // así cubre prestaciones cargadas del mes
   document.getElementById('prest_vigencia_box').style.display = 'block';
-  document.getElementById('prest_correccion_nota').style.display = 'none';
   onCategoriaChangePrest();
   _mostrarModalPrest(true);
 }
@@ -104,11 +100,10 @@ function editarPrestacionUI(grupo) {
   set('prest_grupo', grupo);
   document.getElementById('prest_categoria').innerHTML = _opcionesCategoria(v.categoria);
   set('prest_codigo', v.codigo); set('prest_descripcion', v.descripcion);
-  set('prest_precio', v.precio); set('prest_moneda', v.moneda);
+  set('prest_precio', v.precio != null ? v.precio : 0); set('prest_moneda', v.moneda);
   set('prest_costo', v.costo != null ? v.costo : ''); set('prest_costoMoneda', v.costoMoneda || 'ARS');
-  // En edición no se elige vigencia: el precio de acá corrige la versión actual.
+  // En edición no se elige vigencia: corrige la versión actual.
   document.getElementById('prest_vigencia_box').style.display = 'none';
-  document.getElementById('prest_correccion_nota').style.display = 'block';
   onCategoriaChangePrest();
   _mostrarModalPrest(true);
 }
@@ -120,14 +115,13 @@ function guardarPrestacion() {
     categoria: val('prest_categoria'),
     codigo: val('prest_codigo'),
     descripcion: val('prest_descripcion'),
-    precio: val('prest_precio'),
+    precio: val('prest_precio') || 0,
     moneda: val('prest_moneda') || 'ARS',
     costo: val('prest_costo'),
     costoMoneda: val('prest_costoMoneda') || 'ARS',
     vigenciaDesde: val('prest_vigencia') || hoyISO(),
   };
   if (!datos.descripcion) { alert('La descripción es obligatoria.'); return false; }
-  if (datos.precio === '' || isNaN(Number(datos.precio))) { alert('El precio debe ser un número.'); return false; }
 
   let r;
   if (grupo) {
