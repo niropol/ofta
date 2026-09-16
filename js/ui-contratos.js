@@ -31,7 +31,7 @@ function renderContratosTabla() {
   if (filas.length === 0) { cont.innerHTML = '<p class="vacio">No hay cirugías en el nomenclador. (Solo las cirugías facturan por contrato de OS; consulta/estudio/práctica van por valor único, con el precio del nomenclador.)</p>'; return; }
   const rows = filas.map(f => `
     <tr>
-      <td>${escHtml((categoriaInfo(f.categoria) || {}).label || f.categoria)}</td>
+      <td>${escHtml(f.codigo || '—')}</td>
       <td>${escHtml(f.descripcion)}</td>
       <td><input type="number" step="0.01" id="ctr_${f.grupo}" value="${f.valor != null ? f.valor : ''}" style="width:150px" placeholder="sin cargar"></td>
       <td class="num">${f.valor != null ? fmtMoneda(Math.floor(f.valor * porcentajeSAM() / 100), 'ARS') : '—'}</td>
@@ -39,10 +39,25 @@ function renderContratosTabla() {
     </tr>`).join('');
   cont.innerHTML = `
     <table class="tabla">
-      <thead><tr><th>Categoría</th><th>Prestación</th><th>Valor de contrato</th>
+      <thead><tr><th>Código</th><th>Descripción</th><th>Valor de contrato</th>
         <th class="num">Nos paga (${porcentajeSAM()}%)</th><th></th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
+}
+
+// Alta manual: crea la cirugía (código + descripción) y le pone el valor para la OS elegida.
+function agregarContratoManualUI() {
+  const os = (document.getElementById('ctrOS') || {}).value;
+  const cod = (document.getElementById('ctrNuevoCodigo') || {}).value || '';
+  const desc = (document.getElementById('ctrNuevoDesc') || {}).value || '';
+  const val = (document.getElementById('ctrNuevoValor') || {}).value || '';
+  try {
+    const r = agregarContratoManual(os, cod, desc, val, hoyISO().slice(0, 7) + '-01');
+    _msgImport((r.creada ? 'Cirugía creada y ' : '') + 'contrato cargado para ' + os + '.', false);
+  } catch (e) { alert(e.message); return; }
+  ['ctrNuevoCodigo', 'ctrNuevoDesc', 'ctrNuevoValor'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  renderContratos();
+  if (typeof renderPanelMes === 'function') renderPanelMes();
 }
 
 function guardarValorContratoUI(grupo) {

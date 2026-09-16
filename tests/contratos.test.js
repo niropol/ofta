@@ -189,6 +189,20 @@ describe('Contratos e ingreso de SAM', () => {
     expect(app.valorContrato('IOMA', faco.grupo, '2026-07-01')).toBe(800000);    // otra OS intacta
   });
 
+  it('agregarContratoManual crea la cirugía (código+descripción) y le pone el valor de la OS', () => {
+    const r = app.agregarContratoManual('OSDE', '660101', 'Facoemulsificación', 950000, '2026-01-01');
+    expect(r.creada).toBe(true);
+    const item = app.listarPrestaciones({ categoria: 'cirugia' }).find(c => c.codigo === '660101');
+    expect(item).toBeTruthy();
+    expect(item.descripcion).toBe('Facoemulsificación');
+    expect(app.valorContrato('OSDE', item.grupo, '2026-03-01')).toBe(950000);
+    // Reusar la misma (por código) para otra OS: no la duplica
+    const r2 = app.agregarContratoManual('IOMA', '660101', 'Facoemulsificación', 700000, '2026-01-01');
+    expect(r2.creada).toBe(false);
+    expect(r2.grupo).toBe(item.grupo);
+    expect(app.valorContrato('IOMA', item.grupo, '2026-03-01')).toBe(700000);
+  });
+
   it('importarContratos matchea por descripción o código y reporta errores', () => {
     const faco = nomFaco(); // descripción "Faco"
     const r = app.importarContratos([

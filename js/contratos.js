@@ -95,6 +95,28 @@ function aumentarContratosOS(obraSocial, porcentaje, vigenciaDesde) {
   return { obraSocial, porcentaje: pct, actualizados: n, vigenciaDesde: desde };
 }
 
+// Alta manual de un contrato: crea la cirugía (código + descripción) si no existe
+// y le fija el valor para esa obra social. Devuelve { grupo, creada }.
+function agregarContratoManual(obraSocial, codigo, descripcion, valor, vigenciaDesde) {
+  if (!obraSocial) throw new Error('Elegí la obra social.');
+  const cod = (codigo || '').trim();
+  const desc = (descripcion || '').trim();
+  if (!desc) throw new Error('La descripción es obligatoria.');
+  const val = Number(valor);
+  if (isNaN(val) || val < 0) throw new Error('El valor debe ser un número ≥ 0.');
+  const desde = vigenciaDesde || (hoyISO().slice(0, 7) + '-01');
+
+  const cirugias = listarPrestaciones({ categoria: 'cirugia', incluirInactivos: false });
+  let item = cirugias.find(n => (cod && String(n.codigo || '') === cod) || (n.descripcion || '').toLowerCase() === desc.toLowerCase());
+  let creada = false;
+  if (!item) {
+    item = crearPrestacion({ categoria: 'cirugia', codigo: cod, descripcion: desc, precio: 0, vigenciaDesde: desde });
+    creada = true;
+  }
+  _upsertContrato(obraSocial, item.grupo, val, desde);
+  return { grupo: item.grupo, creada };
+}
+
 // Importa contratos de cirugía desde filas normalizadas [{obraSocial, ref, valor}].
 // `ref` matchea la prestación por código o por descripción. Devuelve {ok, errores}.
 function importarContratos(filas, vigenciaDesde) {
@@ -133,7 +155,7 @@ function contratosDeOS(obraSocial) {
   return grupos.map(g => {
     const item = versionActual(g);
     const actual = _contratoActual(obraSocial, g);
-    return { grupo: g, descripcion: item ? item.descripcion : '', categoria: item ? item.categoria : '',
+    return { grupo: g, codigo: item ? (item.codigo || '') : '', descripcion: item ? item.descripcion : '', categoria: item ? item.categoria : '',
              valor: actual ? actual.valor : null, vigenciaDesde: actual ? actual.vigenciaDesde : null };
   }).filter(x => x.descripcion && x.categoria === 'cirugia');
 }
