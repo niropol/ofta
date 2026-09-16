@@ -87,7 +87,7 @@ const EXPONER = [
   'aumentarContratosOS', 'importarContratos',
   'ingresoSAMDePrestacion', 'ingresoSAMDelMes', 'ingresoSAMPorOS', 'registrarCobroSAM', 'quitarCobroSAM',
   'comparacionCobroSAM', 'comparacionCobrosMes',
-  'costoInsumosDelMes', 'registrarCostoInsumos', 'quitarCostoInsumos',
+  'insumoModo', 'setInsumoModo', 'costoInsumosDelMes',
   'renderContratos', 'guardarValorContratoUI', 'registrarCobroSAMUI',
   // diagnóstico (Etapa 9)
   'runSelfTests', 'diagnosticoDatos', 'estadoNube', 'verificarNube',

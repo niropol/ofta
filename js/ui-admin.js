@@ -12,12 +12,30 @@ function renderAdmin() {
 }
 
 // ── Costo real de insumos ──
+// Selector del mecanismo global de reparto de insumos.
+function _bloqueModoInsumo() {
+  const modo = (typeof insumoModo === 'function') ? insumoModo() : 'total';
+  return `
+    <div class="cd-card" style="margin-bottom:16px">
+      <h4 style="margin-top:0">Mecanismo de reparto de insumos (global)</h4>
+      <p class="muted" style="margin-top:0">SAM siempre cobra. En ambos, SAM Oftalmo <strong>no</strong> paga el costo del insumo.</p>
+      <label style="display:block;margin-bottom:6px"><input type="radio" name="insModo" value="total" ${modo === 'total' ? 'checked' : ''} onchange="setInsumoModoUI('total')"> <strong>Mecanismo 1 — reparto del total:</strong> se reparte lo facturado 60/40; el costo lo absorbe SAM.</label>
+      <label style="display:block"><input type="radio" name="insModo" value="margen" ${modo === 'margen' ? 'checked' : ''} onchange="setInsumoModoUI('margen')"> <strong>Mecanismo 2 — descontar costo:</strong> se descuenta el costo del insumo y se reparte el margen 60/40.</label>
+    </div>`;
+}
+
+function setInsumoModoUI(modo) {
+  setInsumoModo(modo);
+  if (typeof sincronizarUI === 'function') sincronizarUI(); else renderAdminInsumos();
+  if (typeof renderPanelMes === 'function') renderPanelMes();
+}
+
 function renderAdminInsumos() {
   const cont = document.getElementById('adminInsumos');
   if (!cont) return;
   const insumos = listarPrestaciones({ categoria: 'insumo', incluirInactivos: true });
   if (insumos.length === 0) {
-    cont.innerHTML = '<p class="vacio">No hay insumos cargados. Cargalos en el Nomenclador (categoría «Insumo»); acá se define su costo real.</p>';
+    cont.innerHTML = _bloqueModoInsumo() + '<p class="vacio">No hay insumos cargados. Cargalos con «+ Nuevo insumo»; acá se define su costo real.</p>';
     return;
   }
   const rows = insumos.map(v => {
@@ -37,10 +55,10 @@ function renderAdminInsumos() {
       <td class="acc"><button onclick="guardarCostoInsumoUI(${v.grupo})">Guardar</button></td>
     </tr>`;
   }).join('');
-  cont.innerHTML = `
+  cont.innerHTML = _bloqueModoInsumo() + `
     <table class="tabla">
       <thead><tr>
-        <th>Insumo</th><th class="num">Precio (cobrado)</th>
+        <th>Insumo</th><th class="num">Precio (factura SAM)</th>
         <th>Costo real</th><th>Moneda</th><th class="num">Neto</th><th></th>
       </tr></thead>
       <tbody>${rows}</tbody>

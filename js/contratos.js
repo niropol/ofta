@@ -9,6 +9,15 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 function porcentajeSAM() { return Number(DB.config.porcentajeSAM) || 0; }
+function insumoModo() { return DB.config.insumoModo === 'margen' ? 'margen' : 'total'; }
+function setInsumoModo(modo) {
+  const m = modo === 'margen' ? 'margen' : 'total';
+  const antes = DB.config.insumoModo;
+  DB.config.insumoModo = m;
+  registrarAuditoria('edicion', 'config', 'insumoModo', { insumoModo: antes }, { insumoModo: m });
+  marcarCambios('config');
+  return m;
+}
 
 function _contratosDe(obraSocial, grupo) {
   const g = Number(grupo);
@@ -139,23 +148,35 @@ function contratosDeOS(obraSocial) {
 // En ambos casos los insumos usados suman su ingreso (en pesos, lo factura SAM).
 function ingresoSAMDePrestacion(reg) {
   const cant = Math.max(1, Math.floor(Number(reg.cantidad) || 1));  // consulta/estudio se cargan por cantidad
-  const insIngresoU = (reg.insumos || []).reduce((s, i) => s + (Number(i.ingreso) || 0), 0);  // pesos, por unidad
+  const insMode = insumoModo();
+  // insBilling = lo que factura SAM por los insumos (para "SAM factura a la OS").
+  // insReparto = lo que entra a NUESTRO reparto 60/40 (mismo billing en Mec 1;
+  //              billing − costo en Mec 2). En ambos NO pagamos el costo aparte.
+  let insBilling = 0, insReparto = 0;
+  (reg.insumos || []).forEach(i => {
+    const ing = Number(i.ingreso) || 0;
+    insBilling += ing;
+    insReparto += (insMode === 'margen') ? (ing - (Number(i.costo) || 0)) : ing;  // costo en pesos
+  });
+
   if (reg.categoria === 'cirugia') {
     const vc = valorContrato(reg.obraSocial, reg.grupoNomenclador, reg.fecha);
-    const factU = (vc || 0) + insIngresoU;
-    const ingU = Math.floor(factU * porcentajeSAM() / 100);
+    const factU = (vc || 0) + insBilling;
+    const baseU = (vc || 0) + insReparto;
+    const ingU = Math.floor(baseU * porcentajeSAM() / 100);
     return {
-      ingreso: ingU * cant, facturado: factU * cant, base: (vc || 0) * cant,
-      valorContrato: vc, insumos: insIngresoU * cant, faltaContrato: vc == null, modo: 'contrato', cantidad: cant,
+      ingreso: ingU * cant, facturado: factU * cant, base: baseU * cant,
+      valorContrato: vc, insumos: insBilling * cant, faltaContrato: vc == null, modo: 'contrato', cantidad: cant,
     };
   }
   // consulta / estudio / práctica → valor único (precio del nomenclador, sin depender de la OS)
-  const baseU = Number(reg.precioNomenclador) || 0;
-  const factU = baseU + insIngresoU;
-  const ingU = Math.floor(factU * porcentajeSAM() / 100);
+  const precioU = Number(reg.precioNomenclador) || 0;
+  const factU = precioU + insBilling;
+  const baseU = precioU + insReparto;
+  const ingU = Math.floor(baseU * porcentajeSAM() / 100);
   return {
     ingreso: ingU * cant, facturado: factU * cant, base: baseU * cant,
-    valorContrato: null, insumos: insIngresoU * cant, faltaContrato: false, modo: 'valor_unico', cantidad: cant,
+    valorContrato: null, insumos: insBilling * cant, faltaContrato: false, modo: 'valor_unico', cantidad: cant,
   };
 }
 
@@ -188,7 +209,8 @@ function ingresoSAMPorOS(mes) {
   return _osDelMes(mes).map(os => ingresoSAMDelMes(mes, os));
 }
 
-// Costo de los insumos del mes (lo que nos cuesta comprarlos) — para registrar el egreso.
+// Costo total de los insumos del mes — SOLO informativo. Nosotros no lo pagamos:
+// en Mecanismo 1 lo absorbe SAM; en Mecanismo 2 ya está descontado de nuestro reparto.
 function costoInsumosDelMes(mes, cotizacion) {
   const cot = Number(cotizacion) || null;
   let costo = 0, requiereCotizacion = false;
@@ -199,29 +221,6 @@ function costoInsumosDelMes(mes, cotizacion) {
       else costo += (Number(i.costo) || 0) * cant;
     }); });
   return { mes, costo: Math.round(costo), requiereCotizacion };
-}
-
-// Registra en caja el costo de los insumos del mes (egreso). Evita duplicar.
-function registrarCostoInsumos(mes, cotizacion, fecha) {
-  if (DB.cajaMovimientos.some(m => m.origen === 'costo_insumos' && m.referenciaId === mes)) {
-    throw new Error('El costo de insumos de ' + mes + ' ya está registrado en la caja.');
-  }
-  const r = costoInsumosDelMes(mes, cotizacion);
-  if (r.requiereCotizacion) throw new Error('Hay insumos con costo en USD: cargá la cotización.');
-  if (!(r.costo > 0)) throw new Error('No hay costo de insumos para ' + mes + '.');
-  return registrarMovimientoCaja({
-    fecha: fecha || hoyISO(), tipo: 'egreso', descripcion: 'Costo insumos ' + mes,
-    monto: r.costo, moneda: 'ARS', medioPago: 'transferencia', origen: 'costo_insumos', referenciaId: mes,
-    categoriaGasto: 'Insumos',
-  });
-}
-function quitarCostoInsumos(mes) {
-  const movs = DB.cajaMovimientos.filter(m => m.origen === 'costo_insumos' && m.referenciaId === mes);
-  if (!movs.length) return 0;
-  DB.cajaMovimientos = DB.cajaMovimientos.filter(m => !(m.origen === 'costo_insumos' && m.referenciaId === mes));
-  movs.forEach(m => registrarAuditoria('baja', 'cajaMovimiento', m.id, m, null));
-  marcarCambios('cajaMovimientos');
-  return movs.length;
 }
 
 // Cada obra social paga en su momento → cada una cierra su cobro por separado.

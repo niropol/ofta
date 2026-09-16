@@ -74,7 +74,11 @@ const DB = {
     empresa: 'SAM Oftalmología',
     sedeActiva: 1,
     usuarioActualId: null,   // "actuando como" (simula el login hasta la Etapa 10)
-    porcentajeSAM: 40,       // % que SAM le paga a SAM Oftalmo sobre el valor de contrato
+    porcentajeSAM: 40,       // % que SAM le paga a SAM Oftalmo (60 SAM / 40 SAM Oftalmo)
+    // Cómo se reparte el insumo (SAM siempre cobra; en ambos NO pagamos el costo):
+    //   'total'  → Mecanismo 1: se reparte 60/40 lo facturado (el costo lo absorbe SAM).
+    //   'margen' → Mecanismo 2: se descuenta el costo y se reparte 60/40 el margen.
+    insumoModo: 'total',
   },
 
   // ── Usuarios del sistema (secretarias + admin). Sin login todavía (Etapa 10),

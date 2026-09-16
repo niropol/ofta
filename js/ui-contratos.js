@@ -155,11 +155,6 @@ function renderCobroSAM() {
   const resumen = comparacionCobrosMes(mes);
   _cobroOS = resumen.filas.map(f => f.obraSocial);
 
-  const cotEl = document.getElementById('ctrCotiz');
-  const cotiz = cotEl ? (Number(cotEl.value) || null) : null;
-  const ci = costoInsumosDelMes(mes, cotiz);
-  const yaCosto = DB.cajaMovimientos.some(m => m.origen === 'costo_insumos' && m.referenciaId === mes);
-
   let tabla;
   if (resumen.filas.length === 0) {
     tabla = '<p class="vacio">No hay prestaciones facturables en este mes.</p>';
@@ -210,17 +205,7 @@ function renderCobroSAM() {
       <p class="muted" style="margin-top:6px">Registrá cada obra social cuando te pague; el "Cobrado" es lo que realmente te transfirió (podés editarlo si difiere del 40% esperado).</p>`;
   }
 
-  cont.innerHTML = `
-    ${tabla}
-    <div class="section-head" style="margin-top:20px"><h4 style="margin:0">Costo de insumos del mes (egreso)</h4></div>
-    <div class="saldos">
-      <div class="saldo-card"><div class="saldo-titulo">Costo de insumos (comprás)</div><div class="saldo-monto neg">${ci.requiereCotizacion ? 'falta cotización USD' : fmtMoneda(ci.costo, 'ARS')}</div></div>
-    </div>
-    <div class="btn-group">
-      ${yaCosto
-        ? '<span class="diag-ok" style="margin:0">✅ Costo de insumos registrado.</span> <button class="btn secundario" onclick="quitarCostoInsumosUI()">Deshacer</button>'
-        : `<button class="btn" onclick="registrarCostoInsumosUI()">Registrar costo de insumos (egreso)</button>`}
-    </div>`;
+  cont.innerHTML = tabla;
 }
 
 function registrarCobroSAMUI(i) {
@@ -240,17 +225,4 @@ function quitarCobroSAMUI(i) {
   renderCobroSAM();
   if (typeof renderCaja === 'function') renderCaja();
   if (typeof renderPanelMes === 'function') renderPanelMes();
-}
-function registrarCostoInsumosUI() {
-  const mes = document.getElementById('ctrMes').value;
-  const cotEl = document.getElementById('ctrCotiz');
-  try { registrarCostoInsumos(mes, cotEl ? cotEl.value : null); } catch (e) { alert(e.message); return; }
-  renderCobroSAM();
-  if (typeof renderCaja === 'function') renderCaja();
-}
-function quitarCostoInsumosUI() {
-  const mes = document.getElementById('ctrMes').value;
-  quitarCostoInsumos(mes);
-  renderCobroSAM();
-  if (typeof renderCaja === 'function') renderCaja();
 }

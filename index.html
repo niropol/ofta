@@ -245,7 +245,6 @@
       <p class="muted" style="margin-top:0">Lo que SAM te debe pagar (40% de lo facturado) por cada obra social, y el registro de lo que efectivamente te transfirió. También el costo de insumos del mes.</p>
       <div class="filtros">
         <label class="muted">Mes <input type="month" id="ctrMes" onchange="renderCobroSAM()"></label>
-        <label class="muted">Cotización USD→ARS (para costo de insumos) <input type="number" id="ctrCotiz" step="0.01" style="width:120px" placeholder="opcional" onchange="renderCobroSAM()"></label>
       </div>
       <div id="cobroSAM"></div>
     </div>
@@ -340,10 +339,9 @@
 
     <div class="adminpanel" data-p="panel">
       <div class="section-head"><h3 style="margin:0">Panel del mes</h3></div>
-      <p class="muted" style="margin-top:0">Resumen calculado: qué factura SAM, cuánto te debe pagar (40%), cuánto te pagó, costo de insumos, honorarios y margen.</p>
+      <p class="muted" style="margin-top:0">Resumen calculado: qué factura SAM, cuánto te debe pagar (40%), cuánto te pagó, honorarios y margen.</p>
       <div class="filtros">
         <label class="muted">Mes <input type="month" id="panelMes" onchange="renderPanelMes()"></label>
-        <label class="muted">Cotización USD→ARS <input type="number" id="panelCotiz" step="0.01" style="width:120px" placeholder="opcional" onchange="renderPanelMes()"></label>
       </div>
       <div id="panelContenido"></div>
     </div>

@@ -10,15 +10,12 @@ function renderPanelMes() {
   const cont = document.getElementById('panelContenido');
   if (!cont) return;
   const mes = (document.getElementById('panelMes') || {}).value || new Date().toISOString().slice(0, 7);
-  const cotEl = document.getElementById('panelCotiz');
-  const cot = cotEl && cotEl.value ? Number(cotEl.value) : null;
 
   const sam = ingresoSAMDelMes(mes);
-  const ins = costoInsumosDelMes(mes, cot);
   const hon = honorariosDelMes(mes).reduce((s, h) => s + h.total, 0);
   const cob = comparacionCobrosMes(mes);
-  const costoIns = ins.requiereCotizacion ? 0 : ins.costo;
-  const margen = sam.ingreso - costoIns - hon;
+  const modoIns = (typeof insumoModo === 'function') ? insumoModo() : 'total';
+  const margen = sam.ingreso - hon;  // no restamos costo de insumos: no lo pagamos nosotros
 
   const card = (titulo, valor, clase, nota) => `
     <div class="saldo-card ${clase || ''}">
@@ -53,16 +50,18 @@ function renderPanelMes() {
   const alertas = [];
   if (sam.sinContrato > 0) alertas.push(`${sam.sinContrato} cirugía(s) sin contrato de OS cargado (facturan solo el insumo).`);
   if (cob.pendientes > 0) alertas.push(`${cob.pendientes} obra(s) social(es) del mes sin cobro registrado.`);
-  if (ins.requiereCotizacion) alertas.push('Hay insumos con costo en USD: cargá la cotización para ver el costo y el margen.');
+
+  const notaModo = modoIns === 'margen'
+    ? 'Insumos: se descuenta el costo y se reparte el margen 60/40 (Mec 2)'
+    : 'Insumos: se reparte lo facturado 60/40, el costo lo absorbe SAM (Mec 1)';
 
   cont.innerHTML = `
     <div class="saldos">
       ${card('SAM factura a las OS', sam.facturado, '', 'Contratos de cirugía + valor único + insumos')}
-      ${card('SAM te debe pagar (40%)', sam.ingreso, '', 'Tu ingreso esperado')}
+      ${card('SAM te debe pagar (40%)', sam.ingreso, '', notaModo)}
       ${cobroCard}
-      ${card('Costo de insumos', costoIns, '', ins.requiereCotizacion ? 'Falta cotización USD' : 'Lo que pagás a proveedores')}
       ${card('Honorarios a médicos', hon, '', 'Valores fijos del mes')}
-      ${card('Margen estimado', margen, 'total', 'Ingreso − insumos − honorarios')}
+      ${card('Margen estimado', margen, 'total', 'Ingreso − honorarios')}
     </div>
     ${alertas.length ? `<div class="aviso" style="margin-top:14px">⚠️ ${alertas.map(escHtml).join('<br>')}</div>` : ''}`;
 }
