@@ -112,12 +112,47 @@ function listarLiquidaciones(mes) {
 }
 
 // ── Mensaje de WhatsApp (texto listo para pegar/enviar) ──
+// Detalla, para el médico, la cantidad de consultas, de estudios (por tipo) y de
+// cirugías (por tipo), más las derivaciones y el total a depositar.
 function mensajeLiquidacionWhatsApp(l) {
   const med = DB.medicos.find(m => m.id === l.medicoId);
   const nombre = med ? med.nombre : 'Médico';
+
   const porRol = { realizador: 0, derivador: 0 };
-  l.detalle.forEach(d => { porRol[d.rol] = (porRol[d.rol] || 0) + d.monto; });
+  const cantCat = {};                 // categoría → cantidad total
+  const porTipo = {};                 // categoría → { descripción → cantidad }
+  let derivCant = 0;
+  l.detalle.forEach(d => {
+    const cant = Math.max(1, Math.floor(Number(d.cantidad) || 1));
+    porRol[d.rol] = (porRol[d.rol] || 0) + d.monto;
+    if (d.rol === 'derivador') { derivCant += cant; return; }
+    const reg = DB.prestacionesRealizadas.find(r => r.id === d.prestacionId);
+    const cat = reg ? reg.categoria : 'otros';
+    cantCat[cat] = (cantCat[cat] || 0) + cant;
+    (porTipo[cat] = porTipo[cat] || {})[d.descripcion] = (porTipo[cat][d.descripcion] || 0) + cant;
+  });
+
+  // Bloque por categoría con desglose por tipo.
+  const bloque = (cat, emoji, titulo, conDesglose) => {
+    if (!cantCat[cat]) return '';
+    let txt = `${emoji} *${titulo}:* ${cantCat[cat]}\n`;
+    if (conDesglose) {
+      const tipos = Object.entries(porTipo[cat]).sort((a, b) => b[1] - a[1]);
+      if (tipos.length > 1 || (tipos[0] && tipos[0][0] !== titulo)) {
+        txt += tipos.map(([desc, n]) => `   • ${desc}: ${n}`).join('\n') + '\n';
+      }
+    }
+    return txt;
+  };
+
+  const detalle =
+    bloque('consulta', '🩺', 'Consultas', false) +
+    bloque('realizacion_estudio', '🔬', 'Estudios', true) +
+    bloque('practica', '🧪', 'Prácticas', true) +
+    bloque('cirugia', '🔪', 'Cirugías', true) +
+    (derivCant > 0 ? `↪️ *Derivaciones:* ${derivCant}\n` : '');
+
   const lineaDeriv = porRol.derivador > 0 ? `↪️ Derivaciones → *${fmtMoneda(porRol.derivador, 'ARS')}*\n` : '';
-  const cant = l.detalle.reduce((s, d) => s + (Math.max(1, Math.floor(Number(d.cantidad) || 1))), 0);
-  return `👁 *SAM Oftalmología*\n📋 *Liquidación ${l.mes}*\n\n👨‍⚕️ ${nombre}\n\n🧾 Prestaciones: ${cant}\n\n💰 *Honorarios:*\n🩺 Realizador → *${fmtMoneda(porRol.realizador, 'ARS')}*\n${lineaDeriv}\n*A depositar (transferencia): ${fmtMoneda(l.total, 'ARS')}*\n\nPor favor remitir factura para procesar el pago. ¡Gracias!`;
+
+  return `👁 *SAM Oftalmología*\n📋 *Liquidación ${l.mes}*\n\n👨‍⚕️ ${nombre}\n\n${detalle}\n💰 *Honorarios:*\n🩺 Realizador → *${fmtMoneda(porRol.realizador, 'ARS')}*\n${lineaDeriv}\n*A depositar (transferencia): ${fmtMoneda(l.total, 'ARS')}*\n\nPor favor remitir factura para procesar el pago. ¡Gracias!`;
 }
