@@ -130,7 +130,7 @@ function guardarPrestacion() {
     r = crearPrestacion(datos);
   }
   cerrarModalPrest();
-  renderNomenclador();
+  if (typeof sincronizarUI === "function") sincronizarUI(); else renderNomenclador();
   return r;
 }
 
@@ -166,7 +166,7 @@ function guardarNuevoPrecio() {
     return false;
   }
   cerrarModalPrecio();
-  renderNomenclador();
+  if (typeof sincronizarUI === "function") sincronizarUI(); else renderNomenclador();
   return true;
 }
 
@@ -195,7 +195,7 @@ function verHistorialPrestacion(grupo) {
 // ── Inactivar / eliminar ──
 function inactivarPrestacionUI(grupo) {
   toggleEstadoPrestacion(grupo);
-  renderNomenclador();
+  if (typeof sincronizarUI === "function") sincronizarUI(); else renderNomenclador();
 }
 
 function eliminarPrestacionUI(grupo) {
@@ -207,5 +207,5 @@ function eliminarPrestacionUI(grupo) {
     alert(`No se puede eliminar: hay ${r.referencias} prestación(es) realizada(s) que usan este ítem. Inactivalo en su lugar.`);
     return;
   }
-  renderNomenclador();
+  if (typeof sincronizarUI === "function") sincronizarUI(); else renderNomenclador();
 }

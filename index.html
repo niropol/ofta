@@ -258,20 +258,8 @@
     <div class="adminpanel" data-p="nomcon" hidden>
       <div class="section-head"><h3 style="margin:0">Nomenclador y contratos</h3></div>
       <div class="subtabs" id="nomconTabs">
-        <button class="active" data-p="prest" onclick="nomconTab('prest')">Prestaciones</button>
+        <button class="active" data-p="contr" onclick="nomconTab('contr')">Contratos (valores por OS)</button>
         <button data-p="os" onclick="nomconTab('os')">Obras sociales</button>
-        <button data-p="contr" onclick="nomconTab('contr')">Contratos</button>
-      </div>
-
-      <div class="nomconpanel" data-p="prest">
-        <div class="section-head"><h4 style="margin:0">Prestaciones (catálogo)</h4>
-          <button class="btn" onclick="abrirNuevaPrestacion()">+ Nueva prestación</button></div>
-        <p class="muted" style="margin-top:0">Solo el catálogo: código, descripción y categoría. El <strong>valor de cada una se carga por obra social en «Contratos»</strong>. Los insumos se cargan en la solapa «Insumos».</p>
-        <div class="filtros">
-          <select id="nomFiltroCat" onchange="renderNomenclador()"></select>
-          <input type="search" id="nomBuscar" placeholder="Buscar por descripción o código…" oninput="renderNomenclador()">
-        </div>
-        <div class="tabla-wrap"><div id="nomencladorTabla"></div></div>
       </div>
 
       <div class="nomconpanel" data-p="os" hidden>
@@ -280,9 +268,9 @@
         <div class="tabla-wrap"><div id="osTabla"></div></div>
       </div>
 
-      <div class="nomconpanel" data-p="contr" hidden>
+      <div class="nomconpanel" data-p="contr">
         <div class="section-head"><h4 style="margin:0">Contratos por obra social</h4></div>
-        <p class="muted" style="margin-top:0">Valor real que SAM factura por <strong>cada prestación según la obra social</strong> (cada OS su valor; SAM te paga el 40%). Podés editar un valor, aplicar un aumento a toda la OS, importar un archivo o cargar una prestación manual (tipo + código + descripción + valor).</p>
+        <p class="muted" style="margin-top:0">Todos los valores en un solo lugar: elegí la obra social y cargá/editá el valor de <strong>cada prestación</strong> (cada OS su valor; SAM te paga el 40%). Podés editar, aplicar un aumento a toda la OS, importar un archivo o dar de alta una prestación (tipo + código + descripción + valor).</p>
         <div class="filtros">
           <label class="muted">Obra social <select id="ctrOS" onchange="renderContratosTabla()"></select></label>
           <label class="muted">Aumentar esta OS <input type="number" id="ctrAumento" step="0.01" style="width:70px" placeholder="%"> %</label>

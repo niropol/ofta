@@ -49,7 +49,11 @@ function renderContratosTabla() {
       <td>${escHtml(f.descripcion)}</td>
       <td><input type="number" step="0.01" id="ctr_${f.grupo}" value="${f.valor != null ? f.valor : ''}" style="width:140px" placeholder="sin cargar"></td>
       <td class="num">${f.valor != null ? fmtMoneda(Math.floor(f.valor * porcentajeSAM() / 100), 'ARS') : '—'}</td>
-      <td class="acc"><button onclick="guardarValorContratoUI(${f.grupo})">Guardar</button></td>
+      <td class="acc">
+        <button onclick="guardarValorContratoUI(${f.grupo})">Guardar</button>
+        <button onclick="editarPrestacionUI(${f.grupo})" title="Editar código/descripción">✎</button>
+        <button class="danger" onclick="eliminarPrestacionUI(${f.grupo})" title="Eliminar la prestación del catálogo">🗑</button>
+      </td>
     </tr>`).join('');
   cont.innerHTML = `
     <table class="tabla">
@@ -75,13 +79,21 @@ function agregarContratoManualUI() {
   if (typeof renderPanelMes === 'function') renderPanelMes();
 }
 
+// Aviso si ya se registró el cobro de esa OS (el cambio no lo toca hasta deshacerlo).
+function _avisoCobrosRegistrados(os) {
+  const meses = [...new Set(DB.cajaMovimientos.filter(m => m.origen === 'cobro_sam' && m.obraSocial === os).map(m => m.mesCobro))].filter(Boolean);
+  if (meses.length) alert('Aviso: ya registraste el cobro de ' + os + ' (' + meses.join(', ') + '). El cambio no lo modifica; para aplicarlo, deshacé y volvé a registrar el cobro en Finanzas ▸ Cobros.');
+}
+
 function guardarValorContratoUI(grupo) {
   const os = document.getElementById('ctrOS').value;
   const v = document.getElementById('ctr_' + grupo).value;
   if (v === '' || isNaN(Number(v))) { alert('El valor debe ser un número.'); return; }
-  try { setContrato(os, grupo, v, hoyISO().slice(0, 7) + '-01'); }
+  try { _upsertContrato(os, grupo, v, hoyISO().slice(0, 7) + '-01'); }
   catch (e) { alert(e.message); return; }
   renderContratos();
+  if (typeof renderPanelMes === 'function') renderPanelMes();
+  _avisoCobrosRegistrados(os);
 }
 
 // ── Aumento por OS, importación de archivo y plantilla ──
@@ -102,6 +114,7 @@ function aumentarContratosOSUI() {
   _msgImport('Actualizados ' + r.actualizados + ' contrato(s) de ' + os + ' (+' + pct + '%).', false);
   renderContratos();
   if (typeof renderPanelMes === 'function') renderPanelMes();
+  _avisoCobrosRegistrados(os);
 }
 
 // CSV simple → objetos (separador coma o punto y coma).
