@@ -22,7 +22,8 @@ const EXPONER = [
   'DB', 'CATEGORIAS', 'CATEGORIA_IDS', 'CATEGORIAS_NOMENCLADOR', 'CATEGORIAS_REALIZADAS', 'CATEGORIAS_REGLA', 'ROLES', 'MONEDAS', 'MEDIOS_PAGO', 'COLECCIONES',
   'categoriaInfo', 'derivaCategoriaDe',
   // pagos a médicos (valores fijos)
-  'redondearAbajo', 'CATEGORIAS_VALOR_MEDICO', 'valorMedicoVigente', 'setValorMedico', 'listarValoresMedicoActuales',
+  'redondearAbajo', 'CATEGORIAS_VALOR_MEDICO', 'valorMedicoVigente', 'setValorMedico', 'setValorMedicoActual', 'listarValoresMedicoActuales',
+  'setHonorarioMedicoInsumo',
   'honorariosDePrestacion', 'honorariosDeMedico', 'honorariosDelMes',
   'renderValoresMedico', 'abrirNuevoValorMedico', 'guardarValorMedico', 'calcularPreviewHonorarios', 'onValorCategoriaChange',
   // caja

@@ -306,9 +306,12 @@
     </div>
 
     <div class="adminpanel" data-p="pagos" hidden>
-      <div class="section-head"><h3 style="margin:0">Valores fijos a médicos</h3>
-        <button class="btn" onclick="abrirNuevoValorMedico()">+ Definir valor</button></div>
-      <p class="muted" style="margin-top:0">Monto fijo que cobra el médico por tipo (consulta, estudio, cirugía, práctica, derivación). General (todos) u override por médico, con vigencia.</p>
+      <div class="section-head"><h3 style="margin:0">Pagos a médicos</h3></div>
+      <p class="muted" style="margin-top:0">Lo que le pagás al médico (fijo) por cada prestación e insumo. Escribí el valor y «Guardar». Para un aumento con fecha (que conserve el historial) usá «Cambio con fecha».</p>
+      <div class="filtros">
+        <label class="muted">Ver / editar valores de <select id="valScope" onchange="renderValoresMedico()"></select></label>
+        <button class="btn secundario" onclick="abrirNuevoValorMedico()">Cambio con fecha (aumento)</button>
+      </div>
       <div class="tabla-wrap"><div id="valoresTabla"></div></div>
 
       <h4 style="margin-top:26px">Vista previa de pagos del mes</h4>

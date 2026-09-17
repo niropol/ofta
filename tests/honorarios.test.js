@@ -55,6 +55,17 @@ describe('Valores fijos a médicos', () => {
 });
 
 describe('Cálculo de honorarios (valores fijos)', () => {
+  it('setValorMedicoActual corrige el valor vigente en el lugar (sin versionar) y se refleja', () => {
+    app.setValorMedico('consulta', null, 10000, '2026-01-01');
+    const c = nom('consulta');
+    const r = reg({ categoria: 'consulta', grupoNomenclador: c.grupo });
+    expect(app.honorariosDePrestacion(r).realizador.monto).toBe(10000);
+    app.setValorMedicoActual('consulta', null, 12000);   // corrige
+    expect(app.valorMedicoVigente('consulta', null, '2026-03-10').valor).toBe(12000);
+    expect(app.honorariosDePrestacion(r).realizador.monto).toBe(12000);  // impacta el cálculo
+    expect(app.DB.valoresMedico.filter(v => v.categoria === 'consulta' && v.medicoId == null).length).toBe(1); // no versionó
+  });
+
   it('el pago fijo por insumo se suma al honorario del médico realizador', () => {
     app.setValorMedico('cirugia', null, 100000, '2026-01-01');
     const faco = nom('cirugia');

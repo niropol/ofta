@@ -178,6 +178,20 @@ function setCostoInsumo(grupo, costo, costoMoneda, honorarioMedico) {
   return actual;
 }
 
+// Corrige el pago fijo al médico de un insumo (edición rápida, en el lugar).
+function setHonorarioMedicoInsumo(grupo, valor) {
+  const actual = versionActual(grupo);
+  if (!actual) return false;
+  if (!(categoriaInfo(actual.categoria) || {}).usaCosto) throw new Error('Solo los insumos tienen pago al médico.');
+  const val = Number(valor);
+  if (isNaN(val) || val < 0) throw new Error('El valor debe ser un número ≥ 0.');
+  const antes = JSON.parse(JSON.stringify(actual));
+  actual.honorarioMedico = val;
+  registrarAuditoria('edicion', 'nomenclador_costo', grupo, antes, actual);
+  marcarCambios('nomenclador');
+  return actual;
+}
+
 // ── Inactivar / reactivar todo el grupo (baja lógica reversible) ──
 function toggleEstadoPrestacion(grupo) {
   const versiones = versionesDe(grupo);

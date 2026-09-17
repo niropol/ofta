@@ -80,6 +80,25 @@ function setValorMedico(categoria, medicoId, valor, vigenciaDesde, grupo) {
   return nuevo;
 }
 
+// Corrige EN EL LUGAR el valor vigente (no versiona) — edición rápida / typo.
+// Si no existe, lo crea con vigencia el 1° del mes actual. Devuelve el registro.
+function setValorMedicoActual(categoria, medicoId, valor, grupo) {
+  if (!CATEGORIAS_VALOR_MEDICO.some(c => c.id === categoria)) throw new Error('Categoría de valor inválida.');
+  const val = Number(valor);
+  if (isNaN(val) || val < 0) throw new Error('El valor debe ser un número ≥ 0.');
+  const mid = (medicoId != null && medicoId !== '') ? Number(medicoId) : null;
+  const g = (grupo != null && grupo !== '') ? Number(grupo) : null;
+  const actual = _valorActual(categoria, mid, g);
+  if (actual) {
+    const antes = JSON.parse(JSON.stringify(actual));
+    actual.valor = val;
+    registrarAuditoria('edicion', 'valorMedico', actual.id, antes, actual);
+    marcarCambios('valoresMedico');
+    return actual;
+  }
+  return setValorMedico(categoria, mid, val, hoyISO().slice(0, 7) + '-01', g);
+}
+
 // Valores "actuales" (uno por categoría+médico+grupo) para la config.
 function listarValoresMedicoActuales() {
   const claves = new Set(DB.valoresMedico.map(v => v.categoria + '|' + (v.medicoId != null ? v.medicoId : '') + '|' + (v.grupo != null ? v.grupo : '')));
