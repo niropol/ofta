@@ -61,6 +61,25 @@
     border-radius: 6px; font-size: 14px; }
   .modal-acciones { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
   .modal-acciones .secundario { background: #eef2f7; color: var(--texto); }
+  .modal-box.ancho { width: 720px; }
+  /* Documento imprimible dentro del modal */
+  #docPrintable { color: #222; }
+  #docPrintable h1 { font-size: 20px; margin: 0 0 2px; }
+  #docPrintable h2 { font-size: 15px; color: #555; margin: 0 0 16px; font-weight: 600; }
+  #docPrintable h3 { font-size: 14px; margin: 18px 0 6px; }
+  #docPrintable table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  #docPrintable th, #docPrintable td { border: 1px solid #ddd; padding: 7px 10px; font-size: 13px; text-align: left; }
+  #docPrintable thead th { background: #f5f7fa; } #docPrintable tfoot th { background: #f0f6ff; font-size: 14px; }
+  .copiar-ta { width: 100%; min-height: 220px; font-family: inherit; font-size: 13px; padding: 10px;
+    border: 1px solid var(--borde); border-radius: 6px; resize: vertical; }
+  @media print {
+    body * { visibility: hidden !important; }
+    #modalDoc, #modalDoc * { visibility: visible !important; }
+    #modalDoc { position: absolute; inset: 0; display: block !important; background: #fff; }
+    #modalDoc .modal-box { width: 100%; max-width: none; max-height: none; box-shadow: none; padding: 0; }
+    .no-print { display: none !important; }
+    @page { margin: 14mm; }
+  }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   /* Filtros y tablas */
   .filtros { display: flex; gap: 10px; margin-bottom: 14px; align-items: center; flex-wrap: wrap; }
@@ -298,6 +317,16 @@
       <p class="muted" style="margin-top:0">Lo que le pagás al médico (fijo) por cada prestación e insumo. Escribí el valor y «Guardar». Para un aumento con fecha (que conserve el historial) usá «Cambio con fecha».</p>
       <div class="filtros">
         <label class="muted">Ver / editar valores de <select id="valScope" onchange="renderValoresMedico()"></select></label>
+        <label class="muted">Categoría <select id="valCat" onchange="renderValoresMedico()">
+          <option value="">Todas</option>
+          <option value="consulta">Consultas</option>
+          <option value="realizacion_estudio">Estudios</option>
+          <option value="practica">Prácticas</option>
+          <option value="cirugia">Cirugías</option>
+          <option value="derivacion">Derivaciones</option>
+          <option value="insumo">Insumos</option>
+        </select></label>
+        <input type="search" id="valBuscar" placeholder="Buscar prestación…" oninput="renderValoresMedico()" style="min-width:180px">
         <button class="btn secundario" onclick="abrirNuevoValorMedico()">Cambio con fecha (aumento)</button>
       </div>
       <div class="tabla-wrap"><div id="valoresTabla"></div></div>
@@ -744,6 +773,46 @@
   </div>
 </div>
 
+<!-- Confirmación in-app (reemplaza confirm()) -->
+<div id="modalConfirm" class="modal">
+  <div class="modal-box" style="width:420px">
+    <h3>Confirmar</h3>
+    <p id="confirmMsg" style="margin:0 0 18px;line-height:1.5"></p>
+    <div class="modal-acciones">
+      <button class="btn secundario" onclick="_confirmResp(false)">Cancelar</button>
+      <button class="btn" onclick="_confirmResp(true)">Aceptar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Documento imprimible in-app (comprobante / informe / resumen) -->
+<div id="modalDoc" class="modal">
+  <div class="modal-box ancho">
+    <div class="no-print" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 id="docModalTitulo" style="margin:0">Documento</h3>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="imprimirDoc()">Imprimir / PDF</button>
+        <button class="btn secundario" onclick="cerrarDocModal()">Cerrar</button>
+      </div>
+    </div>
+    <div id="docPrintable"></div>
+  </div>
+</div>
+
+<!-- Copiar texto in-app (WhatsApp / CSV) -->
+<div id="modalCopiar" class="modal">
+  <div class="modal-box ancho">
+    <h3 id="copiarTitulo">Copiar</h3>
+    <p class="muted" style="margin:0 0 8px">Revisá el texto y copialo. Si el botón no copia, seleccionalo y usá Ctrl/Cmd + C.</p>
+    <textarea id="copiarTexto" class="copiar-ta" readonly></textarea>
+    <div id="copiarEstado" class="pos" style="min-height:18px;margin-top:6px;font-size:13px"></div>
+    <div class="modal-acciones">
+      <button class="btn secundario" onclick="cerrarCopiarModal()">Cerrar</button>
+      <button class="btn" onclick="copiarDesdeModal()">Copiar</button>
+    </div>
+  </div>
+</div>
+
 <script src="js/datos.js?v=1"></script>
 <script src="js/auditoria.js?v=1"></script>
 <script src="js/usuarios.js?v=1"></script>
@@ -771,6 +840,7 @@
 <script src="js/ui-usuarios.js?v=1"></script>
 <script src="js/diagnostico.js?v=1"></script>
 <script src="js/ui-diagnostico.js?v=1"></script>
+<script src="js/ui-dialogos.js?v=1"></script>
 <script src="js/persistencia.js?v=1"></script>
 <script>
 // ── Navegación entre secciones ──

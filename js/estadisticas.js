@@ -32,9 +32,13 @@ function resumenMes(mes) {
   const liquidado = DB.pagosMedicos.filter(p => p.mes === mes && p.estado === 'cerrada').reduce((s, p) => s + p.total, 0);
   const sam = (typeof ingresoSAMDelMes === 'function') ? ingresoSAMDelMes(mes) : { facturado: 0, ingreso: 0 };
 
+  // Margen estimado del mes: igual que el Panel del mes (lo que SAM nos paga − honorarios).
+  // Es "vivo": si cambian los valores a médicos o los contratos, se recalcula al instante.
+  const margenEstimado = sam.ingreso - honorariosCalc;
+
   return {
     mes, totalPrestaciones: unidades, registros: activas.length, consultas, porCategoria, porDia, anuladas,
-    ingresosMes, egresosMes, gastosMes, honorariosCalc, liquidado,
+    ingresosMes, egresosMes, gastosMes, honorariosCalc, liquidado, margenEstimado,
     facturadoSAM: sam.facturado, ingresoSAM: sam.ingreso, saldos: saldosCaja(),
   };
 }

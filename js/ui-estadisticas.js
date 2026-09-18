@@ -37,6 +37,7 @@ function renderVistaClinica(cont, mes) {
   const dias = Object.keys(r.porDia).sort()
     .map(d => `<tr><td>${escHtml(d)}</td><td class="num">${r.porDia[d]}</td></tr>`).join('');
 
+  const cardMargen = (t, v) => `<div class="saldo-card total"><div class="saldo-titulo">${escHtml(t)}</div><div class="saldo-monto ${v < 0 ? 'neg' : ''}">${fmtMoneda(v, 'ARS')}</div></div>`;
   cont.innerHTML = `
     <div class="saldos">
       ${card('Prestaciones', r.totalPrestaciones)}
@@ -44,8 +45,10 @@ function renderVistaClinica(cont, mes) {
       ${card('Facturado a SAM', fmtMoneda(r.facturadoSAM, 'ARS'))}
       ${card('SAM paga (' + DB.config.porcentajeSAM + '%)', fmtMoneda(r.ingresoSAM, 'ARS'))}
       ${card('Honorarios médicos', fmtMoneda(r.honorariosCalc, 'ARS'))}
+      ${cardMargen('Margen estimado', r.margenEstimado)}
       ${card('Saldo caja pesos', fmtMoneda(r.saldos.ARS.total, 'ARS'))}
     </div>
+    <p class="muted" style="margin:-6px 0 14px">«Margen estimado» = SAM paga − honorarios (mismo cálculo que el Panel del mes; se actualiza al cambiar valores). «Saldo caja» es el dinero real ya movido (ingresos/egresos registrados).</p>
     <div class="btn-group" style="margin-bottom:16px">
       <button class="btn" onclick="exportarResumenPDF('${mes}')">Resumen PDF</button>
       <button class="btn secundario" onclick="exportarResumenWhatsApp('${mes}')">Copiar para WhatsApp</button>
@@ -113,16 +116,12 @@ function renderVistaControl(cont, mes) {
 }
 
 // ── Exportaciones ──
-function _copiar(txt, msgOk) {
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(txt).then(() => alert(msgOk), () => window.prompt('Copiá el texto:', txt));
-  } else { window.prompt('Copiá el texto:', txt); }
-}
-function exportarResumenWhatsApp(mes) { _copiar(resumenMesTextoWhatsApp(mes), 'Resumen copiado — listo para WhatsApp.'); }
+function _copiar(txt, titulo) { copiarTextoUI(titulo || 'Copiar', txt); }
+function exportarResumenWhatsApp(mes) { _copiar(resumenMesTextoWhatsApp(mes), 'Resumen del mes — ' + mes); }
 function copiarResumenMedicoWhatsApp(medicoId, mes) {
   const r = resumenMedicoMes(Number(medicoId), mes);
   const txt = `👁 *SAM Oftalmología* — ${medicoNombre(Number(medicoId))}\n📋 ${mes}\n\n🧾 Prestaciones: *${r.cantidad}*\n👨‍⚕️ Honorarios: *${fmtMoneda(r.total, 'ARS')}*`;
-  _copiar(txt, 'Informe del médico copiado — listo para WhatsApp.');
+  _copiar(txt, 'Informe médico — ' + medicoNombre(Number(medicoId)));
 }
 
 function exportarResumenPDF(mes) {

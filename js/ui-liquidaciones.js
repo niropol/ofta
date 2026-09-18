@@ -71,37 +71,35 @@ function generarLiquidacionUI(medicoId) {
 }
 
 function cerrarLiquidacionUI(id) {
-  if (typeof confirm === 'function' && !confirm('¿Cerrar la liquidación? Se carga el egreso en caja y se bloquea el período (podés reabrirla después).')) return;
-  try { cerrarLiquidacion(id); }
-  catch (e) { alert(e.message); return; }
-  renderLiquidaciones();
-  if (typeof renderCaja === 'function') renderCaja();
+  confirmarUI('¿Cerrar la liquidación? Se carga el egreso en caja y se bloquea el período (podés reabrirla después).').then(ok => {
+    if (!ok) return;
+    try { cerrarLiquidacion(id); }
+    catch (e) { alert(e.message); return; }
+    if (typeof sincronizarUI === 'function') sincronizarUI(); else { renderLiquidaciones(); if (typeof renderCaja === 'function') renderCaja(); }
+  });
 }
 
 function reabrirLiquidacionUI(id) {
-  if (typeof confirm === 'function' && !confirm('¿Reabrir? Se quita el egreso de caja y se desbloquea el período.')) return;
-  reabrirLiquidacion(id);
-  renderLiquidaciones();
-  if (typeof renderCaja === 'function') renderCaja();
+  confirmarUI('¿Reabrir? Se quita el egreso de caja y se desbloquea el período.').then(ok => {
+    if (!ok) return;
+    reabrirLiquidacion(id);
+    if (typeof sincronizarUI === 'function') sincronizarUI(); else { renderLiquidaciones(); if (typeof renderCaja === 'function') renderCaja(); }
+  });
 }
 
 function eliminarLiquidacionUI(id) {
-  if (typeof confirm === 'function' && !confirm('¿Eliminar esta liquidación? Queda en auditoría.')) return;
-  eliminarLiquidacion(id);
-  renderLiquidaciones();
-  if (typeof renderCaja === 'function') renderCaja();
+  confirmarUI('¿Eliminar esta liquidación? Queda en auditoría.').then(ok => {
+    if (!ok) return;
+    eliminarLiquidacion(id);
+    if (typeof sincronizarUI === 'function') sincronizarUI(); else { renderLiquidaciones(); if (typeof renderCaja === 'function') renderCaja(); }
+  });
 }
 
-// ── WhatsApp: copia el mensaje al portapapeles ──
+// ── WhatsApp: muestra el mensaje en un modal para copiar ──
 function copiarWhatsApp(id) {
   const l = DB.pagosMedicos.find(p => p.id === Number(id));
   if (!l) return;
-  const msg = mensajeLiquidacionWhatsApp(l);
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(msg).then(() => alert('Mensaje copiado — listo para pegar en WhatsApp.'), () => window.prompt('Copiá el mensaje:', msg));
-  } else {
-    window.prompt('Copiá el mensaje:', msg);
-  }
+  copiarTextoUI('WhatsApp — ' + medicoNombre(l.medicoId) + ' · ' + l.mes, mensajeLiquidacionWhatsApp(l));
 }
 
 // ── Comprobante en PDF (ventana de impresión) ──
@@ -129,23 +127,5 @@ function verComprobante(id) {
       <tfoot><tr><th colspan="4" style="text-align:right">TOTAL A DEPOSITAR</th><th style="text-align:right">${fmtMoneda(l.total, 'ARS')}</th></tr></tfoot>
     </table>
     <p style="margin-top:24px;color:#666">Pago por transferencia bancaria. Comprobante generado el ${hoyISO()}.</p>`;
-  _abrirVentanaImpresion('Liquidación ' + l.mes + ' — ' + (med ? med.nombre : ''), html);
-}
-
-function _abrirVentanaImpresion(titulo, contenidoHTML) {
-  const win = window.open('', '_blank', 'width=900,height=700');
-  if (!win) { alert('Habilitá las ventanas emergentes para ver el comprobante.'); return; }
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${titulo}</title>
-    <style>
-      body{font-family:Arial,sans-serif;color:#222;margin:24px;}
-      h1{font-size:20px;margin:0 0 2px;} h2{font-size:15px;color:#555;margin:0 0 16px;font-weight:600;}
-      table{width:100%;border-collapse:collapse;margin-top:12px;}
-      th,td{border:1px solid #ddd;padding:7px 10px;font-size:13px;text-align:left;}
-      thead th{background:#f5f7fa;} tfoot th{background:#f0f6ff;font-size:14px;}
-      @media print{@page{margin:14mm;} button{display:none;}}
-    </style></head><body>
-    <div style="text-align:right"><button onclick="window.print()" style="padding:8px 18px;background:#2d5a8e;color:#fff;border:none;border-radius:6px;cursor:pointer">Imprimir / PDF</button></div>
-    ${contenidoHTML}
-    </body></html>`);
-  win.document.close();
+  mostrarDocModal('Liquidación ' + l.mes + ' — ' + (med ? med.nombre : ''), html);
 }

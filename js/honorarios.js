@@ -64,7 +64,11 @@ function setValorMedico(categoria, medicoId, valor, vigenciaDesde, grupo) {
   if (g != null) {
     const item = (typeof versionActual === 'function') ? versionActual(g) : null;
     if (!item) throw new Error('Prestación del nomenclador inexistente para el valor por ítem.');
-    if (item.categoria !== categoria) throw new Error('La prestación elegida no es de la categoría "' + categoria + '".');
+    // 'derivacion' puede fijarse por CUALQUIER prestación derivable (cirugía/estudio/práctica):
+    // el pago al derivador puede variar según lo derivado. El resto debe coincidir en categoría.
+    if (categoria !== 'derivacion' && item.categoria !== categoria) {
+      throw new Error('La prestación elegida no es de la categoría "' + categoria + '".');
+    }
   }
   const desde = vigenciaDesde || (hoyISO().slice(0, 7) + '-01');
   const actual = _valorActual(categoria, mid, g);
@@ -121,7 +125,9 @@ function honorariosDePrestacion(reg) {
 
   let derivador = null;
   if (reg.medicoDerivadorId) {
-    const vd = valorMedicoVigente('derivacion', reg.medicoDerivadorId, reg.fecha);
+    // La derivación admite valor por tipo (grupo del nomenclador) con respaldo al general:
+    // derivar una catarata puede pagar distinto que derivar un estudio simple.
+    const vd = valorMedicoVigente('derivacion', reg.medicoDerivadorId, reg.fecha, reg.grupoNomenclador);
     derivador = { medicoId: reg.medicoDerivadorId, monto: redondearAbajo(vd ? vd.valor : 0) * cant, faltaValor: vd ? [] : ['derivacion'] };
   }
   return { realizador, derivador };

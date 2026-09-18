@@ -25,9 +25,12 @@ function renderValoresMedico() {
     if (cur) sel.value = cur;
   }
   const mid = (sel && sel.value) ? Number(sel.value) : null;
+  const catFiltro = (document.getElementById('valCat') || {}).value || '';
+  const q = (((document.getElementById('valBuscar') || {}).value) || '').trim().toLowerCase();
+  const coincide = txt => !q || (txt || '').toLowerCase().includes(q);
   const fecha = hoyISO();
 
-  // Fila editable de un valor por categoría (+ grupo opcional para cirugía puntual).
+  // Fila editable de un valor por categoría (+ grupo opcional = tipo puntual).
   const fila = (label, categoria, grupo) => {
     const gen = valorMedicoVigente(categoria, null, fecha, grupo);
     let valorInput = gen ? gen.valor : '';
@@ -47,41 +50,64 @@ function renderValoresMedico() {
     </tr>`;
   };
 
-  let filas = [
-    fila('Consulta', 'consulta', null),
-    fila('Estudio', 'realizacion_estudio', null),
-    fila('Práctica', 'practica', null),
-    fila('Derivación (al derivador)', 'derivacion', null),
-  ];
-  // Cirugías: una fila por tipo de cirugía del nomenclador.
+  const encabezado = titulo => `<tr><td colspan="4" style="background:#f8fafc;font-weight:600">${escHtml(titulo)}</td></tr>`;
+
+  // Bloque de una categoría: fila «general» (respaldo) + una fila por tipo del nomenclador.
+  const bloque = (categoria, titulo, items, etiquetaGeneral) => {
+    const rows = [];
+    if (coincide('general ' + titulo)) rows.push(fila(etiquetaGeneral || ('General — toda la categoría'), categoria, null));
+    items.filter(it => coincide(it.descripcion)).forEach(it => rows.push(fila(it.descripcion, categoria, it.grupo)));
+    return rows.length ? encabezado(titulo) + rows.join('') : '';
+  };
+
+  const consultas = listarPrestaciones({ categoria: 'consulta', incluirInactivos: false });
+  const estudios = listarPrestaciones({ categoria: 'realizacion_estudio', incluirInactivos: false });
+  const practicas = listarPrestaciones({ categoria: 'practica', incluirInactivos: false });
   const cirugias = listarPrestaciones({ categoria: 'cirugia', incluirInactivos: false });
-  if (cirugias.length) {
-    filas.push('<tr><td colspan="4" style="background:#f8fafc;font-weight:600">Cirugías</td></tr>');
-    cirugias.forEach(c => filas.push(fila(c.descripcion, 'cirugia', c.grupo)));
+
+  const mostrar = c => !catFiltro || catFiltro === c;
+  let cuerpo = '';
+  if (mostrar('consulta')) cuerpo += bloque('consulta', 'Consultas', consultas, 'Consulta (valor general)');
+  if (mostrar('realizacion_estudio')) cuerpo += bloque('realizacion_estudio', 'Estudios', estudios, 'Estudio (valor general)');
+  if (mostrar('practica')) cuerpo += bloque('practica', 'Prácticas', practicas, 'Práctica (valor general)');
+  if (mostrar('cirugia')) cuerpo += bloque('cirugia', 'Cirugías', cirugias, 'Cirugía (valor general)');
+
+  // Derivación: valor al derivador. General siempre; por tipo al filtrar «Derivaciones».
+  if (mostrar('derivacion')) {
+    const rows = [];
+    if (coincide('general derivacion derivación')) rows.push(fila('Derivación (valor general)', 'derivacion', null));
+    if (catFiltro === 'derivacion') {
+      [...cirugias, ...estudios, ...practicas]
+        .filter(it => coincide(it.descripcion))
+        .forEach(it => rows.push(fila('↪ ' + it.descripcion, 'derivacion', it.grupo)));
+    }
+    if (rows.length) cuerpo += encabezado('Derivaciones (al médico que deriva)') + rows.join('');
   }
 
-  let insumosBloque = '';
-  if (mid == null) {
-    const insumos = listarPrestaciones({ categoria: 'insumo', incluirInactivos: false });
+  // Insumos: pago fijo por colocarlos (siempre general, no por médico).
+  if (mid == null && mostrar('insumo')) {
+    const insumos = listarPrestaciones({ categoria: 'insumo', incluirInactivos: false })
+      .filter(v => coincide(v.descripcion));
     if (insumos.length) {
-      const insRows = insumos.map(v => `
+      cuerpo += encabezado('Insumos (pago por colocarlos)') + insumos.map(v => `
         <tr>
           <td>${escHtml(v.descripcion)}</td>
           <td><input type="number" step="0.01" id="vmi_${v.grupo}" value="${v.honorarioMedico != null ? v.honorarioMedico : ''}" style="width:130px" placeholder="0"></td>
           <td class="muted">por colocarlo</td>
           <td class="acc"><button onclick="guardarHonInsumoInlineUI(${v.grupo})">Guardar</button></td>
         </tr>`).join('');
-      insumosBloque = `<tr><td colspan="4" style="background:#f8fafc;font-weight:600">Insumos (pago por colocarlos)</td></tr>${insRows}`;
     }
   }
+
+  if (!cuerpo) cuerpo = '<tr><td colspan="4" class="muted">Sin prestaciones para ese filtro. Cargá el nomenclador/contratos primero.</td></tr>';
 
   cont.innerHTML = `
     <table class="tabla">
       <thead><tr><th>Prestación</th><th>Pago al médico</th><th></th><th></th></tr></thead>
-      <tbody>${filas.join('')}${insumosBloque}</tbody>
+      <tbody>${cuerpo}</tbody>
     </table>
     <p class="muted" style="margin-top:6px">${mid == null
-      ? 'Valores generales (todos los médicos). Elegí un médico arriba para ponerle un valor especial.'
+      ? 'Valores generales (todos los médicos). La fila «valor general» de cada bloque se usa cuando un tipo puntual no tiene valor propio. Elegí un médico arriba para ponerle un valor especial. En «Derivaciones» elegí esa categoría para fijar el pago por tipo derivado.'
       : 'Valor especial para <strong>' + escHtml(medicoNombre(mid)) + '</strong>. Vacío = usa el general. Los insumos son siempre generales.'}</p>`;
 }
 
