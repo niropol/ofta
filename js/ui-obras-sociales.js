@@ -42,7 +42,7 @@ function renderOS() {
       <td class="acc">
         <button onclick="editarOS(${o.id})">Editar</button>
         <button onclick="toggleEstadoOS(${o.id})">${inactiva ? 'Reactivar' : 'Inactivar'}</button>
-        <button class="danger" onclick="eliminarOS(${o.id})">Eliminar</button>
+        <button class="danger" onclick="eliminarOSUI(${o.id})">Eliminar</button>
       </td>
     </tr>`;
   }).join('');
@@ -121,6 +121,7 @@ function toggleEstadoOS(id) {
   return o;
 }
 
+// Motor: elimina si no está en uso y devuelve true/false (sin confirmación).
 function eliminarOS(id) {
   const o = DB.obrasSociales.find(x => x.id === Number(id));
   if (!o) return false;
@@ -129,11 +130,19 @@ function eliminarOS(id) {
     alert(`No se puede eliminar "${o.nombre}": hay ${ref} prestación(es) que la usan. Inactivala en su lugar.`);
     return false;
   }
-  if (typeof confirm === 'function' && !confirm(`¿Eliminar definitivamente la obra social "${o.nombre}"? Queda registrado en auditoría.`)) return false;
   const antes = JSON.parse(JSON.stringify(o));
   DB.obrasSociales = DB.obrasSociales.filter(x => x.id !== o.id);
   registrarAuditoria('baja', 'obraSocial', o.id, antes, null);
   marcarCambios('obrasSociales');
-  renderOS(); poblarDatalistOS();
   return true;
+}
+// UI: confirma y refresca.
+function eliminarOSUI(id) {
+  const o = DB.obrasSociales.find(x => x.id === Number(id));
+  if (!o) return;
+  if (_referenciasOS(o.nombre) > 0) { eliminarOS(id); return; }  // muestra el aviso de bloqueo
+  confirmarUI(`¿Eliminar definitivamente la obra social "${o.nombre}"? Queda registrado en auditoría.`).then(ok => {
+    if (!ok) return;
+    if (eliminarOS(id) && typeof sincronizarUI === 'function') sincronizarUI(); else { renderOS(); poblarDatalistOS(); }
+  });
 }

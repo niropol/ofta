@@ -106,11 +106,13 @@ function eliminarSede(id) {
   const ref = _referenciasSede(s.id);
   if (ref.total > 0) { alert(`No se puede eliminar "${s.nombre}": tiene ${ref.med} médico(s), ${ref.prest} prestación(es) y ${ref.caja} movimiento(s) de caja. Inactivala en su lugar.`); return; }
   if (DB.sedes.filter(x => x.id !== s.id).length === 0) { alert('Debe existir al menos una sede.'); return; }
-  if (typeof confirm === 'function' && !confirm(`¿Eliminar la sede "${s.nombre}"? Queda en auditoría.`)) return;
-  const antes = JSON.parse(JSON.stringify(s));
-  DB.sedes = DB.sedes.filter(x => x.id !== s.id);
-  if (sedeActiva() === s.id) DB.config.sedeActiva = DB.sedes[0].id;
-  registrarAuditoria('baja', 'sede', s.id, antes, null);
-  marcarCambios('sedes');
-  if (typeof sincronizarUI === 'function') sincronizarUI(); else renderSedes();
+  confirmarUI(`¿Eliminar la sede "${s.nombre}"? Queda en auditoría.`).then(ok => {
+    if (!ok) return;
+    const antes = JSON.parse(JSON.stringify(s));
+    DB.sedes = DB.sedes.filter(x => x.id !== s.id);
+    if (sedeActiva() === s.id) DB.config.sedeActiva = DB.sedes[0].id;
+    registrarAuditoria('baja', 'sede', s.id, antes, null);
+    marcarCambios('sedes');
+    if (typeof sincronizarUI === 'function') sincronizarUI(); else renderSedes();
+  });
 }

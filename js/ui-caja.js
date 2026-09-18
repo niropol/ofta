@@ -128,10 +128,12 @@ function guardarMovimientoCaja() {
 }
 
 function eliminarMovimientoCajaUI(id) {
-  if (typeof confirm === 'function' && !confirm('¿Eliminar este movimiento de caja? Queda registrado en auditoría.')) return;
-  const r = eliminarMovimientoCaja(id);
-  if (!r.ok && r.automatico) { alert('Es un pago a médico automático: se corrige desde la liquidación (Etapa 6).'); return; }
-  renderCaja();
+  confirmarUI('¿Eliminar este movimiento de caja? Queda registrado en auditoría.').then(ok => {
+    if (!ok) return;
+    const r = eliminarMovimientoCaja(id);
+    if (!r.ok && r.automatico) { alert('Es un pago a médico automático: se corrige desde la liquidación (Etapa 6).'); return; }
+    if (typeof sincronizarUI === 'function') sincronizarUI(); else renderCaja();
+  });
 }
 
 // ── Cierre / arqueo ──

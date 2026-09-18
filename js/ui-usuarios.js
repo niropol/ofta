@@ -96,10 +96,12 @@ function toggleEstadoUsuarioUI(id) {
 }
 
 function eliminarUsuarioUI(id) {
-  if (typeof confirm === 'function' && !confirm('¿Eliminar este usuario? Queda registrado en auditoría.')) return;
-  const r = eliminarUsuario(id);
-  if (!r.ok) { alert('No se puede eliminar: ' + (r.motivo || '')); return; }
-  renderUsuarios(); poblarActuandoComo();
+  confirmarUI('¿Eliminar este usuario? Queda registrado en auditoría.').then(ok => {
+    if (!ok) return;
+    const r = eliminarUsuario(id);
+    if (!r.ok) { alert('No se puede eliminar: ' + (r.motivo || '')); return; }
+    renderUsuarios(); poblarActuandoComo();
+  });
 }
 
 // ── Visor de auditoría ──

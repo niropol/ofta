@@ -94,12 +94,14 @@ function eliminarConsultorio(id) {
   const c = DB.consultorios.find(x => x.id === Number(id));
   if (!c) return;
   if (_referenciasConsultorio(c.id) > 0) { alert('No se puede eliminar: está en uso por prestaciones u horarios. Inactivalo.'); return; }
-  if (typeof confirm === 'function' && !confirm(`¿Eliminar el consultorio "${c.nombre}"?`)) return;
-  const antes = JSON.parse(JSON.stringify(c));
-  DB.consultorios = DB.consultorios.filter(x => x.id !== c.id);
-  registrarAuditoria('baja', 'consultorio', c.id, antes, null);
-  marcarCambios('consultorios');
-  if (typeof sincronizarUI === 'function') sincronizarUI(); else renderConsultorios();
+  confirmarUI(`¿Eliminar el consultorio "${c.nombre}"?`).then(ok => {
+    if (!ok) return;
+    const antes = JSON.parse(JSON.stringify(c));
+    DB.consultorios = DB.consultorios.filter(x => x.id !== c.id);
+    registrarAuditoria('baja', 'consultorio', c.id, antes, null);
+    marcarCambios('consultorios');
+    if (typeof sincronizarUI === 'function') sincronizarUI(); else renderConsultorios();
+  });
 }
 
 // ── Agenda semanal (grilla): columnas = días, bloques por médico ──

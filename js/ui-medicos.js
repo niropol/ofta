@@ -56,7 +56,7 @@ function renderMedicos() {
       <div class="med-acciones">
         <button onclick="editarMedico(${m.id})">Editar</button>
         <button onclick="toggleEstadoMedico(${m.id})">${inactivo ? 'Reactivar' : 'Inactivar'}</button>
-        <button class="danger" onclick="eliminarMedico(${m.id})">Eliminar</button>
+        <button class="danger" onclick="eliminarMedicoUI(${m.id})">Eliminar</button>
       </div>
     </div>`;
   }).join('');
@@ -163,6 +163,7 @@ function toggleEstadoMedico(id) {
 }
 
 // ── Eliminar (baja física). Bloquea si hay registros asociados (sin huérfanos). ──
+// Motor: elimina si no hay referencias y devuelve true/false (sin confirmación).
 function eliminarMedico(id) {
   const m = DB.medicos.find(x => x.id === Number(id));
   if (!m) return false;
@@ -171,11 +172,20 @@ function eliminarMedico(id) {
     alert(`No se puede eliminar a ${m.nombre}: tiene ${ref.prest} prestación(es), ${ref.reglas} regla(s) de reparto y ${ref.liq} liquidación(es) asociadas.\n\nInactivalo en su lugar (deja de aparecer para cargar, pero conserva el historial).`);
     return false;
   }
-  if (typeof confirm === 'function' && !confirm(`¿Eliminar definitivamente a ${m.nombre}? Esta acción queda registrada en auditoría.`)) return false;
   const antes = JSON.parse(JSON.stringify(m));
   DB.medicos = DB.medicos.filter(x => x.id !== m.id);
   registrarAuditoria('baja', 'medico', m.id, antes, null);
   marcarCambios('medicos');
-  renderMedicos();
   return true;
+}
+// UI: confirma y refresca.
+function eliminarMedicoUI(id) {
+  const m = DB.medicos.find(x => x.id === Number(id));
+  if (!m) return;
+  const ref = _referenciasMedico(m.id);
+  if (ref.total > 0) { eliminarMedico(id); return; }  // muestra el aviso de bloqueo
+  confirmarUI(`¿Eliminar definitivamente a ${m.nombre}? Esta acción queda registrada en auditoría.`).then(ok => {
+    if (!ok) return;
+    if (eliminarMedico(id) && typeof sincronizarUI === 'function') sincronizarUI(); else renderMedicos();
+  });
 }

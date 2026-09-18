@@ -107,14 +107,15 @@ function aumentarContratosOSUI() {
   const pct = (document.getElementById('ctrAumento') || {}).value;
   if (!os) { alert('Elegí una obra social.'); return; }
   if (pct === '' || isNaN(Number(pct))) { alert('Ingresá el porcentaje.'); return; }
-  if (typeof confirm === 'function' && !confirm('¿Aumentar un ' + pct + '% todos los contratos de ' + os + '? Rige desde el 1° de este mes.')) return;
-  let r; try { r = aumentarContratosOS(os, pct, hoyISO().slice(0, 7) + '-01'); }
-  catch (e) { alert(e.message); return; }
-  document.getElementById('ctrAumento').value = '';
-  _msgImport('Actualizados ' + r.actualizados + ' contrato(s) de ' + os + ' (+' + pct + '%).', false);
-  renderContratos();
-  if (typeof renderPanelMes === 'function') renderPanelMes();
-  _avisoCobrosRegistrados(os);
+  confirmarUI('¿Aumentar un ' + pct + '% todos los contratos de ' + os + '? Rige desde el 1° de este mes.').then(ok => {
+    if (!ok) return;
+    let r; try { r = aumentarContratosOS(os, pct, hoyISO().slice(0, 7) + '-01'); }
+    catch (e) { alert(e.message); return; }
+    document.getElementById('ctrAumento').value = '';
+    _msgImport('Actualizados ' + r.actualizados + ' contrato(s) de ' + os + ' (+' + pct + '%).', false);
+    if (typeof sincronizarUI === 'function') sincronizarUI(); else { renderContratos(); if (typeof renderPanelMes === 'function') renderPanelMes(); }
+    _avisoCobrosRegistrados(os);
+  });
 }
 
 // CSV simple → objetos (separador coma o punto y coma).

@@ -201,11 +201,13 @@ function inactivarPrestacionUI(grupo) {
 function eliminarPrestacionUI(grupo) {
   const v = versionActual(grupo);
   if (!v) return;
-  if (typeof confirm === 'function' && !confirm(`¿Eliminar definitivamente "${v.descripcion}" y todo su historial de precios? Queda registrado en auditoría.`)) return;
-  const r = eliminarPrestacion(grupo);
-  if (!r.ok) {
-    alert(`No se puede eliminar: hay ${r.referencias} prestación(es) realizada(s) que usan este ítem. Inactivalo en su lugar.`);
-    return;
-  }
-  if (typeof sincronizarUI === "function") sincronizarUI(); else renderNomenclador();
+  confirmarUI(`¿Eliminar definitivamente "${v.descripcion}" y todo su historial de precios? Queda registrado en auditoría.`).then(ok => {
+    if (!ok) return;
+    const r = eliminarPrestacion(grupo);
+    if (!r.ok) {
+      alert(`No se puede eliminar: hay ${r.referencias} prestación(es) realizada(s) que usan este ítem. Inactivalo en su lugar.`);
+      return;
+    }
+    if (typeof sincronizarUI === "function") sincronizarUI(); else renderNomenclador();
+  });
 }

@@ -275,14 +275,16 @@ function anularPrestacionUI(id) {
   if (typeof renderCargaDiaria === 'function') renderCargaDiaria();
 }
 function reactivarPrestacionUI(id) {
-  if (typeof confirm === 'function' && !confirm('¿Reactivar esta prestación anulada?')) return;
-  reactivarPrestacion(id);
-  renderPrestaciones();
-  if (typeof renderCargaDiaria === 'function') renderCargaDiaria();
+  confirmarUI('¿Reactivar esta prestación anulada?').then(ok => {
+    if (!ok) return;
+    reactivarPrestacion(id);
+    if (typeof sincronizarUI === 'function') sincronizarUI(); else { renderPrestaciones(); if (typeof renderCargaDiaria === 'function') renderCargaDiaria(); }
+  });
 }
 function eliminarPrestacionRealizadaUI(id) {
-  if (typeof confirm === 'function' && !confirm('¿Eliminar definitivamente esta prestación? Para dejar constancia, conviene «Anular» en su lugar. Queda registrado en auditoría.')) return;
-  eliminarPrestacionRealizada(id);
-  renderPrestaciones();
-  if (typeof renderCargaDiaria === 'function') renderCargaDiaria();
+  confirmarUI('¿Eliminar definitivamente esta prestación? Para dejar constancia, conviene «Anular» en su lugar. Queda registrado en auditoría.').then(ok => {
+    if (!ok) return;
+    eliminarPrestacionRealizada(id);
+    if (typeof sincronizarUI === 'function') sincronizarUI(); else { renderPrestaciones(); if (typeof renderCargaDiaria === 'function') renderCargaDiaria(); }
+  });
 }
