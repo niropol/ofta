@@ -120,6 +120,12 @@ const DB = {
   //    { id, obraSocial, grupoNomenclador, descripcion, valor, vigenciaDesde, vigenciaHasta, estado } ──
   contratos: [],
 
+  // ── Alias de contrato: equivalencia aprendida entre cómo nombra una OS una
+  //    prestación (código y/o texto) y la prestación CANÓNICA del nomenclador.
+  //    Evita duplicados al importar contratos de varias OS con distinta nomenclatura.
+  //    { id, obraSocial, codigo, textoNorm, textoOrig, grupoNomenclador } ──
+  aliasContrato: [],
+
   // ── Valores fijos a médicos (EGRESO): monto fijo por categoría (consulta/estudio/
   //    cirugia/practica/derivacion), general (medicoId=null) o por médico, con vigencia. ──
   valoresMedico: [],
@@ -161,7 +167,7 @@ const DB = {
 // Colecciones que se persisten a la nube (ver persistencia.js). config/nextId van aparte.
 const COLECCIONES = [
   'usuarios', 'sedes', 'consultorios', 'medicos', 'obrasSociales', 'pacientes', 'nomenclador',
-  'contratos', 'valoresMedico', 'reglasReparto', 'horarios', 'prestacionesRealizadas',
+  'contratos', 'aliasContrato', 'valoresMedico', 'reglasReparto', 'horarios', 'prestacionesRealizadas',
   'cobros', 'gastos', 'pagosMedicos', 'cajaMovimientos', 'cajaCierres', 'auditoria',
 ];
 

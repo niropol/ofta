@@ -90,6 +90,9 @@ const EXPONER = [
   'comparacionCobroSAM', 'comparacionCobrosMes',
   'insumoModo', 'setInsumoModo', 'costoInsumosDelMes',
   'renderContratos', 'guardarValorContratoUI', 'registrarCobroSAMUI',
+  // matcheo de contratos (alias + sugerencias)
+  'similitudTexto', 'buscarAliasContrato', 'guardarAliasContrato', 'olvidarAliasContrato',
+  'sugerirPrestacionContrato', 'planImportarContratos', 'aplicarImportacionContratos',
   // diagnóstico (Etapa 9)
   'runSelfTests', 'diagnosticoDatos', 'estadoNube', 'verificarNube',
   // navegación
@@ -130,7 +133,7 @@ export function resetDatos(app) {
   const D = app.DB;
   ['medicos', 'obrasSociales', 'pacientes', 'nomenclador', 'reglasReparto',
    'prestacionesRealizadas', 'cobros', 'gastos', 'pagosMedicos', 'cajaMovimientos',
-   'cajaCierres', 'contratos', 'valoresMedico', 'consultorios', 'horarios',
+   'cajaCierres', 'contratos', 'aliasContrato', 'valoresMedico', 'consultorios', 'horarios',
    'auditoria'].forEach(c => { D[c] = []; });
   return D;
 }

@@ -73,6 +73,8 @@
   .muted { color: var(--muted); font-size: 12.5px; }
   .badge-inactivo { background: #fee2e2; color: var(--danger); font-size: 11px;
     padding: 2px 7px; border-radius: 10px; }
+  .badge-ok { background: #e7f2d9; color: var(--primario-osc); font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+  .badge-warn { background: #fef3c7; color: #92400e; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
   .med-acciones { margin-top: 12px; display: flex; gap: 6px; flex-wrap: wrap; }
   .med-acciones button { background: #f1f5f9; border: 1px solid var(--borde); border-radius: 7px;
     padding: 6px 11px; cursor: pointer; font-size: 12.5px; transition: background .14s, border-color .14s; }
@@ -866,11 +868,30 @@
   </div>
 </div>
 
+<!-- Revisión de importación de contratos: matchear cada línea con la prestación del catálogo -->
+<div id="modalImportRev" class="modal">
+  <div class="modal-box" style="width:920px">
+    <h3>Revisar importación de contratos</h3>
+    <p class="muted" style="margin:0 0 10px">Confirmá a qué <strong>prestación del catálogo</strong> corresponde cada línea. Lo que confirmes se recuerda por obra social para la próxima. Nada se guarda hasta «Confirmar».</p>
+    <div class="filtros" style="margin-bottom:10px">
+      <label class="muted">Vigencia desde <input type="month" id="impVigencia"></label>
+      <span id="impResumen" class="muted"></span>
+    </div>
+    <div class="tabla-wrap" style="max-height:52vh;overflow:auto"><div id="impRevBody"></div></div>
+    <div id="impRevMsg"></div>
+    <div class="modal-acciones">
+      <button class="btn secundario" onclick="cerrarModalImportRev()">Cancelar</button>
+      <button class="btn" onclick="confirmarImportacionUI()">Confirmar importación</button>
+    </div>
+  </div>
+</div>
+
 <script src="js/datos.js?v=1"></script>
 <script src="js/auditoria.js?v=1"></script>
 <script src="js/usuarios.js?v=1"></script>
 <script src="js/nomenclador.js?v=1"></script>
 <script src="js/contratos.js?v=1"></script>
+<script src="js/matching.js?v=1"></script>
 <script src="js/prestaciones.js?v=1"></script>
 <script src="js/honorarios.js?v=1"></script>
 <script src="js/caja.js?v=1"></script>

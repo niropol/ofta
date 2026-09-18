@@ -127,16 +127,31 @@ function _csvAObjetos(text) {
   return lines.slice(1).map(l => { const c = l.split(sep); const o = {}; heads.forEach((h, i) => o[h] = (c[i] || '').trim()); return o; });
 }
 
-// Reconoce las columnas por nombre (sin importar acentos/mayúsculas).
+// Reconoce las columnas por nombre (sin importar acentos/mayúsculas). Separa
+// código y descripción cuando vienen en columnas distintas; si no, usa lo que haya.
 function _normalizarFilaContrato(row) {
   const keys = Object.keys(row);
   const norm = s => (s == null ? '' : String(s)).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-  const find = re => { const k = keys.find(k => re.test(norm(k))); return k != null ? row[k] : ''; };
+  const find = res => { for (const re of res) { const k = keys.find(k => re.test(norm(k))); if (k != null && String(row[k]).trim() !== '') return row[k]; } return ''; };
+  const codigo = String(find([/^codigo$/, /codigo/, /\bcod\b/])).trim();
+  const descripcion = String(find([/prestac/, /descrip/, /cirug/, /practica/, /estudio/, /nombre/])).trim();
+  const categoria = String(find([/categor/, /^tipo$/])).trim();
   return {
-    obraSocial: String(find(/obra|social|^os$/)).trim(),
-    ref: String(find(/prestac|codigo|cirug|descrip|practica|nombre/)).trim(),
-    valor: find(/valor|precio|monto|importe/),
+    obraSocial: String(find([/obra/, /social/, /^os$/])).trim(),
+    codigo, descripcion,
+    categoria: _mapCategoriaTexto(categoria),
+    valor: find([/valor/, /precio/, /monto/, /importe/]),
   };
+}
+
+// Mapea un texto libre de categoría a un id del nomenclador (o '' si no aplica).
+function _mapCategoriaTexto(t) {
+  const n = (t || '').toLowerCase();
+  if (/consult/.test(n)) return 'consulta';
+  if (/cirug/.test(n)) return 'cirugia';
+  if (/practic|práctic/.test(n)) return 'practica';
+  if (/estudio|estud/.test(n)) return 'realizacion_estudio';
+  return '';
 }
 
 function _parsearArchivoContratos(data, name) {
@@ -147,7 +162,7 @@ function _parsearArchivoContratos(data, name) {
   } else {
     rows = _csvAObjetos(data);
   }
-  return rows.map(_normalizarFilaContrato).filter(f => f.obraSocial || f.ref);
+  return rows.map(_normalizarFilaContrato).filter(f => f.obraSocial || f.codigo || f.descripcion);
 }
 
 function importarContratosArchivo(input) {
@@ -158,23 +173,129 @@ function importarContratosArchivo(input) {
     let filas;
     try { filas = _parsearArchivoContratos(e.target.result, file.name); }
     catch (err) { _msgImport('No se pudo leer el archivo: ' + err.message, true); return; }
-    if (!filas.length) { _msgImport('No se reconocieron filas. El archivo necesita encabezados: obra social, prestación (o código), valor.', true); return; }
-    const r = importarContratos(filas, hoyISO().slice(0, 7) + '-01');
-    const errTxt = r.errores.length ? ' ' + r.errores.length + ' con error: ' + r.errores.slice(0, 4).map(x => 'fila ' + x.fila + ' (' + x.motivo + ')').join('; ') + (r.errores.length > 4 ? '…' : '') : '';
-    _msgImport('Importados ' + r.ok + ' contrato(s).' + errTxt, r.ok === 0 && r.errores.length > 0);
+    if (!filas.length) { _msgImport('No se reconocieron filas. El archivo necesita encabezados: obra social, código y/o prestación, valor.', true); return; }
     input.value = '';
-    renderContratos();
-    if (typeof renderPanelMes === 'function') renderPanelMes();
+    abrirRevisionImport(planImportarContratos(filas));
   };
   if (/\.csv$/i.test(file.name)) reader.readAsText(file); else reader.readAsArrayBuffer(file);
+}
+
+// ── Revisión de importación (confirmar el matcheo antes de guardar) ──
+let _planImportActual = [];
+
+function cerrarModalImportRev() { const m = document.getElementById('modalImportRev'); if (m) m.style.display = 'none'; }
+
+function _badgeMatch(m) {
+  if (m.estado === 'alias') return '<span class="badge-ok">✓ recordado</span>';
+  if (m.estado === 'codigo') return '<span class="badge-ok">✓ código</span>';
+  if (m.estado === 'exacto') return '<span class="badge-ok">✓ exacto</span>';
+  if (m.estado === 'sugerido') return '<span class="badge-warn">~ ' + Math.round(m.score * 100) + '%</span>';
+  return '<span class="badge-inactivo">sin match</span>';
+}
+
+// Opciones del catálogo agrupadas por categoría + acciones especiales.
+function _opcionesCatalogoImport(selGrupo, estado) {
+  const items = listarPrestaciones({ incluirInactivos: false }).filter(n => n.categoria !== 'insumo');
+  const cats = ['consulta', 'realizacion_estudio', 'practica', 'cirugia'];
+  const label = id => (categoriaInfo(id) || {}).label || id;
+  let opts = '';
+  // Placeholder solo si no hay selección (sin match): fuerza decidir.
+  const haySel = selGrupo != null;
+  opts += `<option value=""${!haySel ? ' selected' : ''} disabled>— elegí una opción —</option>`;
+  cats.forEach(cat => {
+    const de = items.filter(n => n.categoria === cat);
+    if (!de.length) return;
+    opts += `<optgroup label="${escHtml(label(cat))}">`;
+    de.forEach(n => { opts += `<option value="${n.grupo}"${n.grupo === selGrupo ? ' selected' : ''}>${escHtml(n.descripcion)}${n.codigo ? ' (' + escHtml(n.codigo) + ')' : ''}</option>`; });
+    opts += `</optgroup>`;
+  });
+  opts += `<option value="__crear__">➕ Crear prestación nueva…</option>`;
+  opts += `<option value="__omitir__">⏭ Omitir esta línea</option>`;
+  return opts;
+}
+
+function _opcionesCategoriaImport(sel) {
+  return ['consulta', 'realizacion_estudio', 'practica', 'cirugia']
+    .map(c => `<option value="${c}"${c === sel ? ' selected' : ''}>${escHtml((categoriaInfo(c) || {}).label || c)}</option>`).join('');
+}
+
+function abrirRevisionImport(plan) {
+  _planImportActual = plan;
+  const cont = document.getElementById('impRevBody');
+  const vig = document.getElementById('impVigencia');
+  if (vig && !vig.value) vig.value = hoyISO().slice(0, 7);
+  const rows = plan.map((p, i) => {
+    const invalida = p.problemas.length > 0;
+    const selGrupo = invalida ? null : p.match.grupo;
+    const catInicial = (p.match.candidato && p.match.candidato.categoria) || p.categoria || 'realizacion_estudio';
+    const archivo = `<strong>${escHtml(p.obraSocial || '—')}</strong>` +
+      (p.codigo ? ' · <span class="muted">' + escHtml(p.codigo) + '</span>' : '') +
+      '<br>' + escHtml(p.descripcion || '—') +
+      ' · <span class="muted">' + (p.valor != null ? fmtMoneda(p.valor, 'ARS') : '¿valor?') + '</span>';
+    const estadoCell = invalida ? '<span class="badge-inactivo">' + escHtml(p.problemas.join(', ')) + '</span>' : _badgeMatch(p.match);
+    const selDisabled = invalida ? ' disabled' : '';
+    return `<tr data-i="${i}">
+      <td style="min-width:230px">${archivo}</td>
+      <td>${estadoCell}</td>
+      <td>
+        <select id="imp_g_${i}" onchange="_impFilaChange(${i})" style="min-width:230px"${selDisabled}>${_opcionesCatalogoImport(selGrupo, p.match.estado)}</select>
+        <div id="imp_crear_${i}" style="display:none;margin-top:6px">
+          <select id="imp_cat_${i}" title="Categoría de la prestación nueva">${_opcionesCategoriaImport(catInicial)}</select>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+  cont.innerHTML = `<table class="tabla"><thead><tr><th>Del archivo</th><th>Detección</th><th>Corresponde a</th></tr></thead><tbody>${rows}</tbody></table>`;
+  const auto = plan.filter(p => !p.problemas.length && p.match.grupo != null).length;
+  const rev = plan.length - auto;
+  const resumen = document.getElementById('impResumen');
+  if (resumen) resumen.textContent = plan.length + ' línea(s): ' + auto + ' reconocida(s), ' + rev + ' para revisar.';
+  document.getElementById('impRevMsg').innerHTML = '';
+  const m = document.getElementById('modalImportRev'); if (m) m.style.display = 'flex';
+  plan.forEach((p, i) => _impFilaChange(i));   // mostrar el sub-select "crear" si corresponde
+}
+
+function _impFilaChange(i) {
+  const sel = document.getElementById('imp_g_' + i);
+  const box = document.getElementById('imp_crear_' + i);
+  if (sel && box) box.style.display = (sel.value === '__crear__') ? 'block' : 'none';
+}
+
+function confirmarImportacionUI() {
+  const desde = ((document.getElementById('impVigencia') || {}).value || hoyISO().slice(0, 7)) + '-01';
+  const decisiones = [];
+  let sinResolver = 0;
+  _planImportActual.forEach((p, i) => {
+    if (p.problemas.length) return;   // filas inválidas del archivo: se ignoran
+    const sel = document.getElementById('imp_g_' + i);
+    const v = sel ? sel.value : '';
+    if (v === '' ) { sinResolver++; return; }
+    if (v === '__omitir__') { decisiones.push({ ...p, accion: 'omitir' }); return; }
+    if (v === '__crear__') {
+      const cat = (document.getElementById('imp_cat_' + i) || {}).value || 'realizacion_estudio';
+      decisiones.push({ ...p, accion: 'crear', categoria: cat, recordar: true });
+      return;
+    }
+    decisiones.push({ ...p, accion: 'asignar', grupo: Number(v), recordar: true });
+  });
+  if (sinResolver > 0) {
+    document.getElementById('impRevMsg').innerHTML = '<div class="diag-err" style="margin:8px 0">Quedan ' + sinResolver + ' línea(s) sin resolver (marcadas «sin match»): elegí una prestación, «Crear nueva» u «Omitir».</div>';
+    return;
+  }
+  const r = aplicarImportacionContratos(decisiones, desde);
+  cerrarModalImportRev();
+  const errTxt = r.errores.length ? ' · ' + r.errores.length + ' con error: ' + r.errores.slice(0, 3).map(x => 'fila ' + x.fila + ' (' + x.motivo + ')').join('; ') : '';
+  _msgImport('Importados ' + r.ok + ' contrato(s)' + (r.creadas ? ' (' + r.creadas + ' prestación/es nueva/s)' : '') + '.' + errTxt, r.ok === 0 && r.errores.length > 0);
+  if (typeof sincronizarUI === 'function') sincronizarUI(); else { renderContratos(); if (typeof renderPanelMes === 'function') renderPanelMes(); }
 }
 
 function descargarPlantillaContratos() {
   const items = listarPrestaciones({ incluirInactivos: false }).filter(n => n.categoria !== 'insumo');
   const os = (document.getElementById('ctrOS') || {}).value || 'OSDE';
-  const filas = [['obra social', 'codigo', 'prestacion', 'valor']];
-  if (items.length) items.forEach(c => filas.push([os, c.codigo || '', c.descripcion, '']));
-  else filas.push([os, '', '(cargá prestaciones primero)', '']);
+  const filas = [['obra social', 'codigo', 'prestacion', 'categoria', 'valor']];
+  const catLabel = id => (categoriaInfo(id) || {}).label || id;
+  if (items.length) items.forEach(c => filas.push([os, c.codigo || '', c.descripcion, catLabel(c.categoria), '']));
+  else filas.push([os, '', '(cargá prestaciones primero)', '', '']);
   const esc = x => /[",;\n]/.test(String(x)) ? '"' + String(x).replace(/"/g, '""') + '"' : String(x);
   const csv = filas.map(f => f.map(esc).join(',')).join('\n');
   const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
