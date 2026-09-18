@@ -154,5 +154,5 @@ function mensajeLiquidacionWhatsApp(l) {
 
   const lineaDeriv = porRol.derivador > 0 ? `↪️ Derivaciones → *${fmtMoneda(porRol.derivador, 'ARS')}*\n` : '';
 
-  return `👁 *SAM Oftalmología*\n📋 *Liquidación ${l.mes}*\n\n👨‍⚕️ ${nombre}\n\n${detalle}\n💰 *Honorarios:*\n🩺 Realizador → *${fmtMoneda(porRol.realizador, 'ARS')}*\n${lineaDeriv}\n*A depositar (transferencia): ${fmtMoneda(l.total, 'ARS')}*\n\nPor favor remitir factura para procesar el pago. ¡Gracias!`;
+  return `👁 *OFTA*\n📋 *Liquidación ${l.mes}*\n\n👨‍⚕️ ${nombre}\n\n${detalle}\n💰 *Honorarios:*\n🩺 Realizador → *${fmtMoneda(porRol.realizador, 'ARS')}*\n${lineaDeriv}\n*A depositar (transferencia): ${fmtMoneda(l.total, 'ARS')}*\n\nPor favor remitir factura para procesar el pago. ¡Gracias!`;
 }

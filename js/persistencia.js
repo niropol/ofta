@@ -193,6 +193,22 @@ async function guardarEnNube(automatico = false) {
   }
 }
 
+// ── Botón "Actualizar" del header: guarda YA y refresca toda la UI ──
+//    En modo local persiste en localStorage; con nube conectada, hace upsert.
+function actualizarApp() {
+  const btn = (typeof document !== 'undefined') && document.querySelector('.btn-actualizar');
+  try {
+    guardarLocal();                                   // respaldo local inmediato
+    if (typeof sincronizarUI === 'function') sincronizarUI();  // que la info viaje a todas las vistas
+    if (sb || initSupabase()) { guardarEnNube(false); }        // nube (si está)
+    else { _setIndicador('guardado'); }
+    if (btn) { btn.classList.add('ok'); btn.textContent = '✓ Actualizado'; setTimeout(() => { btn.classList.remove('ok'); btn.textContent = '↻ Actualizar'; }, 1400); }
+  } catch (e) {
+    console.error('actualizarApp:', e);
+    if (btn) { btn.textContent = '⚠ Error'; setTimeout(() => { btn.textContent = '↻ Actualizar'; }, 1600); }
+  }
+}
+
 // ── Diagnóstico de nube (para el botón "Verificar nube" del Admin) ──
 function estadoNube() {
   return {

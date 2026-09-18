@@ -120,14 +120,14 @@ function _copiar(txt, titulo) { copiarTextoUI(titulo || 'Copiar', txt); }
 function exportarResumenWhatsApp(mes) { _copiar(resumenMesTextoWhatsApp(mes), 'Resumen del mes — ' + mes); }
 function copiarResumenMedicoWhatsApp(medicoId, mes) {
   const r = resumenMedicoMes(Number(medicoId), mes);
-  const txt = `👁 *SAM Oftalmología* — ${medicoNombre(Number(medicoId))}\n📋 ${mes}\n\n🧾 Prestaciones: *${r.cantidad}*\n👨‍⚕️ Honorarios: *${fmtMoneda(r.total, 'ARS')}*`;
+  const txt = `👁 *OFTA* — ${medicoNombre(Number(medicoId))}\n📋 ${mes}\n\n🧾 Prestaciones: *${r.cantidad}*\n👨‍⚕️ Honorarios: *${fmtMoneda(r.total, 'ARS')}*`;
   _copiar(txt, 'Informe médico — ' + medicoNombre(Number(medicoId)));
 }
 
 function exportarResumenPDF(mes) {
   const r = resumenMes(mes);
   const cats = Object.keys(r.porCategoria).sort().map(c => `<tr><td>${escHtml(_catLabelSt(c))}</td><td style="text-align:right">${r.porCategoria[c]}</td></tr>`).join('');
-  const html = `<h1>SAM Oftalmología</h1><h2>Resumen mensual — ${escHtml(mes)}</h2>
+  const html = `<h1>OFTA — Oftalmología</h1><h2>Resumen mensual — ${escHtml(mes)}</h2>
     <table><tbody>
       <tr><td>Prestaciones</td><td style="text-align:right">${r.totalPrestaciones}</td></tr>
       <tr><td>Consultas</td><td style="text-align:right">${r.consultas}</td></tr>
@@ -145,7 +145,7 @@ function exportarResumenPDF(mes) {
 function verResumenMedicoPDF(medicoId, mes) {
   const r = resumenMedicoMes(Number(medicoId), mes);
   const filas = r.detalle.map(d => `<tr><td>${escHtml(d.fecha)}</td><td>${escHtml(d.descripcion)}</td><td>${d.rol === 'derivador' ? 'Derivador' : 'Realizador'}</td><td style="text-align:right">${fmtMoneda(d.monto, 'ARS')}</td></tr>`).join('');
-  const html = `<h1>SAM Oftalmología</h1><h2>Informe del médico — ${escHtml(mes)}</h2>
+  const html = `<h1>OFTA — Oftalmología</h1><h2>Informe del médico — ${escHtml(mes)}</h2>
     <p><strong>${escHtml(medicoNombre(Number(medicoId)))}</strong> · Prestaciones: ${r.cantidad}</p>
     <table><thead><tr><th>Fecha</th><th>Prestación</th><th>Rol</th><th style="text-align:right">Honorario</th></tr></thead>
       <tbody>${filas}</tbody>

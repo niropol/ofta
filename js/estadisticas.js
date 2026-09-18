@@ -77,7 +77,7 @@ function resumenMesTextoWhatsApp(mes) {
   const r = resumenMes(mes);
   const cats = Object.keys(r.porCategoria).sort()
     .map(c => `   • ${(categoriaInfo(c) || {}).label || c}: ${r.porCategoria[c]}`).join('\n');
-  return `👁 *SAM Oftalmología* — Resumen ${mes}\n\n` +
+  return `👁 *OFTA* — Resumen ${mes}\n\n` +
     `🧾 Prestaciones: *${r.totalPrestaciones}* (consultas: ${r.consultas})\n` +
     (cats ? cats + '\n' : '') +
     (r.anuladas ? `⚠️ Anuladas: ${r.anuladas}\n` : '') +

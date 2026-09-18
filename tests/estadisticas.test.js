@@ -71,7 +71,7 @@ describe('Estadísticas — resumen del mes', () => {
     app.registrarPrestacion({ fecha: '2026-03-01', categoria: 'consulta', grupoNomenclador: c.grupo, medicoRealizadorId: 501 });
     app.registrarMovimientoCaja({ fecha: '2026-03-05', tipo: 'ingreso', descripcion: 'Pago SAM', monto: 100000, moneda: 'ARS', medioPago: 'transferencia' });
     const txt = app.resumenMesTextoWhatsApp('2026-03');
-    expect(txt).toContain('SAM Oftalmología');
+    expect(txt).toContain('OFTA');
     expect(txt).toContain('2026-03');
     const csv = app.csvContable('2026-03');
     expect(csv.split('\n')[0]).toContain('Fecha');

@@ -13,10 +13,10 @@
   :root {
     --bg: #eef2f7; --panel: #ffffff; --texto: #172033; --muted: #6b7789;
     --borde: #e4e9f0; --borde-fuerte: #d3dae4;
-    --primario: #0f7d91; --primario-osc: #0b6072; --primario-soft: #e2f3f6;
-    --acento: #16a3b8;
-    --danger: #c33636; --ok: #15803d; --warn: #b45309;
-    --grad: linear-gradient(120deg, #0d6c80 0%, #12889e 52%, #1ba7bd 100%);
+    --primario: #6b7a3b; --primario-osc: #545f2c; --primario-soft: #eef1e0;
+    --acento: #8a9a4e;
+    --danger: #c33636; --ok: #4d7c25; --warn: #b45309;
+    --grad: linear-gradient(120deg, #58652e 0%, #6d7c3a 52%, #879452 100%);
     --radio: 14px; --radio-sm: 9px; --radio-lg: 20px;
     --sombra: 0 1px 2px rgba(15,35,60,.05), 0 4px 14px rgba(15,35,60,.05);
     --sombra-hover: 0 2px 6px rgba(15,35,60,.08), 0 10px 26px rgba(15,35,60,.10);
@@ -34,6 +34,12 @@
   header.top h1 { font-size: 20px; margin: 0; font-weight: 700; letter-spacing: .06em; }
   header.top .sub { opacity: .82; font-size: 12px; letter-spacing: .01em; }
   #indicadorGuardado { font-size: 12px; opacity: .92; }
+  .btn-actualizar { background: rgba(255,255,255,.16); color: #fff; border: 1px solid rgba(255,255,255,.35);
+    padding: 8px 15px; border-radius: var(--radio-sm); cursor: pointer; font-size: 13px; font-weight: 600;
+    font-family: inherit; transition: background .15s, transform .05s; }
+  .btn-actualizar:hover { background: rgba(255,255,255,.28); }
+  .btn-actualizar:active { transform: translateY(1px); }
+  .btn-actualizar.ok { background: #fff; color: var(--primario-osc); }
   header.top select { background: rgba(255,255,255,.14); color: #fff; }
   header.top select option { color: #172033; }
   nav.tabs { background: var(--panel); border-bottom: 1px solid var(--borde);
@@ -150,7 +156,7 @@
   .saldo-card { background: var(--panel); border: 1px solid var(--borde); border-radius: var(--radio); padding: 16px 18px;
     box-shadow: var(--sombra); transition: box-shadow .16s, transform .16s; }
   .saldo-card:hover { box-shadow: var(--sombra-hover); transform: translateY(-2px); }
-  .saldo-card.total { background: linear-gradient(135deg, #e8f6f8, #dcf0f4); border-color: #b6e0e7; }
+  .saldo-card.total { background: linear-gradient(135deg, #f0f3e2, #e6ecd0); border-color: #d3ddb2; }
   .saldo-card.alerta { background: #fef2f2; border-color: #fecaca; }
   .aviso { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 11px 14px; border-radius: var(--radio-sm); font-size: 13px; }
   .cd-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
@@ -205,10 +211,8 @@
     </div>
   </div>
   <div style="display:flex;align-items:center;gap:14px">
-    <label style="font-size:12px;opacity:.9">Actuando como
-      <select id="actuandoComo" onchange="cambiarActuandoComo()" style="margin-left:6px;padding:4px 6px;border-radius:5px;border:none;font-size:12px"></select>
-    </label>
     <div id="indicadorGuardado"></div>
+    <button class="btn-actualizar" onclick="actualizarApp()" title="Guardar los cambios y refrescar todo">↻ Actualizar</button>
   </div>
 </header>
 

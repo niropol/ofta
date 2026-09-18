@@ -71,7 +71,7 @@ const MEDIOS_PAGO = ['efectivo', 'transferencia'];
 const DB = {
   // ── Valores globales configurables ──
   config: {
-    empresa: 'SAM Oftalmología',
+    empresa: 'OFTA — Oftalmología',
     sedeActiva: 1,
     usuarioActualId: null,   // "actuando como" (simula el login hasta la Etapa 10)
     porcentajeSAM: 40,       // % que SAM le paga a SAM Oftalmo (60 SAM / 40 SAM Oftalmo)

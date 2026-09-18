@@ -116,7 +116,7 @@ function verComprobante(id) {
       <td style="text-align:right">${fmtMoneda(d.monto, 'ARS')}</td>
     </tr>`).join('');
   const html = `
-    <h1>SAM Oftalmología</h1>
+    <h1>OFTA — Oftalmología</h1>
     <h2>Comprobante de liquidación — ${escHtml(l.mes)}</h2>
     <p><strong>Médico:</strong> ${escHtml(med ? med.nombre : '')}<br>
        <strong>Estado:</strong> ${l.estado === 'cerrada' ? 'Cerrada (' + escHtml(l.fechaCierre || '') + ')' : 'Borrador'}
