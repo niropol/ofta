@@ -57,7 +57,7 @@ function renderPanelMes() {
 
   cont.innerHTML = `
     <div class="saldos">
-      ${card('SAM factura a las OS', sam.facturado, '', 'Contratos de cirugía + valor único + insumos')}
+      ${card('SAM factura a las OS', sam.facturado, '', 'Contratos por obra social + insumos')}
       ${card('SAM te debe pagar (40%)', sam.ingreso, '', notaModo)}
       ${cobroCard}
       ${card('Honorarios a médicos', hon, '', 'Valores fijos del mes')}

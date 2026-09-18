@@ -310,7 +310,7 @@
     <!-- Cobros de SAM del mes (área Finanzas) -->
     <div class="adminpanel" data-p="cobros" hidden>
       <div class="section-head"><h3 style="margin:0">Cobros de SAM del mes</h3></div>
-      <p class="muted" style="margin-top:0">Lo que SAM te debe pagar (40% de lo facturado) por cada obra social, y el registro de lo que efectivamente te transfirió. También el costo de insumos del mes.</p>
+      <p class="muted" style="margin-top:0">Lo que SAM te debe pagar (40% de lo facturado, insumos incluidos) por cada obra social, y el registro de lo que efectivamente te transfirió.</p>
       <div class="filtros">
         <label class="muted">Mes <input type="month" id="ctrMes" onchange="renderCobroSAM()"></label>
       </div>
@@ -462,6 +462,7 @@
       <button class="btn" onclick="uiVerificarCalculos()">Verificar cálculos</button>
       <button class="btn secundario" onclick="uiDiagnosticoDatos()">Diagnóstico de datos</button>
       <button class="btn secundario" onclick="uiVerificarNube()">Verificar nube</button>
+      <button class="btn secundario" onclick="cargarEjemploIOMA()">Cargar ejemplo IOMA (4 médicos)</button>
     </div>
     <div id="diagResultado"></div>
 
@@ -890,6 +891,7 @@
 <script src="js/diagnostico.js?v=1"></script>
 <script src="js/ui-diagnostico.js?v=1"></script>
 <script src="js/ui-dialogos.js?v=1"></script>
+<script src="js/ejemplo.js?v=1"></script>
 <script src="js/persistencia.js?v=1"></script>
 <script>
 // ── Navegación entre secciones ──
