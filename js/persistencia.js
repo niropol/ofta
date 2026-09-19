@@ -209,6 +209,31 @@ function actualizarApp() {
   }
 }
 
+// ── Copia de seguridad (export/import JSON) ──
+// Vuelca todo (config + nextId + colecciones) a un objeto serializable, y al
+// revés: reemplaza los datos por los de un backup (respetando sedes/usuarios base).
+function exportarBackupObj() {
+  const dump = { _tipo: 'OFTA_BACKUP', _version: 1, _fecha: new Date().toISOString(), nextId: DB.nextId, config: DB.config };
+  for (const c of COLECCIONES) dump[c] = DB[c];
+  return dump;
+}
+function importarBackupObj(dump) {
+  if (!dump || typeof dump !== 'object') throw new Error('Archivo inválido.');
+  const hayColecciones = COLECCIONES.some(c => Array.isArray(dump[c]));
+  if (!hayColecciones) throw new Error('El archivo no parece una copia de OFTA (no tiene colecciones).');
+  let cargadas = 0, registros = 0;
+  for (const c of COLECCIONES) { if (Array.isArray(dump[c])) { DB[c] = dump[c]; cargadas++; registros += dump[c].length; } }
+  if (dump.config) DB.config = dump.config;
+  if (dump.nextId) DB.nextId = dump.nextId;
+  _asegurarBase('sedes', SEDES_BASE, 'nombre');
+  _asegurarBase('consultorios', CONSULTORIOS_BASE, 'nombre');
+  _asegurarBase('usuarios', USUARIOS_BASE, 'email');
+  _corregirNextId();
+  guardarLocal();
+  marcarCambios();
+  return { colecciones: cargadas, registros };
+}
+
 // ── Diagnóstico de nube (para el botón "Verificar nube" del Admin) ──
 function estadoNube() {
   return {

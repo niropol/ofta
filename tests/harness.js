@@ -42,7 +42,7 @@ const EXPONER = [
   // auditoría
   'registrarAuditoria', 'auditoriaDe',
   // persistencia
-  'marcarCambios', 'cargarDesdeNube', 'guardarEnNube',
+  'marcarCambios', 'cargarDesdeNube', 'guardarEnNube', 'exportarBackupObj', 'importarBackupObj',
   // ABM de médicos
   'renderMedicos', 'abrirNuevoMedico', 'editarMedico', 'guardarMedico',
   'eliminarMedico', 'toggleEstadoMedico', '_referenciasMedico',

@@ -56,3 +56,41 @@ async function uiVerificarNube() {
     <div class="${res.todoOk ? 'diag-ok' : 'diag-err'}">${res.todoOk ? '✅ Todo está guardado en la nube.' : '⚠️ Hay diferencias entre lo local y la nube.'}</div>
     <table class="tabla"><thead><tr><th></th><th>Colección</th><th class="num">Local</th><th class="num">Nube</th></tr></thead><tbody>${filas}</tbody></table>`;
 }
+
+// ── Copia de seguridad (backup/restore JSON) ──
+function descargarBackupUI() {
+  try {
+    const dump = exportarBackupObj();
+    const blob = new Blob([JSON.stringify(dump, null, 0)], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'ofta_backup_' + hoyISO() + '.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    const box = _diagBox(); if (box) box.innerHTML = '<div class="diag-ok">✅ Copia descargada (ofta_backup_' + hoyISO() + '.json). Guardala en un lugar seguro.</div>';
+  } catch (e) {
+    const box = _diagBox(); if (box) box.innerHTML = '<div class="diag-err">No se pudo generar la copia: ' + escHtml(e.message) + '</div>';
+  }
+}
+
+function restaurarBackupUI(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    let dump;
+    try { dump = JSON.parse(e.target.result); }
+    catch (err) { alert('No se pudo leer el archivo JSON: ' + err.message); input.value = ''; return; }
+    const registros = (typeof COLECCIONES !== 'undefined' ? COLECCIONES : []).reduce((s, c) => s + (Array.isArray(dump[c]) ? dump[c].length : 0), 0);
+    confirmarUI('Restaurar esta copia REEMPLAZA todos los datos actuales por los del archivo (' + registros + ' registro/s). ¿Continuar?').then(ok => {
+      input.value = '';
+      if (!ok) return;
+      let r;
+      try { r = importarBackupObj(dump); }
+      catch (err) { alert('No se pudo restaurar: ' + err.message); return; }
+      if (typeof sincronizarUI === 'function') sincronizarUI();
+      const box = _diagBox(); if (box) box.innerHTML = '<div class="diag-ok">✅ Copia restaurada: ' + r.registros + ' registro/s en ' + r.colecciones + ' colección(es).</div>';
+    });
+  };
+  reader.readAsText(file);
+}
