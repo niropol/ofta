@@ -127,6 +127,14 @@ const DB = {
   //    { id, obraSocial, codigo, textoNorm, textoOrig, grupoNomenclador } ──
   aliasContrato: [],
 
+  // ── Derivaciones quirúrgicas: cirugías derivadas al cirujano, con su estado
+  //    (pendiente → programada → realizada / cancelada) y urgencia. Al marcarse
+  //    'realizada' se puede convertir en prestación (carga diaria) para facturar.
+  //    { id, fecha, pacienteApellido, pacienteNombre, pacienteDni, obraSocial,
+  //      grupoNomenclador, medicoDerivadorId, medicoCirujanoId, urgencia,
+  //      estado, fechaProgramada, notas, prestacionId } ──
+  derivaciones: [],
+
   // ── Valores fijos a médicos (EGRESO): monto fijo por categoría (consulta/estudio/
   //    cirugia/practica/derivacion), general (medicoId=null) o por médico, con vigencia. ──
   valoresMedico: [],
@@ -168,7 +176,7 @@ const DB = {
 // Colecciones que se persisten a la nube (ver persistencia.js). config/nextId van aparte.
 const COLECCIONES = [
   'usuarios', 'sedes', 'consultorios', 'medicos', 'obrasSociales', 'pacientes', 'nomenclador',
-  'contratos', 'aliasContrato', 'valoresMedico', 'reglasReparto', 'horarios', 'prestacionesRealizadas',
+  'contratos', 'aliasContrato', 'valoresMedico', 'reglasReparto', 'horarios', 'derivaciones', 'prestacionesRealizadas',
   'cobros', 'gastos', 'pagosMedicos', 'cajaMovimientos', 'cajaCierres', 'auditoria',
 ];
 

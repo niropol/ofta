@@ -308,6 +308,7 @@
     <div class="subtabs areas" id="adminAreas">
       <button class="active" data-area="resumen" onclick="adminArea('resumen')">📊 Resumen</button>
       <button data-area="finanzas" onclick="adminArea('finanzas')">💸 Finanzas</button>
+      <button data-area="derivaciones" onclick="adminArea('derivaciones')">↪️ Derivaciones</button>
       <button data-area="config" onclick="adminArea('config')">⚙️ Configuración</button>
       <button data-area="seguridad" onclick="adminArea('seguridad')">Seguridad</button>
     </div>
@@ -480,6 +481,24 @@
     </div>
     <div class="tabla-wrap"><div id="liquidacionesTabla"></div></div>
     </div><!-- /panel liquidaciones -->
+
+    <div class="adminpanel" data-p="derivaciones" hidden>
+      <div class="section-head"><h3 style="margin:0">Derivaciones quirúrgicas</h3>
+        <button class="btn" onclick="abrirNuevaDerivacion()">+ Nueva derivación</button></div>
+      <p class="muted" style="margin-top:0">Cirugías derivadas al cirujano y su estado (pendiente → programada → realizada). Las urgentes aparecen primero. Al marcar «Realizada» se puede cargar como prestación para facturar.</p>
+      <div id="derivResumen" class="saldos" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))"></div>
+      <div class="filtros">
+        <label class="muted">Estado <select id="derivFiltroEstado" onchange="renderDerivaciones()">
+          <option value="">Todos</option>
+          <option value="pendiente">Pendientes</option>
+          <option value="programada">Programadas</option>
+          <option value="realizada">Realizadas</option>
+          <option value="cancelada">Canceladas</option>
+        </select></label>
+        <label class="muted">Médico que deriva <select id="derivFiltroMedico" onchange="renderDerivaciones()"></select></label>
+      </div>
+      <div class="tabla-wrap"><div id="derivacionesTabla"></div></div>
+    </div>
 
     <div class="adminpanel" data-p="seguridad" hidden>
     <h3>Diagnóstico y verificación</h3>
@@ -861,6 +880,38 @@
   </div>
 </div>
 
+<!-- Derivación quirúrgica -->
+<div id="modalDeriv" class="modal">
+  <div class="modal-box">
+    <h3 id="modalDerivTitulo">Nueva derivación</h3>
+    <input type="hidden" id="deriv_id">
+    <div class="row2">
+      <div class="campo"><label>Apellido</label><input id="deriv_apellido"></div>
+      <div class="campo"><label>Nombre</label><input id="deriv_nombre"></div>
+    </div>
+    <div class="row2">
+      <div class="campo"><label>DNI</label><input id="deriv_dni"></div>
+      <div class="campo"><label>Obra social</label><input id="deriv_os" list="osList"></div>
+    </div>
+    <div class="campo"><label>Tipo de cirugía *</label><select id="deriv_grupo"></select></div>
+    <div class="row2">
+      <div class="campo"><label>Médico que deriva *</label><select id="deriv_derivador"></select></div>
+      <div class="campo"><label>Cirujano</label><select id="deriv_cirujano"></select></div>
+    </div>
+    <div class="row2">
+      <div class="campo"><label>Urgencia</label>
+        <select id="deriv_urgencia"><option value="normal">Normal</option><option value="urgente">Urgente</option></select>
+      </div>
+      <div class="campo"><label>Fecha programada</label><input type="date" id="deriv_fechaProg"></div>
+    </div>
+    <div class="campo"><label>Notas</label><input id="deriv_notas"></div>
+    <div class="modal-acciones">
+      <button class="btn secundario" onclick="cerrarModalDeriv()">Cancelar</button>
+      <button class="btn" onclick="guardarDerivacion()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Confirmación in-app (reemplaza confirm()) -->
 <div id="modalConfirm" class="modal">
   <div class="modal-box" style="width:420px">
@@ -929,6 +980,7 @@
 <script src="js/honorarios.js?v=1"></script>
 <script src="js/caja.js?v=1"></script>
 <script src="js/liquidaciones.js?v=1"></script>
+<script src="js/derivaciones.js?v=1"></script>
 <script src="js/estadisticas.js?v=1"></script>
 <script src="js/ui-medicos.js?v=1"></script>
 <script src="js/ui-nomenclador.js?v=1"></script>
@@ -941,6 +993,7 @@
 <script src="js/ui-honorarios.js?v=1"></script>
 <script src="js/ui-caja.js?v=1"></script>
 <script src="js/ui-liquidaciones.js?v=1"></script>
+<script src="js/ui-derivaciones.js?v=1"></script>
 <script src="js/ui-estadisticas.js?v=1"></script>
 <script src="js/ui-carga-diaria.js?v=1"></script>
 <script src="js/ui-panel.js?v=1"></script>
@@ -964,6 +1017,7 @@ function showSection(id) {
 const ADMIN_AREAS = {
   resumen:   { tabs: [['panel', 'Panel del mes'], ['estadisticas', 'Estadísticas']] },
   finanzas:  { tabs: [['cobros', 'Cobros de SAM'], ['liquidaciones', 'Liquidaciones'], ['caja', 'Caja']] },
+  derivaciones: { tabs: [['derivaciones', 'Derivaciones']] },
   config:    { tabs: [['nomcon', 'Nomenclador y contratos'], ['honorarios', 'Insumos'], ['medicos', 'Médicos'], ['sedes', 'Sedes y consultorios']] },
   seguridad: { tabs: [['seguridad', 'Seguridad']] },
 };
@@ -980,6 +1034,8 @@ function adminArea(area) {
 function adminTab(p) {
   document.querySelectorAll('#section-admin .adminpanel').forEach(el => { el.hidden = el.dataset.p !== p; });
   document.querySelectorAll('#adminSubtabs button').forEach(b => b.classList.toggle('active', b.dataset.p === p));
+  const render = { derivaciones: 'renderDerivaciones', liquidaciones: 'renderLiquidaciones', caja: 'renderCaja', medicos: 'renderMedicos' }[p];
+  if (render && typeof window[render] === 'function') { try { window[render](); } catch (e) {} }
 }
 
 // Sub-pestañas de la parte visible (Día / Todas / Agenda).
@@ -1022,7 +1078,7 @@ function sincronizarUI() {
     '_poblarFiltrosPrestaciones', 'renderPrestaciones', 'renderCargaDiaria',
     'renderMedicos', 'renderNomenclador', 'renderOS', 'renderSedes', 'renderConsultorios',
     'renderHorarios', 'renderContratos', 'renderValoresMedico', 'renderAdmin', 'renderCaja',
-    'renderLiquidaciones', 'renderEstadisticas', 'renderPanelMes', 'poblarActuandoComo',
+    'renderLiquidaciones', 'renderDerivaciones', 'renderEstadisticas', 'renderPanelMes', 'poblarActuandoComo',
   ]);
 }
 </script>
