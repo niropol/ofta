@@ -135,6 +135,10 @@ const DB = {
   //      estado, fechaProgramada, notas, prestacionId } ──
   derivaciones: [],
 
+  // ── Recordatorios manuales (avisos). Los avisos automáticos se calculan del estado.
+  //    { id, texto, fecha, tipo (urgente/importante/info), estado (activa/resuelta) } ──
+  alarmas: [],
+
   // ── Valores fijos a médicos (EGRESO): monto fijo por categoría (consulta/estudio/
   //    cirugia/practica/derivacion), general (medicoId=null) o por médico, con vigencia. ──
   valoresMedico: [],
@@ -176,7 +180,7 @@ const DB = {
 // Colecciones que se persisten a la nube (ver persistencia.js). config/nextId van aparte.
 const COLECCIONES = [
   'usuarios', 'sedes', 'consultorios', 'medicos', 'obrasSociales', 'pacientes', 'nomenclador',
-  'contratos', 'aliasContrato', 'valoresMedico', 'reglasReparto', 'horarios', 'derivaciones', 'prestacionesRealizadas',
+  'contratos', 'aliasContrato', 'valoresMedico', 'reglasReparto', 'horarios', 'derivaciones', 'alarmas', 'prestacionesRealizadas',
   'cobros', 'gastos', 'pagosMedicos', 'cajaMovimientos', 'cajaCierres', 'auditoria',
 ];
 

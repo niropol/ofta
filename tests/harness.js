@@ -99,6 +99,9 @@ const EXPONER = [
   // derivaciones quirúrgicas
   'DERIV_ESTADOS', 'DERIV_URGENCIAS', 'crearDerivacion', 'editarDerivacion', 'cambiarEstadoDerivacion',
   'eliminarDerivacion', 'listarDerivaciones', 'resumenDerivaciones', 'renderDerivaciones',
+  // avisos / alarmas
+  'avisosAutomaticos', 'crearAlarma', 'resolverAlarma', 'eliminarAlarma', 'listarAlarmas',
+  'alarmasVencidas', 'totalAvisos', 'renderAvisos',
   // diagnóstico (Etapa 9)
   'runSelfTests', 'diagnosticoDatos', 'estadoNube', 'verificarNube',
   // navegación
@@ -140,7 +143,7 @@ export function resetDatos(app) {
   ['medicos', 'obrasSociales', 'pacientes', 'nomenclador', 'reglasReparto',
    'prestacionesRealizadas', 'cobros', 'gastos', 'pagosMedicos', 'cajaMovimientos',
    'cajaCierres', 'contratos', 'aliasContrato', 'valoresMedico', 'consultorios', 'horarios',
-   'derivaciones', 'auditoria'].forEach(c => { D[c] = []; });
+   'derivaciones', 'alarmas', 'auditoria'].forEach(c => { D[c] = []; });
   return D;
 }
 

@@ -74,6 +74,11 @@
   .badge-inactivo { background: #fee2e2; color: var(--danger); font-size: 11px;
     padding: 2px 7px; border-radius: 10px; }
   .badge-ok { background: #e7f2d9; color: var(--primario-osc); font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+  .avisos-badge { background: var(--danger); color: #fff; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px; margin-left: 4px; }
+  .aviso-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: var(--radio-sm); margin-bottom: 6px; font-size: 13px; }
+  .aviso-urgente { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+  .aviso-importante { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+  .aviso-info { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; }
   .badge-warn { background: #fef3c7; color: #92400e; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
   .med-acciones { margin-top: 12px; display: flex; gap: 6px; flex-wrap: wrap; }
   .med-acciones button { background: #f1f5f9; border: 1px solid var(--borde); border-radius: 7px;
@@ -309,6 +314,7 @@
       <button class="active" data-area="resumen" onclick="adminArea('resumen')">📊 Resumen</button>
       <button data-area="finanzas" onclick="adminArea('finanzas')">💸 Finanzas</button>
       <button data-area="derivaciones" onclick="adminArea('derivaciones')">↪️ Derivaciones</button>
+      <button data-area="avisos" onclick="adminArea('avisos')">🔔 Avisos <span id="avisosBadge" class="avisos-badge" style="display:none">0</span></button>
       <button data-area="config" onclick="adminArea('config')">⚙️ Configuración</button>
       <button data-area="seguridad" onclick="adminArea('seguridad')">Seguridad</button>
     </div>
@@ -498,6 +504,25 @@
         <label class="muted">Médico que deriva <select id="derivFiltroMedico" onchange="renderDerivaciones()"></select></label>
       </div>
       <div class="tabla-wrap"><div id="derivacionesTabla"></div></div>
+    </div>
+
+    <div class="adminpanel" data-p="avisos" hidden>
+      <div class="section-head"><h3 style="margin:0">Avisos y recordatorios</h3></div>
+      <p class="muted" style="margin-top:0">Avisos automáticos del estado (cobros, liquidaciones, derivaciones) y recordatorios que cargues con fecha.</p>
+      <h4>Automáticos</h4>
+      <div id="avisosAutoLista"></div>
+      <h4 style="margin-top:22px">Recordatorios</h4>
+      <div class="filtros" style="align-items:flex-end">
+        <label class="muted">Texto <input id="alarma_texto" style="width:280px" placeholder="ej. Llamar a OSDE por el contrato"></label>
+        <label class="muted">Fecha <input type="date" id="alarma_fecha"></label>
+        <label class="muted">Tipo <select id="alarma_tipo">
+          <option value="importante">Importante</option>
+          <option value="urgente">Urgente</option>
+          <option value="info">Info</option>
+        </select></label>
+        <button class="btn" onclick="agregarAlarmaUI()">+ Agregar</button>
+      </div>
+      <div class="tabla-wrap"><div id="alarmasTabla"></div></div>
     </div>
 
     <div class="adminpanel" data-p="seguridad" hidden>
@@ -981,6 +1006,7 @@
 <script src="js/caja.js?v=1"></script>
 <script src="js/liquidaciones.js?v=1"></script>
 <script src="js/derivaciones.js?v=1"></script>
+<script src="js/alarmas.js?v=1"></script>
 <script src="js/estadisticas.js?v=1"></script>
 <script src="js/ui-medicos.js?v=1"></script>
 <script src="js/ui-nomenclador.js?v=1"></script>
@@ -994,6 +1020,7 @@
 <script src="js/ui-caja.js?v=1"></script>
 <script src="js/ui-liquidaciones.js?v=1"></script>
 <script src="js/ui-derivaciones.js?v=1"></script>
+<script src="js/ui-alarmas.js?v=1"></script>
 <script src="js/ui-estadisticas.js?v=1"></script>
 <script src="js/ui-carga-diaria.js?v=1"></script>
 <script src="js/ui-panel.js?v=1"></script>
@@ -1018,6 +1045,7 @@ const ADMIN_AREAS = {
   resumen:   { tabs: [['panel', 'Panel del mes'], ['estadisticas', 'Estadísticas']] },
   finanzas:  { tabs: [['cobros', 'Cobros de SAM'], ['liquidaciones', 'Liquidaciones'], ['caja', 'Caja']] },
   derivaciones: { tabs: [['derivaciones', 'Derivaciones']] },
+  avisos:    { tabs: [['avisos', 'Avisos']] },
   config:    { tabs: [['nomcon', 'Nomenclador y contratos'], ['honorarios', 'Insumos'], ['medicos', 'Médicos'], ['sedes', 'Sedes y consultorios']] },
   seguridad: { tabs: [['seguridad', 'Seguridad']] },
 };
@@ -1034,7 +1062,7 @@ function adminArea(area) {
 function adminTab(p) {
   document.querySelectorAll('#section-admin .adminpanel').forEach(el => { el.hidden = el.dataset.p !== p; });
   document.querySelectorAll('#adminSubtabs button').forEach(b => b.classList.toggle('active', b.dataset.p === p));
-  const render = { derivaciones: 'renderDerivaciones', liquidaciones: 'renderLiquidaciones', caja: 'renderCaja', medicos: 'renderMedicos' }[p];
+  const render = { derivaciones: 'renderDerivaciones', avisos: 'renderAvisos', liquidaciones: 'renderLiquidaciones', caja: 'renderCaja', medicos: 'renderMedicos' }[p];
   if (render && typeof window[render] === 'function') { try { window[render](); } catch (e) {} }
 }
 
@@ -1078,7 +1106,7 @@ function sincronizarUI() {
     '_poblarFiltrosPrestaciones', 'renderPrestaciones', 'renderCargaDiaria',
     'renderMedicos', 'renderNomenclador', 'renderOS', 'renderSedes', 'renderConsultorios',
     'renderHorarios', 'renderContratos', 'renderValoresMedico', 'renderAdmin', 'renderCaja',
-    'renderLiquidaciones', 'renderDerivaciones', 'renderEstadisticas', 'renderPanelMes', 'poblarActuandoComo',
+    'renderLiquidaciones', 'renderDerivaciones', 'renderAvisos', 'renderEstadisticas', 'renderPanelMes', 'poblarActuandoComo',
   ]);
 }
 </script>
