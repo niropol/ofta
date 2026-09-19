@@ -102,6 +102,8 @@ const EXPONER = [
   // avisos / alarmas
   'avisosAutomaticos', 'crearAlarma', 'resolverAlarma', 'eliminarAlarma', 'listarAlarmas',
   'alarmasVencidas', 'totalAvisos', 'renderAvisos',
+  // pegar resumen (carga rápida)
+  'parsearResumenDiario', 'aplicarResumenDiario',
   // diagnóstico (Etapa 9)
   'runSelfTests', 'diagnosticoDatos', 'estadoNube', 'verificarNube',
   // navegación

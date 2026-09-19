@@ -245,6 +245,7 @@
         <label class="muted">Médico <select id="cd_medico"></select></label>
         <label class="muted">Sede <select id="cd_sede" onchange="cdSedeChange()"></select></label>
         <label class="muted">Consultorio <select id="cd_consultorio"></select></label>
+        <button class="btn secundario" onclick="abrirPegarResumen()">📋 Pegar resumen</button>
       </div>
 
       <div class="cd-grid">
@@ -905,6 +906,21 @@
   </div>
 </div>
 
+<!-- Pegar resumen: carga diaria por texto -->
+<div id="modalPegar" class="modal">
+  <div class="modal-box ancho">
+    <h3>Pegar resumen del día</h3>
+    <p class="muted" style="margin:0 0 8px">Una línea por prestación: <strong>cantidad · prestación · obra social</strong>. Ej.: «5 consultas IOMA», «3 OCT OSDE». Se cargan para el médico y la fecha elegidos arriba. Las cirugías se cargan aparte.</p>
+    <textarea id="pegarTexto" class="copiar-ta" style="min-height:120px" placeholder="5 consultas IOMA&#10;3 OCT OSDE&#10;2 campo visual particular" oninput="previsualizarPegar()"></textarea>
+    <div class="tabla-wrap" style="max-height:38vh;overflow:auto;margin-top:10px"><div id="pegarPreview"></div></div>
+    <div id="pegarMsg"></div>
+    <div class="modal-acciones">
+      <button class="btn secundario" onclick="cerrarModalPegar()">Cancelar</button>
+      <button class="btn" onclick="confirmarPegarResumen()">Cargar las reconocidas</button>
+    </div>
+  </div>
+</div>
+
 <!-- Derivación quirúrgica -->
 <div id="modalDeriv" class="modal">
   <div class="modal-box">
@@ -1001,6 +1017,7 @@
 <script src="js/nomenclador.js?v=1"></script>
 <script src="js/contratos.js?v=1"></script>
 <script src="js/matching.js?v=1"></script>
+<script src="js/pegar-resumen.js?v=1"></script>
 <script src="js/prestaciones.js?v=1"></script>
 <script src="js/honorarios.js?v=1"></script>
 <script src="js/caja.js?v=1"></script>

@@ -171,3 +171,49 @@ function cdNuevaCirugia() {
     sedeId: base.sedeId, consultorioId: base.consultorioId,
   });
 }
+
+// ── Pegar resumen del día (carga rápida por texto) ──
+function _mostrarModalPegar(on) { const m = document.getElementById('modalPegar'); if (m) m.style.display = on ? 'flex' : 'none'; }
+function cerrarModalPegar() { _mostrarModalPegar(false); }
+
+function abrirPegarResumen() {
+  const ta = document.getElementById('pegarTexto'); if (ta) ta.value = '';
+  const pv = document.getElementById('pegarPreview'); if (pv) pv.innerHTML = '';
+  const msg = document.getElementById('pegarMsg'); if (msg) msg.innerHTML = '';
+  _mostrarModalPegar(true);
+}
+
+let _pegarPlan = [];
+function previsualizarPegar() {
+  const ta = document.getElementById('pegarTexto');
+  const pv = document.getElementById('pegarPreview');
+  if (!ta || !pv) return;
+  _pegarPlan = parsearResumenDiario(ta.value);
+  if (!_pegarPlan.length) { pv.innerHTML = '<p class="muted">Escribí o pegá el resumen arriba.</p>'; return; }
+  const rows = _pegarPlan.map(p => {
+    const okCell = p.problema
+      ? `<span class="badge-inactivo">${escHtml(p.problema)}</span>`
+      : `<span class="badge-ok">✓ ${escHtml((categoriaInfo(p.categoria) || {}).label || p.categoria)}</span>`;
+    return `<tr class="${p.problema ? 'fila-inactiva' : ''}">
+      <td class="num">${p.cantidad}</td>
+      <td>${escHtml(p.problema ? p.prestTxt : p.descripcion)}</td>
+      <td>${escHtml(p.obraSocial)}</td>
+      <td>${okCell}</td>
+    </tr>`;
+  }).join('');
+  const okN = _pegarPlan.filter(p => !p.problema).length;
+  pv.innerHTML = `<p class="muted">${okN}/${_pegarPlan.length} línea(s) reconocida(s).</p>
+    <table class="tabla"><thead><tr><th class="num">Cant.</th><th>Prestación</th><th>OS</th><th>Detección</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function confirmarPegarResumen() {
+  const fecha = (document.getElementById('cd_fecha') || {}).value || hoyISO();
+  const medicoId = (document.getElementById('cd_medico') || {}).value || null;
+  if (!medicoId) { alert('Elegí el médico arriba antes de cargar.'); return; }
+  if (!_pegarPlan.length) { previsualizarPegar(); }
+  const r = aplicarResumenDiario(_pegarPlan, { fecha, medicoRealizadorId: Number(medicoId) });
+  if (r.ok === 0) { const msg = document.getElementById('pegarMsg'); if (msg) msg.innerHTML = '<div class="diag-err" style="margin:8px 0">No se cargó ninguna línea (revisá la detección).</div>'; return; }
+  cerrarModalPegar();
+  if (typeof sincronizarUI === 'function') sincronizarUI(); else renderCargaDiaria();
+  alert('Cargadas ' + r.ok + ' línea(s) (' + r.unidades + ' unidad/es)' + (r.omitidas ? ', ' + r.omitidas + ' omitida(s)' : '') + '.');
+}
