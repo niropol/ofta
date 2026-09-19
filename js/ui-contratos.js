@@ -33,6 +33,22 @@ function _poblarSelectCatContrato() {
   if (cur) sel.value = cur;
 }
 
+// Al escribir la descripción, detecta la clasificación y la preselecciona (estilo OIP):
+// consulta/estudio/cirugía por palabras clave; si no matchea, práctica + aviso «confirmá».
+function _autoClasificarAlta() {
+  const desc = ((document.getElementById('ctrNuevoDesc') || {}).value || '').trim();
+  const hint = document.getElementById('ctrNuevoHint');
+  const sel = document.getElementById('ctrNuevoCat');
+  if (!desc) { if (hint) hint.textContent = ''; return; }
+  const { categoria, dudosa } = clasificarPrestacionOFTA(desc);
+  if (sel) sel.value = categoria;
+  const label = (categoriaInfo(categoria) || {}).label || categoria;
+  if (hint) hint.innerHTML = dudosa
+    ? '⚠️ No la pude clasificar con seguridad: la puse en <strong>' + escHtml(label) + '</strong> por descarte. Confirmá o cambiala.'
+    : '✓ Detectada como <strong>' + escHtml(label) + '</strong>. Cambiala si no corresponde.';
+}
+function _altaCatManual() { const h = document.getElementById('ctrNuevoHint'); if (h) h.textContent = 'Clasificación elegida a mano.'; }
+
 function renderContratosTabla() {
   const cont = document.getElementById('contratosTabla');
   if (!cont) return;
@@ -72,11 +88,13 @@ function agregarContratoManualUI() {
   const val = (document.getElementById('ctrNuevoValor') || {}).value || '';
   try {
     const r = agregarContratoManual(os, cat, cod, desc, val, hoyISO().slice(0, 7) + '-01');
+    // Aprende la equivalencia (OS + código/nombre → prestación) para futuras importaciones.
+    if (typeof guardarAliasContrato === 'function') guardarAliasContrato(os, cod, desc, r.grupo);
     _msgImport((r.creada ? 'Prestación creada y ' : '') + 'contrato cargado para ' + os + '.', false);
   } catch (e) { alert(e.message); return; }
   ['ctrNuevoCodigo', 'ctrNuevoDesc', 'ctrNuevoValor'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-  renderContratos();
-  if (typeof renderPanelMes === 'function') renderPanelMes();
+  const hint = document.getElementById('ctrNuevoHint'); if (hint) hint.textContent = '';
+  if (typeof sincronizarUI === 'function') sincronizarUI(); else { renderContratos(); if (typeof renderPanelMes === 'function') renderPanelMes(); }
 }
 
 // Aviso si ya se registró el cobro de esa OS (el cambio no lo toca hasta deshacerlo).
@@ -228,6 +246,8 @@ function abrirRevisionImport(plan) {
     const invalida = p.problemas.length > 0;
     const selGrupo = invalida ? null : p.match.grupo;
     const catInicial = (p.match.candidato && p.match.candidato.categoria) || p.categoria || 'realizacion_estudio';
+    // Si la línea no matchea con nada del catálogo, la categoría detectada guía el "crear nueva".
+    const dudaCat = p.dudosa && p.match.grupo == null;
     const archivo = `<strong>${escHtml(p.obraSocial || '—')}</strong>` +
       (p.codigo ? ' · <span class="muted">' + escHtml(p.codigo) + '</span>' : '') +
       '<br>' + escHtml(p.descripcion || '—') +
@@ -240,7 +260,9 @@ function abrirRevisionImport(plan) {
       <td>
         <select id="imp_g_${i}" onchange="_impFilaChange(${i})" style="min-width:230px"${selDisabled}>${_opcionesCatalogoImport(selGrupo, p.match.estado)}</select>
         <div id="imp_crear_${i}" style="display:none;margin-top:6px">
-          <select id="imp_cat_${i}" title="Categoría de la prestación nueva">${_opcionesCategoriaImport(catInicial)}</select>
+          <label class="muted" style="font-size:11px">Clasificar como
+            <select id="imp_cat_${i}" title="${dudaCat ? 'No pude clasificarla con seguridad — confirmá dónde va' : 'Categoría detectada automáticamente'}"${dudaCat ? ' style="border:2px solid var(--warn);background:#fffbeb"' : ''}>${_opcionesCategoriaImport(catInicial)}</select>
+          </label>${dudaCat ? ' <span title="Revisar categoría">⚠️</span>' : ''}
         </div>
       </td>
     </tr>`;
@@ -248,8 +270,19 @@ function abrirRevisionImport(plan) {
   cont.innerHTML = `<table class="tabla"><thead><tr><th>Del archivo</th><th>Detección</th><th>Corresponde a</th></tr></thead><tbody>${rows}</tbody></table>`;
   const auto = plan.filter(p => !p.problemas.length && p.match.grupo != null).length;
   const rev = plan.length - auto;
+  const inval = plan.filter(p => p.problemas.length).length;
+  // Chequeos de salud del archivo (estilo OIP): conteo por categoría + códigos repetidos.
+  const cont2 = { consulta: 0, realizacion_estudio: 0, practica: 0, cirugia: 0 };
+  plan.forEach(p => { if (cont2[p.categoria] != null) cont2[p.categoria]++; });
+  const conteoCod = {};
+  plan.forEach(p => { const k = (p.codigo || '').trim(); if (k) conteoCod[k] = (conteoCod[k] || 0) + 1; });
+  const dup = Object.keys(conteoCod).filter(k => conteoCod[k] > 1);
   const resumen = document.getElementById('impResumen');
-  if (resumen) resumen.textContent = plan.length + ' línea(s): ' + auto + ' reconocida(s), ' + rev + ' para revisar.';
+  if (resumen) {
+    resumen.innerHTML = plan.length + ' línea(s): ' + auto + ' reconocida(s), ' + rev + ' para revisar' + (inval ? ', ' + inval + ' inválida(s)' : '') +
+      ' · 🩺 ' + cont2.consulta + ' · 🔬 ' + cont2.realizacion_estudio + ' · ⚕️ ' + cont2.practica + ' · 🔪 ' + cont2.cirugia +
+      (dup.length ? '<br><span style="color:var(--danger);font-weight:600">⚠️ ' + dup.length + ' código(s) repetido(s) en el archivo: ' + escHtml(dup.slice(0, 8).join(', ')) + (dup.length > 8 ? '…' : '') + '</span>' : '');
+  }
   document.getElementById('impRevMsg').innerHTML = '';
   const m = document.getElementById('modalImportRev'); if (m) m.style.display = 'flex';
   plan.forEach((p, i) => _impFilaChange(i));   // mostrar el sub-select "crear" si corresponde

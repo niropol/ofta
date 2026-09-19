@@ -93,6 +93,7 @@ const EXPONER = [
   // matcheo de contratos (alias + sugerencias)
   'similitudTexto', 'buscarAliasContrato', 'guardarAliasContrato', 'olvidarAliasContrato',
   'sugerirPrestacionContrato', 'planImportarContratos', 'aplicarImportacionContratos',
+  'clasificarPrestacionOFTA',
   // diagnóstico (Etapa 9)
   'runSelfTests', 'diagnosticoDatos', 'estadoNube', 'verificarNube',
   // navegación

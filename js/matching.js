@@ -37,6 +37,34 @@ function similitudTexto(a, b) {
   return (2 * inter) / (ba.length + bb.length);
 }
 
+// ── Clasificación automática por descripción (estilo OIP, adaptado a OFTA) ──
+// Reconoce consulta / estudio / cirugía por palabras clave; si no matchea nada,
+// cae en 'práctica' y se marca DUDOSA para que el usuario confirme dónde va.
+const _KW_ESTUDIO = ['topografia', 'tomografia', 'campo visual', 'campimetria', 'paquimetria',
+  'ecografia', 'ecometria', 'biometria', 'iol master', 'recuento', 'pentacam', 'angiografia',
+  'retinografia', 'retinofluoresce', 'oftalmoscop', 'fondo de ojo', 'electrorretinograma',
+  'electroretinograma', 'potencial', 'gonioscopia', 'curva tensional', 'microscopia especular',
+  'autorrefract', 'autorefract', 'interferometria', 'papilografia', 'especular', 'tonometria',
+  'tonografia', 'iconografia', 'sensibilidad', 'lagrimal funcional'];
+const _TOK_ESTUDIO = ['oct', 'ubm', 'hrt', 'rfg', 'arm', 'obi', 'erg', 'oci', 'test', 'curva', 'curvas'];
+const _KW_CIRUGIA = ['cirugia', 'catarata', 'faco', 'lasik', 'excimer', 'vitrectomia', 'iridotomia',
+  'iridectomia', 'pterigion', 'chalazion', 'chalazio', 'blefaro', 'ptosis', 'entropion', 'ectropion',
+  'inyeccion', 'intravitre', 'capsulotomia', 'sutura', 'dacrio', 'estrabismo', 'trasplante', 'glaucoma',
+  'valvula', 'implante', 'sonda', 'exeresis', 'biopsia', 'crosslinking', 'queratoplastia', 'trabeculo',
+  'escleral', 'enucleacion', 'eviscer', 'retinopexia', 'fotocoagulacion', 'laser', 'antivegf',
+  'anti vegf', 'peeling', 'plastia', 'extraccion del cristalino', 'orbita'];
+
+// Devuelve { categoria, dudosa }. categoria ∈ consulta|realizacion_estudio|cirugia|practica.
+function clasificarPrestacionOFTA(desc) {
+  const d = _normContrato(desc);
+  if (!d) return { categoria: 'consulta', dudosa: true };
+  if (/\bconsultas?\b/.test(d)) return { categoria: 'consulta', dudosa: false };
+  if (_KW_ESTUDIO.some(k => d.includes(k)) || _TOK_ESTUDIO.some(t => new RegExp(`\\b${t}\\b`).test(d)))
+    return { categoria: 'realizacion_estudio', dudosa: false };
+  if (_KW_CIRUGIA.some(k => d.includes(k))) return { categoria: 'cirugia', dudosa: false };
+  return { categoria: 'practica', dudosa: true };   // por descarte → confirmar
+}
+
 // ── Alias por OS ──
 function buscarAliasContrato(obraSocial, codigo, descripcion) {
   const cod = _codigoNorm(codigo), txt = _normContrato(descripcion);
@@ -112,7 +140,10 @@ function planImportarContratos(filas) {
     const os = (f.obraSocial || '').trim();
     const codigo = (f.codigo != null ? String(f.codigo) : '').trim();
     const descripcion = (f.descripcion != null ? String(f.descripcion) : (f.ref != null ? String(f.ref) : '')).trim();
-    const categoria = (f.categoria || '').trim();
+    const catArchivo = (f.categoria || '').trim();
+    const clasif = clasificarPrestacionOFTA(descripcion);
+    const categoria = catArchivo || clasif.categoria;       // la del archivo manda; si no, la detectada
+    const dudosa = !catArchivo && clasif.dudosa;            // solo dudamos si tuvimos que adivinar
     const valorNum = Number(f.valor);
     const problemas = [];
     if (!os) problemas.push('falta obra social');
@@ -120,7 +151,7 @@ function planImportarContratos(filas) {
     if (f.valor === '' || f.valor == null || isNaN(valorNum) || valorNum < 0) problemas.push('valor inválido');
     const match = (os && (descripcion || codigo)) ? sugerirPrestacionContrato(os, codigo, descripcion, categoria)
       : { estado: 'sinMatch', grupo: null, candidato: null, score: 0, alternativas: [] };
-    return { fila: i + 1, obraSocial: os, codigo, descripcion, categoria, valor: isNaN(valorNum) ? null : valorNum, match, problemas };
+    return { fila: i + 1, obraSocial: os, codigo, descripcion, categoria, dudosa, valor: isNaN(valorNum) ? null : valorNum, match, problemas };
   });
 }
 

@@ -48,6 +48,26 @@ describe('Sugerencia contra el catálogo', () => {
   });
 });
 
+describe('Clasificación automática por descripción (estilo OIP)', () => {
+  it('detecta consulta / estudio / cirugía por palabras clave', () => {
+    expect(app.clasificarPrestacionOFTA('Consulta oftalmológica').categoria).toBe('consulta');
+    expect(app.clasificarPrestacionOFTA('CAMPO VISUAL COMPUTARIZADO').categoria).toBe('realizacion_estudio');
+    expect(app.clasificarPrestacionOFTA('OCT de mácula').categoria).toBe('realizacion_estudio');
+    expect(app.clasificarPrestacionOFTA('Facoemulsificación de catarata').categoria).toBe('cirugia');
+    expect(app.clasificarPrestacionOFTA('Pterigión con injerto').categoria).toBe('cirugia');
+  });
+  it('lo no reconocido cae en práctica y se marca dudosa', () => {
+    const r = app.clasificarPrestacionOFTA('Extracción de cuerpo extraño superficial');
+    expect(r.categoria).toBe('practica');
+    expect(r.dudosa).toBe(true);
+  });
+  it('el plan de importación adjunta la categoría detectada (para «crear nueva»)', () => {
+    const plan = app.planImportarContratos([{ obraSocial: 'IOMA', codigo: 'Z1', descripcion: 'Retinografía color', valor: 9000 }]);
+    expect(plan[0].categoria).toBe('realizacion_estudio');
+    expect(plan[0].dudosa).toBe(false);
+  });
+});
+
 describe('Alias aprendido por OS', () => {
   it('tras guardar el alias, la misma OS matchea directo (estado alias)', () => {
     app.guardarAliasContrato('IOMA', 'X-77', 'CV computarizado IOMA', campo.grupo);

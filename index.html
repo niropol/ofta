@@ -355,12 +355,13 @@
           <button class="btn secundario" onclick="descargarPlantillaContratos()">Descargar plantilla CSV</button>
         </div>
         <div class="filtros" style="align-items:flex-end">
-          <label class="muted">Tipo <select id="ctrNuevoCat"></select></label>
+          <label class="muted">Descripción <input id="ctrNuevoDesc" style="width:240px" placeholder="ej. Facoemulsificación" oninput="_autoClasificarAlta()"></label>
+          <label class="muted">Clasificar como <select id="ctrNuevoCat" onchange="_altaCatManual()"></select></label>
           <label class="muted">Código <input id="ctrNuevoCodigo" style="width:100px" placeholder="ej. 660101"></label>
-          <label class="muted">Descripción <input id="ctrNuevoDesc" style="width:220px" placeholder="ej. Facoemulsificación"></label>
           <label class="muted">Valor <input id="ctrNuevoValor" type="number" step="0.01" style="width:120px" placeholder="$"></label>
           <button class="btn" onclick="agregarContratoManualUI()">+ Agregar</button>
         </div>
+        <div id="ctrNuevoHint" class="muted" style="font-size:12px;min-height:16px;margin:-6px 0 8px"></div>
         <div id="ctrImportMsg"></div>
         <div class="tabla-wrap"><div id="contratosTabla"></div></div>
         <p class="muted" style="margin-top:10px">El cobro mensual (lo que SAM te paga y lo que te transfirió) está en <strong>Finanzas ▸ Cobros de SAM</strong>.</p>
