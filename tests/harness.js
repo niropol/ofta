@@ -85,7 +85,7 @@ const EXPONER = [
   'eliminarSede', '_referenciasSede', 'marcarSedeActiva',
   // contratos (ingreso)
   'porcentajeSAM', 'valorContrato', 'setContrato', 'eliminarContrato', 'contratosDeOS',
-  'aumentarContratosOS', 'importarContratos', 'agregarContratoManual',
+  'aumentarContratosOS', 'importarContratos', 'agregarContratoManual', 'comparativaContratos',
   'ingresoSAMDePrestacion', 'ingresoSAMDelMes', 'ingresoSAMPorOS', 'registrarCobroSAM', 'quitarCobroSAM',
   'comparacionCobroSAM', 'comparacionCobrosMes',
   'insumoModo', 'setInsumoModo', 'costoInsumosDelMes',

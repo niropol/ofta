@@ -9,6 +9,36 @@ beforeEach(() => {
 });
 function nomFaco() { return app.crearPrestacion({ categoria: 'cirugia', descripcion: 'Faco', precio: 0, vigenciaDesde: '2026-01-01' }); }
 
+describe('Comparativa de contratos (prestación de menor valor)', () => {
+  it('marca la OS de menor valor por prestación y la diferencia con la más cara', () => {
+    const faco = nomFaco();
+    const campo = app.crearPrestacion({ categoria: 'realizacion_estudio', descripcion: 'Campo visual', vigenciaDesde: '2026-01-01' });
+    app.setContrato('OSDE', faco.grupo, 150000, '2026-01-01');
+    app.setContrato('IOMA', faco.grupo, 120000, '2026-01-01');
+    app.setContrato('IOMA', campo.grupo, 40000, '2026-01-01');   // única OS
+    const comp = app.comparativaContratos('2026-03-01');
+    const rFaco = comp.find(r => r.grupo === faco.grupo);
+    expect(rFaco.menorOS).toBe('IOMA');
+    expect(rFaco.menorValor).toBe(120000);
+    expect(rFaco.mayorOS).toBe('OSDE');
+    expect(rFaco.diferencia).toBe(30000);
+    expect(rFaco.cantidadOS).toBe(2);
+    const rCampo = comp.find(r => r.grupo === campo.grupo);
+    expect(rCampo.menorOS).toBe('IOMA');
+    expect(rCampo.cantidadOS).toBe(1);
+  });
+
+  it('al cargar un contrato nuevo más barato, cambia la OS de menor valor', () => {
+    const faco = nomFaco();
+    app.setContrato('OSDE', faco.grupo, 150000, '2026-01-01');
+    expect(app.comparativaContratos('2026-03-01').find(r => r.grupo === faco.grupo).menorOS).toBe('OSDE');
+    app.setContrato('IOMA', faco.grupo, 100000, '2026-01-01');
+    const r = app.comparativaContratos('2026-03-01').find(r => r.grupo === faco.grupo);
+    expect(r.menorOS).toBe('IOMA');
+    expect(r.menorValor).toBe(100000);
+  });
+});
+
 describe('Contratos e ingreso de SAM', () => {
   it('setContrato guarda el valor por OS + prestación y lo devuelve vigente', () => {
     const faco = nomFaco();

@@ -20,7 +20,42 @@ function renderContratos() {
   _poblarSelectOSContratos();
   _poblarSelectCatContrato();
   renderContratosTabla();
+  renderMenorValor();
   renderCobroSAM();
+}
+
+// ── Prestaciones de menor valor: comparativa de precios entre obras sociales ──
+function renderMenorValor() {
+  const cont = document.getElementById('menorValorTabla');
+  if (!cont) return;
+  const catF = (document.getElementById('mvCat') || {}).value || '';
+  const q = (((document.getElementById('mvBuscar') || {}).value) || '').trim().toLowerCase();
+  let filas = comparativaContratos();
+  if (catF) filas = filas.filter(r => r.categoria === catF);
+  if (q) filas = filas.filter(r => (r.descripcion || '').toLowerCase().includes(q) || (r.codigo || '').toLowerCase().includes(q));
+  const orden = { consulta: 0, realizacion_estudio: 1, practica: 2, cirugia: 3 };
+  filas.sort((a, b) => ((orden[a.categoria] ?? 9) - (orden[b.categoria] ?? 9)) || (a.descripcion || '').localeCompare(b.descripcion || '', 'es'));
+  if (!filas.length) { cont.innerHTML = '<p class="vacio">No hay contratos cargados todavía. Cargá valores por obra social en «Contratos».</p>'; return; }
+
+  const rows = filas.map(r => {
+    const detalle = r.contratos.map(c =>
+      `<span style="white-space:nowrap;${c.obraSocial === r.menorOS ? 'font-weight:700;color:var(--ok)' : ''}">${escHtml(c.obraSocial)} ${fmtMoneda(c.valor, 'ARS')}</span>`
+    ).join(' · ');
+    const dif = (r.cantidadOS > 1 && r.diferencia > 0)
+      ? `<span class="muted">+${fmtMoneda(r.diferencia, 'ARS')} vs ${escHtml(r.mayorOS)}</span>` : '<span class="muted">única OS</span>';
+    return `<tr>
+      <td>${escHtml((categoriaInfo(r.categoria) || {}).label || r.categoria)}</td>
+      <td>${escHtml(r.descripcion)}</td>
+      <td><span class="badge-ok">▼ ${escHtml(r.menorOS)}</span> <strong>${fmtMoneda(r.menorValor, 'ARS')}</strong></td>
+      <td>${dif}</td>
+      <td class="muted" style="font-size:12px">${detalle}</td>
+    </tr>`;
+  }).join('');
+  cont.innerHTML = `
+    <table class="tabla">
+      <thead><tr><th>Categoría</th><th>Prestación</th><th>Menor valor (OS)</th><th>Diferencia</th><th>Todas las OS</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
 }
 
 // Categorías para el alta manual (todas menos insumo).

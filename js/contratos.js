@@ -161,6 +161,42 @@ function contratosDeOS(obraSocial) {
   }).filter(x => x.descripcion && x.categoria !== 'insumo');
 }
 
+// ── Comparativa de contratos entre obras sociales ──
+// Para cada prestación CANÓNICA con al menos un contrato vigente, devuelve el
+// valor de cada OS y marca cuál es la de MENOR valor (y la de mayor). Se recalcula
+// cada vez que se carga/edita un contrato (renderContratos lo vuelve a pedir).
+function comparativaContratos(fecha) {
+  const f = fecha || hoyISO();
+  const porGrupo = {};
+  const pares = new Set();
+  DB.contratos.forEach(c => pares.add(c.obraSocial + '||' + c.grupoNomenclador));
+  pares.forEach(k => {
+    const idx = k.lastIndexOf('||');
+    const os = k.slice(0, idx);
+    const g = Number(k.slice(idx + 2));
+    const v = valorContrato(os, g, f);
+    if (v == null) return;
+    (porGrupo[g] = porGrupo[g] || []).push({ obraSocial: os, valor: v });
+  });
+  return Object.keys(porGrupo).map(gStr => {
+    const g = Number(gStr);
+    const item = versionActual(g);
+    const lista = porGrupo[g].slice().sort((a, b) => a.valor - b.valor);
+    const menor = lista[0], mayor = lista[lista.length - 1];
+    return {
+      grupo: g,
+      codigo: item ? (item.codigo || '') : '',
+      descripcion: item ? item.descripcion : '—',
+      categoria: item ? item.categoria : '',
+      contratos: lista,
+      cantidadOS: lista.length,
+      menorOS: menor.obraSocial, menorValor: menor.valor,
+      mayorOS: mayor.obraSocial, mayorValor: mayor.valor,
+      diferencia: mayor.valor - menor.valor,
+    };
+  }).filter(r => r.descripcion && r.categoria !== 'insumo');
+}
+
 // ── Ingreso de SAM ──
 // SAM factura TODA prestación (consulta, estudio, práctica y cirugía, incluido
 // Particular) por su VALOR DE CONTRATO según la obra social (cada OS su valor), y

@@ -333,6 +333,7 @@
       <div class="section-head"><h3 style="margin:0">Nomenclador y contratos</h3></div>
       <div class="subtabs" id="nomconTabs">
         <button class="active" data-p="contr" onclick="nomconTab('contr')">Contratos (valores por OS)</button>
+        <button data-p="menor" onclick="nomconTab('menor')">Prestaciones de menor valor</button>
         <button data-p="os" onclick="nomconTab('os')">Obras sociales</button>
       </div>
 
@@ -340,6 +341,22 @@
         <div class="section-head"><h4 style="margin:0">Obras sociales</h4>
           <button class="btn" onclick="abrirNuevaOS()">+ Nueva obra social</button></div>
         <div class="tabla-wrap"><div id="osTabla"></div></div>
+      </div>
+
+      <div class="nomconpanel" data-p="menor" hidden>
+        <div class="section-head"><h4 style="margin:0">Prestaciones de menor valor</h4></div>
+        <p class="muted" style="margin-top:0">Para cada prestación, la obra social que la paga <strong>más barata</strong> (y comparada con la más cara). Se recalcula sola cada vez que cargás o editás un contrato.</p>
+        <div class="filtros">
+          <label class="muted">Categoría <select id="mvCat" onchange="renderMenorValor()">
+            <option value="">Todas</option>
+            <option value="consulta">Consultas</option>
+            <option value="realizacion_estudio">Estudios</option>
+            <option value="practica">Prácticas</option>
+            <option value="cirugia">Cirugías</option>
+          </select></label>
+          <input type="search" id="mvBuscar" placeholder="Buscar prestación…" oninput="renderMenorValor()" style="min-width:180px">
+        </div>
+        <div class="tabla-wrap"><div id="menorValorTabla"></div></div>
       </div>
 
       <div class="nomconpanel" data-p="contr">
