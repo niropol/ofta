@@ -183,6 +183,7 @@ function comparativaContratos(fecha) {
     const item = versionActual(g);
     const lista = porGrupo[g].slice().sort((a, b) => a.valor - b.valor);
     const menor = lista[0], mayor = lista[lista.length - 1];
+    const promedio = Math.round(lista.reduce((s, x) => s + x.valor, 0) / lista.length);
     return {
       grupo: g,
       codigo: item ? (item.codigo || '') : '',
@@ -192,6 +193,7 @@ function comparativaContratos(fecha) {
       cantidadOS: lista.length,
       menorOS: menor.obraSocial, menorValor: menor.valor,
       mayorOS: mayor.obraSocial, mayorValor: mayor.valor,
+      promedio,
       diferencia: mayor.valor - menor.valor,
     };
   }).filter(r => r.descripcion && r.categoria !== 'insumo');

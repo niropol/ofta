@@ -30,6 +30,16 @@ function renderValoresMedico() {
   const coincide = txt => !q || (txt || '').toLowerCase().includes(q);
   const fecha = hoyISO();
 
+  // Sugerencia: menor y promedio de los contratos (entre OS) de cada prestación.
+  const compMap = {};
+  (typeof comparativaContratos === 'function' ? comparativaContratos(fecha) : []).forEach(r => { compMap[r.grupo] = r; });
+  const celdaSug = grupo => {
+    const r = grupo != null ? compMap[grupo] : null;
+    if (!r) return '<td class="muted">—</td><td class="muted">—</td>';
+    return `<td class="muted" title="Contrato más barato entre obras sociales">${fmtMoneda(r.menorValor, 'ARS')} <span style="font-size:11px">(${escHtml(r.menorOS)})</span></td>`
+      + `<td class="muted" title="Promedio de los contratos${r.cantidadOS > 1 ? ' de ' + r.cantidadOS + ' OS' : ''}">${fmtMoneda(r.promedio, 'ARS')}</td>`;
+  };
+
   // Fila editable de un valor por categoría (+ grupo opcional = tipo puntual).
   const fila = (label, categoria, grupo) => {
     const gen = valorMedicoVigente(categoria, null, fecha, grupo);
@@ -44,13 +54,14 @@ function renderValoresMedico() {
     const id = 'vm_' + categoria + '_' + (grupo || 'g') + '_' + (mid || 'gen');
     return `<tr>
       <td>${escHtml(label)}</td>
-      <td><input type="number" step="0.01" id="${id}" value="${valorInput}" style="width:130px" placeholder="${mid != null ? '(usa el general)' : 'sin definir'}"></td>
+      <td><input type="number" step="0.01" id="${id}" value="${valorInput}" style="width:120px" placeholder="${mid != null ? '(usa el general)' : 'sin definir'}"></td>
+      ${celdaSug(grupo)}
       <td class="muted">${hint}</td>
       <td class="acc"><button onclick="guardarValorInlineUI('${categoria}',${grupo || 'null'},${mid || 'null'},'${id}')">Guardar</button></td>
     </tr>`;
   };
 
-  const encabezado = titulo => `<tr><td colspan="4" style="background:#f8fafc;font-weight:600">${escHtml(titulo)}</td></tr>`;
+  const encabezado = titulo => `<tr><td colspan="6" style="background:#f8fafc;font-weight:600">${escHtml(titulo)}</td></tr>`;
 
   // Bloque de una categoría: fila «general» (respaldo) + una fila por tipo del nomenclador.
   const bloque = (categoria, titulo, items, etiquetaGeneral) => {
@@ -92,18 +103,20 @@ function renderValoresMedico() {
       cuerpo += encabezado('Insumos (pago por colocarlos)') + insumos.map(v => `
         <tr>
           <td>${escHtml(v.descripcion)}</td>
-          <td><input type="number" step="0.01" id="vmi_${v.grupo}" value="${v.honorarioMedico != null ? v.honorarioMedico : ''}" style="width:130px" placeholder="0"></td>
+          <td><input type="number" step="0.01" id="vmi_${v.grupo}" value="${v.honorarioMedico != null ? v.honorarioMedico : ''}" style="width:120px" placeholder="0"></td>
+          <td class="muted">—</td>
+          <td class="muted">—</td>
           <td class="muted">por colocarlo</td>
           <td class="acc"><button onclick="guardarHonInsumoInlineUI(${v.grupo})">Guardar</button></td>
         </tr>`).join('');
     }
   }
 
-  if (!cuerpo) cuerpo = '<tr><td colspan="4" class="muted">Sin prestaciones para ese filtro. Cargá el nomenclador/contratos primero.</td></tr>';
+  if (!cuerpo) cuerpo = '<tr><td colspan="6" class="muted">Sin prestaciones para ese filtro. Cargá el nomenclador/contratos primero.</td></tr>';
 
   cont.innerHTML = `
     <table class="tabla">
-      <thead><tr><th>Prestación</th><th>Pago al médico</th><th></th><th></th></tr></thead>
+      <thead><tr><th>Prestación</th><th>Pago al médico</th><th>Menor contrato</th><th>Promedio contratos</th><th></th><th></th></tr></thead>
       <tbody>${cuerpo}</tbody>
     </table>
     <p class="muted" style="margin-top:6px">${mid == null
