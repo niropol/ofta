@@ -30,14 +30,17 @@ function renderValoresMedico() {
   const coincide = txt => !q || (txt || '').toLowerCase().includes(q);
   const fecha = hoyISO();
 
-  // Sugerencia: menor y promedio de los contratos (entre OS) de cada prestación.
+  // Sugerencia: menor y promedio de los contratos (entre OS) de cada prestación,
+  // y el 40% de cada uno (lo que SAM efectivamente nos paga).
+  const pct = (typeof porcentajeSAM === 'function') ? porcentajeSAM() : 40;
   const compMap = {};
   (typeof comparativaContratos === 'function' ? comparativaContratos(fecha) : []).forEach(r => { compMap[r.grupo] = r; });
+  const p40 = v => Math.floor(v * pct / 100);
   const celdaSug = grupo => {
     const r = grupo != null ? compMap[grupo] : null;
     if (!r) return '<td class="muted">—</td><td class="muted">—</td>';
-    return `<td class="muted" title="Contrato más barato entre obras sociales">${fmtMoneda(r.menorValor, 'ARS')} <span style="font-size:11px">(${escHtml(r.menorOS)})</span></td>`
-      + `<td class="muted" title="Promedio de los contratos${r.cantidadOS > 1 ? ' de ' + r.cantidadOS + ' OS' : ''}">${fmtMoneda(r.promedio, 'ARS')}</td>`;
+    return `<td class="muted" title="Contrato más barato entre obras sociales">${fmtMoneda(r.menorValor, 'ARS')} <span style="font-size:11px">(${escHtml(r.menorOS)})</span><br><span style="font-size:11px">${pct}%: <strong>${fmtMoneda(p40(r.menorValor), 'ARS')}</strong></span></td>`
+      + `<td class="muted" title="Promedio de los contratos${r.cantidadOS > 1 ? ' de ' + r.cantidadOS + ' OS' : ''}">${fmtMoneda(r.promedio, 'ARS')}<br><span style="font-size:11px">${pct}%: <strong>${fmtMoneda(p40(r.promedio), 'ARS')}</strong></span></td>`;
   };
 
   // Fila editable de un valor por categoría (+ grupo opcional = tipo puntual).
@@ -52,9 +55,15 @@ function renderValoresMedico() {
       hint = gen ? `general ${fmtMoneda(gen.valor, 'ARS')}` : 'sin general';
     }
     const id = 'vm_' + categoria + '_' + (grupo || 'g') + '_' + (mid || 'gen');
+    // Rojo si el pago supera el 40% del contrato MÁS BARATO: pagarías más de lo que SAM te deja.
+    const r = grupo != null ? compMap[grupo] : null;
+    const techo = r ? p40(r.menorValor) : null;
+    const efectivo = Number((valorInput !== '' && valorInput != null) ? valorInput : (gen ? gen.valor : 0)) || 0;
+    const excede = techo != null && efectivo > techo;
+    const inpStyle = excede ? 'width:120px;border:2px solid var(--danger);background:#fdecec' : 'width:120px';
     return `<tr>
-      <td>${escHtml(label)}</td>
-      <td><input type="number" step="0.01" id="${id}" value="${valorInput}" style="width:120px" placeholder="${mid != null ? '(usa el general)' : 'sin definir'}"></td>
+      <td>${escHtml(label)}${excede ? ' <span title="Pagás más que el ' + pct + '% del contrato más barato (' + fmtMoneda(techo, 'ARS') + ')" style="color:var(--danger)">⚠</span>' : ''}</td>
+      <td><input type="number" step="0.01" id="${id}" value="${valorInput}" style="${inpStyle}" placeholder="${mid != null ? '(usa el general)' : 'sin definir'}"></td>
       ${celdaSug(grupo)}
       <td class="muted">${hint}</td>
       <td class="acc"><button onclick="guardarValorInlineUI('${categoria}',${grupo || 'null'},${mid || 'null'},'${id}')">Guardar</button></td>
@@ -119,7 +128,7 @@ function renderValoresMedico() {
       <thead><tr><th>Prestación</th><th>Pago al médico</th><th>Menor contrato</th><th>Promedio contratos</th><th></th><th></th></tr></thead>
       <tbody>${cuerpo}</tbody>
     </table>
-    <p class="muted" style="margin-top:6px">${mid == null
+    <p class="muted" style="margin-top:6px"><span style="color:var(--danger)">⚠ En rojo</span>: el pago supera el ${pct}% del contrato más barato (pagarías más de lo que SAM te deja por esa prestación). ${mid == null
       ? 'Valores generales (todos los médicos). La fila «valor general» de cada bloque se usa cuando un tipo puntual no tiene valor propio. Elegí un médico arriba para ponerle un valor especial. En «Derivaciones» elegí esa categoría para fijar el pago por tipo derivado.'
       : 'Valor especial para <strong>' + escHtml(medicoNombre(mid)) + '</strong>. Vacío = usa el general. Los insumos son siempre generales.'}</p>`;
 }
