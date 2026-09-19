@@ -674,6 +674,13 @@
         <select id="os_estado"><option value="Activa">Activa</option><option value="Inactiva">Inactiva</option></select>
       </div>
     </div>
+    <div class="campo"><label>Modalidad IVA</label>
+      <select id="os_modalidadIVA">
+        <option value="ambas">Ambas (según cada prestación)</option>
+        <option value="exenta">Solo exenta (nunca IVA)</option>
+        <option value="gravada">Solo gravada (siempre IVA)</option>
+      </select>
+    </div>
     <div class="modal-acciones">
       <button class="btn secundario" onclick="cerrarModalOS()">Cancelar</button>
       <button class="btn" onclick="guardarOS()">Guardar</button>

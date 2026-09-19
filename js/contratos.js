@@ -9,6 +9,29 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 function porcentajeSAM() { return Number(DB.config.porcentajeSAM) || 0; }
+function ivaAlicuota() { const v = Number(DB.config.ivaAlicuota); return isNaN(v) ? 0 : v; }
+
+// Modalidad IVA de una obra social: 'exenta' (nunca IVA), 'gravada' (siempre IVA),
+// 'ambas' (según la prestación). Default 'ambas'.
+function _modalidadIVAdeOS(obraSocial) {
+  const os = (DB.obrasSociales || []).find(o => o.nombre === obraSocial);
+  const m = os && os.modalidadIVA;
+  return (m === 'exenta' || m === 'gravada') ? m : 'ambas';
+}
+// ¿La línea (OS + prestación) lleva IVA? La modalidad de la OS puede forzar
+// exento/gravado; en 'ambas' decide la prestación (item.ivaExento).
+function lineaGravada(obraSocial, grupo, fecha) {
+  const modo = _modalidadIVAdeOS(obraSocial);
+  if (modo === 'exenta') return false;
+  if (modo === 'gravada') return true;
+  const item = (typeof versionActual === 'function') ? versionActual(Number(grupo)) : null;
+  return item ? item.ivaExento === false : false;   // por defecto exento (sin IVA)
+}
+// IVA en pesos sobre un valor de contrato, si la línea es gravada.
+function ivaDeLinea(obraSocial, grupo, valor, fecha) {
+  if (!lineaGravada(obraSocial, grupo, fecha)) return 0;
+  return Math.round((Number(valor) || 0) * ivaAlicuota() / 100);
+}
 function insumoModo() { return DB.config.insumoModo === 'margen' ? 'margen' : 'total'; }
 function setInsumoModo(modo) {
   const m = modo === 'margen' ? 'margen' : 'total';
@@ -218,12 +241,16 @@ function ingresoSAMDePrestacion(reg) {
   });
 
   const vc = valorContrato(reg.obraSocial, reg.grupoNomenclador, reg.fecha);
-  const factU = (vc || 0) + insBilling;
-  const baseU = (vc || 0) + insReparto;
+  // IVA (10,5%) sobre la prestación GRAVADA: se suma a lo facturado y al 40%.
+  const iva = ivaDeLinea(reg.obraSocial, reg.grupoNomenclador, vc || 0, reg.fecha);
+  const vcConIva = (vc || 0) + iva;
+  const factU = vcConIva + insBilling;
+  const baseU = vcConIva + insReparto;
   const ingU = Math.floor(baseU * porcentajeSAM() / 100);
   return {
     ingreso: ingU * cant, facturado: factU * cant, base: baseU * cant,
-    valorContrato: vc, insumos: insBilling * cant, faltaContrato: vc == null, cantidad: cant,
+    valorContrato: vc, iva: iva * cant, gravada: iva > 0,
+    insumos: insBilling * cant, faltaContrato: vc == null, cantidad: cant,
   };
 }
 

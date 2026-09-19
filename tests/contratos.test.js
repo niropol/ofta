@@ -9,6 +9,42 @@ beforeEach(() => {
 });
 function nomFaco() { return app.crearPrestacion({ categoria: 'cirugia', descripcion: 'Faco', precio: 0, vigenciaDesde: '2026-01-01' }); }
 
+describe('IVA (exento / gravado)', () => {
+  function regDe(os, grupo) { return { obraSocial: os, grupoNomenclador: grupo, fecha: '2026-03-10', cantidad: 1 }; }
+  it('prestación gravada suma IVA 10,5% al facturar y al 40%', () => {
+    const p = app.crearPrestacion({ categoria: 'practica', descripcion: 'Práctica gravada', ivaExento: false, vigenciaDesde: '2026-01-01' });
+    app.DB.obrasSociales.push({ id: 1, nombre: 'OSDE', estado: 'Activo', modalidadIVA: 'ambas' });
+    app.setContrato('OSDE', p.grupo, 100000, '2026-01-01');
+    const d = app.ingresoSAMDePrestacion(regDe('OSDE', p.grupo));
+    expect(d.gravada).toBe(true);
+    expect(d.iva).toBe(10500);
+    expect(d.facturado).toBe(110500);
+    expect(d.ingreso).toBe(Math.floor(110500 * 0.4)); // 44200
+  });
+  it('prestación exenta (default) no suma IVA', () => {
+    const p = app.crearPrestacion({ categoria: 'consulta', descripcion: 'Consulta', vigenciaDesde: '2026-01-01' });
+    app.DB.obrasSociales.push({ id: 2, nombre: 'IOMA', estado: 'Activo', modalidadIVA: 'ambas' });
+    app.setContrato('IOMA', p.grupo, 22000, '2026-01-01');
+    const d = app.ingresoSAMDePrestacion(regDe('IOMA', p.grupo));
+    expect(d.iva).toBe(0);
+    expect(d.facturado).toBe(22000);
+  });
+  it('OS "exenta" fuerza sin IVA aunque la prestación sea gravada', () => {
+    const p = app.crearPrestacion({ categoria: 'practica', descripcion: 'Práctica X', ivaExento: false, vigenciaDesde: '2026-01-01' });
+    app.DB.obrasSociales.push({ id: 3, nombre: 'PAMI', estado: 'Activo', modalidadIVA: 'exenta' });
+    app.setContrato('PAMI', p.grupo, 100000, '2026-01-01');
+    expect(app.ingresoSAMDePrestacion(regDe('PAMI', p.grupo)).iva).toBe(0);
+  });
+  it('OS "gravada" fuerza IVA aunque la prestación sea exenta', () => {
+    const p = app.crearPrestacion({ categoria: 'consulta', descripcion: 'Consulta Y', vigenciaDesde: '2026-01-01' });
+    app.DB.obrasSociales.push({ id: 4, nombre: 'SWISS', estado: 'Activo', modalidadIVA: 'gravada' });
+    app.setContrato('SWISS', p.grupo, 20000, '2026-01-01');
+    const d = app.ingresoSAMDePrestacion(regDe('SWISS', p.grupo));
+    expect(d.iva).toBe(Math.round(20000 * 10.5 / 100)); // 2100
+    expect(d.facturado).toBe(22100);
+  });
+});
+
 describe('Comparativa de contratos (prestación de menor valor)', () => {
   it('marca la OS de menor valor por prestación y la diferencia con la más cara', () => {
     const faco = nomFaco();

@@ -83,6 +83,7 @@ function crearPrestacion(datos) {
     costo: esLIO ? (Number(datos.costo) || 0) : null,
     costoMoneda: esLIO ? (datos.costoMoneda || 'ARS') : null,
     honorarioMedico: esLIO ? (Number(datos.honorarioMedico) || 0) : null,  // fijo al médico por colocar el insumo
+    ivaExento: datos.ivaExento === false ? false : true,   // por defecto exento (sin IVA); gravado si ivaExento=false
     vigenciaDesde: datos.vigenciaDesde || hoyISO(),
     vigenciaHasta: null,
     estado: 'Activo',
@@ -105,6 +106,7 @@ function editarPrestacion(grupo, datos) {
   versiones.forEach(v => {
     if (datos.codigo != null) v.codigo = String(datos.codigo).trim();
     if (datos.descripcion != null) v.descripcion = String(datos.descripcion).trim();
+    if (datos.ivaExento != null) v.ivaExento = datos.ivaExento === false ? false : true;
     if (datos.categoria != null) {
       v.categoria = datos.categoria;
       if (!esLIO) { v.costo = null; v.costoMoneda = null; }
@@ -152,6 +154,7 @@ function versionarPrecio(grupo, { vigenciaDesde, precio, moneda, costo, costoMon
     costo: esLIO ? (costo != null ? Number(costo) : actual.costo) : null,
     costoMoneda: esLIO ? (costoMoneda || actual.costoMoneda || 'ARS') : null,
     honorarioMedico: esLIO ? (actual.honorarioMedico || 0) : null,
+    ivaExento: actual.ivaExento === false ? false : true,
     vigenciaDesde: desde,
     vigenciaHasta: null,
     estado: actual.estado,

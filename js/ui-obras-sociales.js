@@ -60,7 +60,7 @@ function cerrarModalOS() { _mostrarModalOS(false); }
 function abrirNuevaOS() {
   document.getElementById('modalOSTitulo').textContent = 'Nueva obra social';
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v == null ? '' : v; };
-  set('os_id', ''); set('os_nombre', ''); set('os_codigo', ''); set('os_estado', 'Activa');
+  set('os_id', ''); set('os_nombre', ''); set('os_codigo', ''); set('os_estado', 'Activa'); set('os_modalidadIVA', 'ambas');
   _mostrarModalOS(true);
 }
 
@@ -69,7 +69,7 @@ function editarOS(id) {
   if (!o) return;
   document.getElementById('modalOSTitulo').textContent = 'Editar obra social';
   const set = (idf, v) => { const el = document.getElementById(idf); if (el) el.value = v == null ? '' : v; };
-  set('os_id', o.id); set('os_nombre', o.nombre); set('os_codigo', o.codigo); set('os_estado', o.estado || 'Activa');
+  set('os_id', o.id); set('os_nombre', o.nombre); set('os_codigo', o.codigo); set('os_estado', o.estado || 'Activa'); set('os_modalidadIVA', o.modalidadIVA || 'ambas');
   _mostrarModalOS(true);
 }
 
@@ -83,7 +83,7 @@ function guardarOS() {
   const dup = DB.obrasSociales.find(o => (o.nombre || '').toLowerCase() === nombre.toLowerCase() && o.id !== idEdit);
   if (dup) { alert('Ya existe una obra social con ese nombre.'); return false; }
 
-  const datos = { nombre, codigo: val('os_codigo'), estado: val('os_estado') || 'Activa' };
+  const datos = { nombre, codigo: val('os_codigo'), estado: val('os_estado') || 'Activa', modalidadIVA: val('os_modalidadIVA') || 'ambas' };
 
   if (idEdit) {
     const o = DB.obrasSociales.find(x => x.id === idEdit);

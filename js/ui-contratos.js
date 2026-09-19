@@ -93,25 +93,47 @@ function renderContratosTabla() {
   const filas = contratosDeOS(os).sort((a, b) =>
     ((orden[a.categoria] ?? 9) - (orden[b.categoria] ?? 9)) || (a.descripcion || '').localeCompare(b.descripcion || '', 'es'));
   if (filas.length === 0) { cont.innerHTML = '<p class="vacio">No hay prestaciones en el nomenclador. Cargalas en «Prestaciones» o con el alta manual de acá.</p>'; return; }
-  const rows = filas.map(f => `
+  const modoOS = (typeof _modalidadIVAdeOS === 'function') ? _modalidadIVAdeOS(os) : 'ambas';
+  const rows = filas.map(f => {
+    const v = versionActual(f.grupo);
+    const exenta = !(v && v.ivaExento === false);
+    const grav = (typeof lineaGravada === 'function') ? lineaGravada(os, f.grupo) : !exenta;
+    const iva = (f.valor != null && typeof ivaDeLinea === 'function') ? ivaDeLinea(os, f.grupo, f.valor) : 0;
+    const nosPaga = f.valor != null ? Math.floor((f.valor + iva) * porcentajeSAM() / 100) : null;
+    const pill = exenta
+      ? '<button class="pill" style="border:1px solid var(--borde);background:#eef2f7;cursor:pointer;font-size:11px;padding:3px 8px;border-radius:10px" onclick="toggleIvaPrestacionUI(' + f.grupo + ')">Exenta</button>'
+      : '<button class="pill" style="border:1px solid #fde68a;background:#fffbeb;color:#92400e;cursor:pointer;font-size:11px;padding:3px 8px;border-radius:10px" onclick="toggleIvaPrestacionUI(' + f.grupo + ')">Gravada +' + ivaAlicuota() + '%</button>';
+    const forzada = modoOS !== 'ambas' ? ` <span class="muted" style="font-size:10px">(OS: ${modoOS === 'exenta' ? 'exenta' : 'gravada'})</span>` : '';
+    return `
     <tr>
       <td>${escHtml((categoriaInfo(f.categoria) || {}).label || f.categoria)}</td>
       <td>${escHtml(f.codigo || '—')}</td>
       <td>${escHtml(f.descripcion)}</td>
-      <td><input type="number" step="0.01" id="ctr_${f.grupo}" value="${f.valor != null ? f.valor : ''}" style="width:140px" placeholder="sin cargar"></td>
-      <td class="num">${f.valor != null ? fmtMoneda(Math.floor(f.valor * porcentajeSAM() / 100), 'ARS') : '—'}</td>
+      <td>${pill}${forzada}</td>
+      <td><input type="number" step="0.01" id="ctr_${f.grupo}" value="${f.valor != null ? f.valor : ''}" style="width:130px" placeholder="sin cargar"></td>
+      <td class="num">${nosPaga != null ? fmtMoneda(nosPaga, 'ARS') + (iva > 0 ? '<br><span class="muted" style="font-size:10px">c/IVA ' + fmtMoneda(f.valor + iva, 'ARS') + '</span>' : '') : '—'}</td>
       <td class="acc">
         <button onclick="guardarValorContratoUI(${f.grupo})">Guardar</button>
         <button onclick="editarPrestacionUI(${f.grupo})" title="Editar código/descripción">✎</button>
         <button class="danger" onclick="eliminarPrestacionUI(${f.grupo})" title="Eliminar la prestación del catálogo">🗑</button>
       </td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
   cont.innerHTML = `
     <table class="tabla">
-      <thead><tr><th>Tipo</th><th>Código</th><th>Descripción</th><th>Valor de contrato</th>
+      <thead><tr><th>Tipo</th><th>Código</th><th>Descripción</th><th>IVA</th><th>Valor de contrato</th>
         <th class="num">Nos paga (${porcentajeSAM()}%)</th><th></th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
+}
+
+// Alterna exenta ↔ gravada de una prestación (afecta el IVA al facturar).
+function toggleIvaPrestacionUI(grupo) {
+  const v = versionActual(grupo);
+  if (!v) return;
+  const nuevoExento = v.ivaExento === false;   // si estaba gravada → exenta; si exenta → gravada
+  editarPrestacion(grupo, { ivaExento: nuevoExento });
+  if (typeof sincronizarUI === 'function') sincronizarUI(); else renderContratos();
 }
 
 // Alta manual: crea la cirugía (código + descripción) y le pone el valor para la OS elegida.

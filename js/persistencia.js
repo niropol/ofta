@@ -21,6 +21,11 @@ const OBRAS_SOCIALES_BASE = JSON.parse(JSON.stringify(DB.obrasSociales || []));
 const SEDES_BASE          = JSON.parse(JSON.stringify(DB.sedes || []));
 const CONSULTORIOS_BASE   = JSON.parse(JSON.stringify(DB.consultorios || []));
 const USUARIOS_BASE       = JSON.parse(JSON.stringify(DB.usuarios || []));
+const CONFIG_BASE         = JSON.parse(JSON.stringify(DB.config || {}));   // defaults de config
+
+// Mergea el config guardado sobre los defaults, así una config vieja (local o nube)
+// sin las claves nuevas (ej. ivaAlicuota) igual queda completa.
+function _mergeConfig(guardado) { DB.config = Object.assign({}, CONFIG_BASE, guardado || {}); }
 
 let sb = null;                 // cliente Supabase
 let datosCargados = false;     // true una vez que se cargó (o sembró) la nube
@@ -61,7 +66,7 @@ function cargarLocal() {
   try {
     const dump = JSON.parse(raw);
     for (const c of COLECCIONES) if (Array.isArray(dump[c])) DB[c] = dump[c];
-    if (dump.config) DB.config = dump.config;
+    if (dump.config) _mergeConfig(dump.config);
     if (dump.nextId) DB.nextId = dump.nextId;
     _asegurarBase('sedes', SEDES_BASE, 'nombre');
     _asegurarBase('consultorios', CONSULTORIOS_BASE, 'nombre');
@@ -121,7 +126,7 @@ async function cargarDesdeNube() {
     // config / nextId desde app_meta.
     const { data: meta } = await sb.from('app_meta').select('clave, valor');
     for (const m of (meta || [])) {
-      if (m.clave === 'config') DB.config = m.valor;
+      if (m.clave === 'config') _mergeConfig(m.valor);
       if (m.clave === 'nextId') DB.nextId = m.valor;
     }
     _corregirNextId();
@@ -223,7 +228,7 @@ function importarBackupObj(dump) {
   if (!hayColecciones) throw new Error('El archivo no parece una copia de OFTA (no tiene colecciones).');
   let cargadas = 0, registros = 0;
   for (const c of COLECCIONES) { if (Array.isArray(dump[c])) { DB[c] = dump[c]; cargadas++; registros += dump[c].length; } }
-  if (dump.config) DB.config = dump.config;
+  if (dump.config) _mergeConfig(dump.config);
   if (dump.nextId) DB.nextId = dump.nextId;
   _asegurarBase('sedes', SEDES_BASE, 'nombre');
   _asegurarBase('consultorios', CONSULTORIOS_BASE, 'nombre');
