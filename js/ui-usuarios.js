@@ -131,12 +131,14 @@ function renderAuditoria() {
   const gv = id => { const el = document.getElementById(id); return el ? el.value : ''; };
   const lista = listarAuditoria({ entidad: gv('audEntidad'), accion: gv('audAccion'), texto: gv('audBuscar') }).slice(0, 200);
 
-  // Poblar el filtro de entidad una vez.
+  // Poblar el filtro de entidad con las entidades presentes (repuebla preservando
+  // la selección, para que las entidades nuevas aparezcan a medida que se auditan).
   const selEnt = document.getElementById('audEntidad');
-  if (selEnt && !selEnt.dataset.listo) {
+  if (selEnt) {
+    const cur = selEnt.value;
     const entidades = [...new Set(DB.auditoria.map(a => a.entidad))].sort();
-    selEnt.innerHTML = '<option value="">Toda entidad</option>' + entidades.map(e => `<option value="${e}">${escHtml(e)}</option>`).join('');
-    selEnt.dataset.listo = '1';
+    const nuevo = '<option value="">Toda entidad</option>' + entidades.map(e => `<option value="${e}">${escHtml(e)}</option>`).join('');
+    if (selEnt.innerHTML !== nuevo) { selEnt.innerHTML = nuevo; if (entidades.includes(cur)) selEnt.value = cur; }
   }
 
   if (lista.length === 0) { cont.innerHTML = '<p class="vacio">Sin registros de auditoría para este filtro.</p>'; return; }
