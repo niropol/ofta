@@ -10,6 +10,15 @@
 
 function porcentajeSAM() { return Number(DB.config.porcentajeSAM) || 0; }
 function ivaAlicuota() { const v = Number(DB.config.ivaAlicuota); return isNaN(v) ? 0 : v; }
+function ivaInsumoAlicuota() { const v = Number(DB.config.ivaInsumo); return isNaN(v) ? 0 : v; }
+
+// IVA (21%) de un insumo colocado. La OS 'exenta' lo suprime; si el insumo está
+// marcado exento, tampoco lleva. Se calcula sobre el ingreso neto del insumo.
+function ivaDeInsumo(obraSocial, insumo) {
+  if (_modalidadIVAdeOS(obraSocial) === 'exenta') return 0;
+  if (insumo && insumo.ivaExento === true) return 0;
+  return Math.round((Number(insumo && insumo.ingreso) || 0) * ivaInsumoAlicuota() / 100);
+}
 
 // Modalidad IVA de una obra social: 'exenta' (nunca IVA), 'gravada' (siempre IVA),
 // 'ambas' (según la prestación). Default 'ambas'.
@@ -233,24 +242,27 @@ function ingresoSAMDePrestacion(reg) {
   // insBilling = lo que factura SAM por los insumos (para "SAM factura a la OS").
   // insReparto = lo que entra a NUESTRO reparto 60/40 (mismo billing en Mec 1;
   //              billing − costo en Mec 2). En ambos NO pagamos el costo aparte.
-  let insBilling = 0, insReparto = 0;
+  let insBilling = 0, insReparto = 0, ivaIns = 0;
   (reg.insumos || []).forEach(i => {
     const ing = Number(i.ingreso) || 0;
-    insBilling += ing;
-    insReparto += (insMode === 'margen') ? (ing - (Number(i.costo) || 0)) : ing;  // costo en pesos
+    const ivaI = ivaDeInsumo(reg.obraSocial, i);   // IVA 21% del insumo (se factura + entra al reparto)
+    ivaIns += ivaI;
+    insBilling += ing + ivaI;
+    insReparto += ((insMode === 'margen') ? (ing - (Number(i.costo) || 0)) : ing) + ivaI;  // costo en pesos
   });
 
   const vc = valorContrato(reg.obraSocial, reg.grupoNomenclador, reg.fecha);
   // IVA (10,5%) sobre la prestación GRAVADA: se suma a lo facturado y al 40%.
-  const iva = ivaDeLinea(reg.obraSocial, reg.grupoNomenclador, vc || 0, reg.fecha);
-  const vcConIva = (vc || 0) + iva;
+  const ivaPrest = ivaDeLinea(reg.obraSocial, reg.grupoNomenclador, vc || 0, reg.fecha);
+  const vcConIva = (vc || 0) + ivaPrest;
   const factU = vcConIva + insBilling;
   const baseU = vcConIva + insReparto;
   const ingU = Math.floor(baseU * porcentajeSAM() / 100);
+  const ivaTotal = ivaPrest + ivaIns;
   return {
     ingreso: ingU * cant, facturado: factU * cant, base: baseU * cant,
-    valorContrato: vc, iva: iva * cant, gravada: iva > 0,
-    insumos: insBilling * cant, faltaContrato: vc == null, cantidad: cant,
+    valorContrato: vc, iva: ivaTotal * cant, ivaPrestacion: ivaPrest * cant, ivaInsumos: ivaIns * cant,
+    gravada: ivaTotal > 0, insumos: insBilling * cant, faltaContrato: vc == null, cantidad: cant,
   };
 }
 

@@ -45,6 +45,46 @@ describe('IVA (exento / gravado)', () => {
   });
 });
 
+describe('IVA de insumos (21%)', () => {
+  function regDe(os, grupo, insumos) { return { obraSocial: os, grupoNomenclador: grupo, fecha: '2026-03-10', cantidad: 1, insumos }; }
+  beforeEach(() => {
+    app.DB.obrasSociales.push({ id: 1, nombre: 'OSDE', estado: 'Activo', modalidadIVA: 'ambas' });
+  });
+  it('insumo gravado por defecto suma IVA 21% a lo facturado y al 40% (Mec 1)', () => {
+    app.DB.config.insumoModo = 'total';
+    const cir = app.crearPrestacion({ categoria: 'cirugia', descripcion: 'Cir', vigenciaDesde: '2026-01-01' }); // exenta
+    const lente = app.crearPrestacion({ categoria: 'insumo', descripcion: 'Lente', precio: 100000, costo: 50000, vigenciaDesde: '2026-01-01' });
+    app.setContrato('OSDE', cir.grupo, 200000, '2026-01-01');
+    const d = app.ingresoSAMDePrestacion(regDe('OSDE', cir.grupo, [{ grupo: lente.grupo, ingreso: 100000, costo: 50000, ivaExento: false }]));
+    // insumo gravado: IVA 21% de 100000 = 21000. facturado = 200000 (cirugía exenta) + 100000 + 21000
+    expect(d.ivaInsumos).toBe(21000);
+    expect(d.facturado).toBe(200000 + 121000);
+    expect(d.ingreso).toBe(Math.floor((200000 + 121000) * 0.4));
+  });
+  it('insumo por defecto es gravado (crearPrestacion categoria insumo)', () => {
+    const lente = app.crearPrestacion({ categoria: 'insumo', descripcion: 'L2', precio: 50000, vigenciaDesde: '2026-01-01' });
+    expect(app.versionActual(lente.grupo).ivaExento).toBe(false);
+  });
+  it('OS exenta suprime el IVA del insumo', () => {
+    app.DB.obrasSociales.push({ id: 2, nombre: 'PAMI', estado: 'Activo', modalidadIVA: 'exenta' });
+    const cir = app.crearPrestacion({ categoria: 'cirugia', descripcion: 'Cir2', vigenciaDesde: '2026-01-01' });
+    const lente = app.crearPrestacion({ categoria: 'insumo', descripcion: 'L3', precio: 100000, vigenciaDesde: '2026-01-01' });
+    app.setContrato('PAMI', cir.grupo, 100000, '2026-01-01');
+    const d = app.ingresoSAMDePrestacion(regDe('PAMI', cir.grupo, [{ grupo: lente.grupo, ingreso: 100000, ivaExento: false }]));
+    expect(d.ivaInsumos).toBe(0);
+  });
+  it('Mec 2 (margen): IVA del insumo entra al reparto sobre el margen', () => {
+    app.DB.config.insumoModo = 'margen';
+    const cir = app.crearPrestacion({ categoria: 'cirugia', descripcion: 'Cir3', vigenciaDesde: '2026-01-01' });
+    const lente = app.crearPrestacion({ categoria: 'insumo', descripcion: 'L4', precio: 100000, costo: 60000, vigenciaDesde: '2026-01-01' });
+    app.setContrato('OSDE', cir.grupo, 100000, '2026-01-01');
+    const d = app.ingresoSAMDePrestacion(regDe('OSDE', cir.grupo, [{ grupo: lente.grupo, ingreso: 100000, costo: 60000, ivaExento: false }]));
+    // base 40% = cirugía 100000 + (100000-60000 margen) + 21000 IVA = 161000
+    expect(d.ingreso).toBe(Math.floor(161000 * 0.4));
+    app.DB.config.insumoModo = 'total';
+  });
+});
+
 describe('Comparativa de contratos (prestación de menor valor)', () => {
   it('marca la OS de menor valor por prestación y la diferencia con la más cara', () => {
     const faco = nomFaco();
@@ -124,7 +164,7 @@ describe('Contratos e ingreso de SAM', () => {
   it('SAM también factura los insumos: el 40% incluye el ingreso de los insumos', () => {
     const faco = nomFaco();
     app.setContrato('OSDE', faco.grupo, 1000000, '2026-01-01');
-    const ins = app.crearPrestacion({ categoria: 'insumo', descripcion: 'Lente', precio: 500000, moneda: 'ARS', costo: 200000, costoMoneda: 'ARS', vigenciaDesde: '2026-01-01' });
+    const ins = app.crearPrestacion({ categoria: 'insumo', ivaExento: true, descripcion: 'Lente', precio: 500000, moneda: 'ARS', costo: 200000, costoMoneda: 'ARS', vigenciaDesde: '2026-01-01' });
     const reg = app.registrarPrestacion({ fecha: '2026-03-10', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 501, obraSocial: 'OSDE', insumos: [ins.grupo] });
     const i = app.ingresoSAMDePrestacion(reg);
     expect(i.facturado).toBe(1500000);          // contrato 1.000.000 + insumo 500.000
@@ -135,7 +175,7 @@ describe('Contratos e ingreso de SAM', () => {
     app.setInsumoModo('total');
     const faco = nomFaco();
     app.setContrato('OSDE', faco.grupo, 1000000, '2026-01-01');
-    const ins = app.crearPrestacion({ categoria: 'insumo', descripcion: 'Lente', precio: 500000, moneda: 'ARS', costo: 250000, costoMoneda: 'ARS', vigenciaDesde: '2026-01-01' });
+    const ins = app.crearPrestacion({ categoria: 'insumo', ivaExento: true, descripcion: 'Lente', precio: 500000, moneda: 'ARS', costo: 250000, costoMoneda: 'ARS', vigenciaDesde: '2026-01-01' });
     const reg = app.registrarPrestacion({ fecha: '2026-03-10', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 501, obraSocial: 'OSDE', insumos: [ins.grupo] });
     const i = app.ingresoSAMDePrestacion(reg);
     expect(i.facturado).toBe(1500000);    // 1.000.000 + 500.000 (lo que factura SAM)
@@ -147,7 +187,7 @@ describe('Contratos e ingreso de SAM', () => {
     app.setInsumoModo('margen');
     const faco = nomFaco();
     app.setContrato('OSDE', faco.grupo, 1000000, '2026-01-01');
-    const ins = app.crearPrestacion({ categoria: 'insumo', descripcion: 'Lente', precio: 500000, moneda: 'ARS', costo: 250000, costoMoneda: 'ARS', vigenciaDesde: '2026-01-01' });
+    const ins = app.crearPrestacion({ categoria: 'insumo', ivaExento: true, descripcion: 'Lente', precio: 500000, moneda: 'ARS', costo: 250000, costoMoneda: 'ARS', vigenciaDesde: '2026-01-01' });
     const reg = app.registrarPrestacion({ fecha: '2026-03-10', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 501, obraSocial: 'OSDE', insumos: [ins.grupo] });
     const i = app.ingresoSAMDePrestacion(reg);
     expect(i.facturado).toBe(1500000);    // SAM factura igual el total
@@ -213,7 +253,7 @@ describe('Contratos e ingreso de SAM', () => {
   it('el insumo suma a lo facturado también en una práctica con contrato', () => {
     const prac = app.crearPrestacion({ categoria: 'practica', descripcion: 'Práctica', vigenciaDesde: '2026-01-01' });
     app.setContrato('OSDE', prac.grupo, 30000, '2026-01-01');
-    const ins = app.crearPrestacion({ categoria: 'insumo', descripcion: 'Descartable', precio: 10000, moneda: 'ARS', costo: 4000, costoMoneda: 'ARS', vigenciaDesde: '2026-01-01' });
+    const ins = app.crearPrestacion({ categoria: 'insumo', ivaExento: true, descripcion: 'Descartable', precio: 10000, moneda: 'ARS', costo: 4000, costoMoneda: 'ARS', vigenciaDesde: '2026-01-01' });
     const r = app.registrarPrestacion({ fecha: '2026-03-10', categoria: 'practica', grupoNomenclador: prac.grupo, medicoRealizadorId: 501, obraSocial: 'OSDE', insumos: [ins.grupo] });
     const i = app.ingresoSAMDePrestacion(r);
     expect(i.facturado).toBe(40000);        // contrato 30.000 + insumo 10.000

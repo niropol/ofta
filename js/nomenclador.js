@@ -83,7 +83,8 @@ function crearPrestacion(datos) {
     costo: esLIO ? (Number(datos.costo) || 0) : null,
     costoMoneda: esLIO ? (datos.costoMoneda || 'ARS') : null,
     honorarioMedico: esLIO ? (Number(datos.honorarioMedico) || 0) : null,  // fijo al médico por colocar el insumo
-    ivaExento: datos.ivaExento === false ? false : true,   // por defecto exento (sin IVA); gravado si ivaExento=false
+    // Prestaciones: por defecto EXENTAS. Insumos: por defecto GRAVADOS (IVA 21%).
+    ivaExento: datos.ivaExento != null ? (datos.ivaExento === false ? false : true) : (datos.categoria !== 'insumo'),
     vigenciaDesde: datos.vigenciaDesde || hoyISO(),
     vigenciaHasta: null,
     estado: 'Activo',

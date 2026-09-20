@@ -1082,7 +1082,7 @@ function adminArea(area) {
 function adminTab(p) {
   document.querySelectorAll('#section-admin .adminpanel').forEach(el => { el.hidden = el.dataset.p !== p; });
   document.querySelectorAll('#adminSubtabs button').forEach(b => b.classList.toggle('active', b.dataset.p === p));
-  const render = { derivaciones: 'renderDerivaciones', avisos: 'renderAvisos', liquidaciones: 'renderLiquidaciones', caja: 'renderCaja', medicos: 'renderMedicos' }[p];
+  const render = { derivaciones: 'renderDerivaciones', avisos: 'renderAvisos', liquidaciones: 'renderLiquidaciones', caja: 'renderCaja', medicos: 'renderMedicos', honorarios: 'renderAdmin' }[p];
   if (render && typeof window[render] === 'function') { try { window[render](); } catch (e) {} }
 }
 

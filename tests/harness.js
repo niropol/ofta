@@ -89,7 +89,7 @@ const EXPONER = [
   'ingresoSAMDePrestacion', 'ingresoSAMDelMes', 'ingresoSAMPorOS', 'registrarCobroSAM', 'quitarCobroSAM',
   'comparacionCobroSAM', 'comparacionCobrosMes',
   'insumoModo', 'setInsumoModo', 'costoInsumosDelMes',
-  'ivaAlicuota', 'lineaGravada', 'ivaDeLinea', '_modalidadIVAdeOS',
+  'ivaAlicuota', 'lineaGravada', 'ivaDeLinea', '_modalidadIVAdeOS', 'ivaInsumoAlicuota', 'ivaDeInsumo',
   'renderContratos', 'guardarValorContratoUI', 'registrarCobroSAMUI', 'toggleIvaPrestacionUI',
   'comparativaContratos',
   // matcheo de contratos (alias + sugerencias)

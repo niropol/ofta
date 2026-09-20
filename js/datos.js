@@ -79,7 +79,8 @@ const DB = {
     //   'total'  → Mecanismo 1: se reparte 60/40 lo facturado (el costo lo absorbe SAM).
     //   'margen' → Mecanismo 2: se descuenta el costo y se reparte 60/40 el margen.
     insumoModo: 'total',
-    ivaAlicuota: 10.5,       // % de IVA que se suma a las prestaciones GRAVADAS al facturar
+    ivaAlicuota: 10.5,       // % de IVA de las PRESTACIONES gravadas (consulta/estudio/práctica/cirugía)
+    ivaInsumo: 21,           // % de IVA de los INSUMOS (generalmente el proveedor pasa precio + IVA 21 aparte)
   },
 
   // ── Usuarios del sistema (secretarias + admin). Sin login todavía (Etapa 10),

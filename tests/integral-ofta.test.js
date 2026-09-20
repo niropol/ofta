@@ -29,10 +29,12 @@ describe('Mes completo OFTA (IVA + insumos + derivación)', () => {
     app.registrarPrestacion({ fecha: '2026-05-06', categoria: 'realizacion_estudio', grupoNomenclador: oct.grupo, medicoRealizadorId: 601, obraSocial: 'IOMA', cantidad: 4 });
     app.registrarPrestacion({ fecha: '2026-05-10', categoria: 'cirugia', grupoNomenclador: cata.grupo, medicoRealizadorId: 600, medicoDerivadorId: 601, obraSocial: 'IOMA', cantidad: 1, insumos: [lente.grupo] });
 
-    // Facturado indep: consulta 10*22000; OCT gravada 4*(40000+round(40000*10.5%)); catarata 265000 + insumo 180000
+    // Facturado indep: consulta 10*22000; OCT gravada 4*(40000+IVA10.5%); catarata 265000 + insumo (180000 + IVA21%)
     const ivaOct = rd(40000 * 10.5 / 100);
-    const facturado = 10 * 22000 + 4 * (40000 + ivaOct) + (265000 + 180000);
-    const ingreso = 10 * fl(22000 * 0.4) + 4 * fl((40000 + ivaOct) * 0.4) + fl((265000 + 180000) * 0.4);
+    const ivaLente = rd(180000 * 21 / 100);   // insumo gravado 21%
+    const cataLinea = 265000 + 180000 + ivaLente;
+    const facturado = 10 * 22000 + 4 * (40000 + ivaOct) + cataLinea;
+    const ingreso = 10 * fl(22000 * 0.4) + 4 * fl((40000 + ivaOct) * 0.4) + fl(cataLinea * 0.4);
     const sam = app.ingresoSAMDelMes('2026-05');
     expect(sam.facturado).toBe(facturado);
     expect(sam.ingreso).toBe(ingreso);

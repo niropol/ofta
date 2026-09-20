@@ -38,27 +38,34 @@ function renderAdminInsumos() {
     cont.innerHTML = _bloqueModoInsumo() + '<p class="vacio">No hay insumos cargados. Cargalos con «+ Nuevo insumo»; acá se define su costo real.</p>';
     return;
   }
+  const alic = (typeof ivaInsumoAlicuota === 'function') ? ivaInsumoAlicuota() : 21;
   const rows = insumos.map(v => {
     const inactivo = v.estado === 'Inactivo';
+    const gravado = v.ivaExento !== true;
+    const iva = gravado && v.moneda === 'ARS' ? Math.round((v.precio || 0) * alic / 100) : 0;
+    const pill = gravado
+      ? `<button class="pill" style="border:1px solid #fde68a;background:#fffbeb;color:#92400e;cursor:pointer;font-size:11px;padding:3px 8px;border-radius:10px" onclick="toggleIvaPrestacionUI(${v.grupo})">Gravado +${alic}%</button>`
+      : `<button class="pill" style="border:1px solid var(--borde);background:#eef2f7;cursor:pointer;font-size:11px;padding:3px 8px;border-radius:10px" onclick="toggleIvaPrestacionUI(${v.grupo})">Exento</button>`;
     return `
     <tr class="${inactivo ? 'fila-inactiva' : ''}">
       <td>${escHtml(v.descripcion)}${inactivo ? ' <span class="badge-inactivo">Inactivo</span>' : ''}</td>
-      <td class="num">${fmtMoneda(v.precio, v.moneda)}</td>
-      <td><input type="number" step="0.01" id="costo_${v.grupo}" value="${v.costo != null ? v.costo : ''}" style="width:120px"></td>
+      <td class="num">${fmtMoneda(v.precio, v.moneda)}${iva > 0 ? '<br><span class="muted" style="font-size:10px">+IVA ' + fmtMoneda(iva, 'ARS') + ' → ' + fmtMoneda(v.precio + iva, 'ARS') + '</span>' : ''}</td>
+      <td>${pill}</td>
+      <td><input type="number" step="0.01" id="costo_${v.grupo}" value="${v.costo != null ? v.costo : ''}" style="width:110px"></td>
       <td>
         <select id="costoMon_${v.grupo}">
           <option value="ARS"${(v.costoMoneda || 'ARS') === 'ARS' ? ' selected' : ''}>Pesos (ARS)</option>
           <option value="USD"${v.costoMoneda === 'USD' ? ' selected' : ''}>Dólares (USD)</option>
         </select>
       </td>
-      <td><input type="number" step="0.01" id="hon_${v.grupo}" value="${v.honorarioMedico != null ? v.honorarioMedico : ''}" style="width:120px" placeholder="$" title="Fijo al médico por colocarlo"></td>
+      <td><input type="number" step="0.01" id="hon_${v.grupo}" value="${v.honorarioMedico != null ? v.honorarioMedico : ''}" style="width:110px" placeholder="$" title="Fijo al médico por colocarlo"></td>
       <td class="acc"><button onclick="guardarCostoInsumoUI(${v.grupo})">Guardar</button></td>
     </tr>`;
   }).join('');
   cont.innerHTML = _bloqueModoInsumo() + `
     <table class="tabla">
       <thead><tr>
-        <th>Insumo</th><th class="num">Precio (factura SAM)</th>
+        <th>Insumo</th><th class="num">Precio (factura SAM)</th><th>IVA</th>
         <th>Costo real</th><th>Moneda</th><th>Pago al médico</th><th></th>
       </tr></thead>
       <tbody>${rows}</tbody>
