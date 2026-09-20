@@ -23,8 +23,8 @@ describe('Carga diaria por cantidad', () => {
     app.renderCargaDiaria();
     setInput(win, 'cd_fecha', '2026-03-10'); app.renderCargaDiaria();
     setInput(win, 'cd_medico', '501');
+    setInput(win, 'cd_con_os', 'IOMA'); app.cdConOsChange();
     setInput(win, 'cd_con_tipo', String(cons.grupo));
-    setInput(win, 'cd_con_os', 'IOMA');
     setInput(win, 'cd_con_cant', '5');
     app.cdAgregarConsulta();
 
@@ -40,24 +40,30 @@ describe('Carga diaria por cantidad', () => {
 
   it('sumar de nuevo la misma consulta/OS acumula en la misma línea', () => {
     const cons = seedNom('consulta', 'Consulta', 20000);
+    app.setContrato('IOMA', cons.grupo, 20000, '2026-01-01');
+    app.setContrato('OSDE', cons.grupo, 25000, '2026-01-01');
     app.renderCargaDiaria();
     setInput(win, 'cd_fecha', '2026-03-10'); app.renderCargaDiaria();
-    setInput(win, 'cd_medico', '501'); setInput(win, 'cd_con_tipo', String(cons.grupo)); setInput(win, 'cd_con_os', 'IOMA');
+    setInput(win, 'cd_medico', '501');
+    setInput(win, 'cd_con_os', 'IOMA'); app.cdConOsChange(); setInput(win, 'cd_con_tipo', String(cons.grupo));
     setInput(win, 'cd_con_cant', '5'); app.cdAgregarConsulta();
     setInput(win, 'cd_con_cant', '3'); app.cdAgregarConsulta();
     expect(app.DB.prestacionesRealizadas.length).toBe(1);  // misma línea
     expect(app.DB.prestacionesRealizadas[0].cantidad).toBe(8);
     // distinta OS abre otra línea
-    setInput(win, 'cd_con_os', 'OSDE'); setInput(win, 'cd_con_cant', '2'); app.cdAgregarConsulta();
+    setInput(win, 'cd_con_os', 'OSDE'); app.cdConOsChange(); setInput(win, 'cd_con_tipo', String(cons.grupo));
+    setInput(win, 'cd_con_cant', '2'); app.cdAgregarConsulta();
     expect(app.DB.prestacionesRealizadas.length).toBe(2);
   });
 
   it('estudios por cantidad; honorarios del médico escalan por cantidad', () => {
     app.setValorMedico('realizacion_estudio', null, 8000, '2026-01-01');
     const oct = seedNom('realizacion_estudio', 'OCT', 45000);
+    app.setContrato('OSDE', oct.grupo, 45000, '2026-01-01');
     app.renderCargaDiaria();
     setInput(win, 'cd_fecha', '2026-03-10'); app.renderCargaDiaria();
-    setInput(win, 'cd_medico', '501'); setInput(win, 'cd_est_tipo', String(oct.grupo)); setInput(win, 'cd_est_os', 'OSDE');
+    setInput(win, 'cd_medico', '501');
+    setInput(win, 'cd_est_os', 'OSDE'); app.cdEstOsChange(); setInput(win, 'cd_est_tipo', String(oct.grupo));
     setInput(win, 'cd_est_cant', '4'); app.cdAgregarEstudio();
     const r = app.DB.prestacionesRealizadas[0];
     expect(r.cantidad).toBe(4);
@@ -67,9 +73,11 @@ describe('Carga diaria por cantidad', () => {
 
   it('cdEditarCantidad corrige la cantidad de una línea', () => {
     const cons = seedNom('consulta', 'Consulta', 20000);
+    app.setContrato('IOMA', cons.grupo, 20000, '2026-01-01');
     app.renderCargaDiaria();
     setInput(win, 'cd_fecha', '2026-03-10'); app.renderCargaDiaria();
-    setInput(win, 'cd_medico', '501'); setInput(win, 'cd_con_tipo', String(cons.grupo)); setInput(win, 'cd_con_os', 'IOMA');
+    setInput(win, 'cd_medico', '501');
+    setInput(win, 'cd_con_os', 'IOMA'); app.cdConOsChange(); setInput(win, 'cd_con_tipo', String(cons.grupo));
     setInput(win, 'cd_con_cant', '5'); app.cdAgregarConsulta();
     const id = app.DB.prestacionesRealizadas[0].id;
     win.prompt = () => '7';

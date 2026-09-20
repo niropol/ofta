@@ -24,6 +24,30 @@ function _optsNomencladorCats(cats, fecha, sel) {
     `<option value="${v.grupo}"${v.grupo === sel ? ' selected' : ''}>${escHtml(v.descripcion)}</option>`).join('');
 }
 
+// Opciones del nomenclador FILTRADAS por el contrato de la OS elegida (primero la
+// OS, después la prestación). Solo se ofrecen las que tienen contrato para esa OS.
+function _optsNomencladorCatsOS(cats, os, fecha, sel) {
+  if (!os) return '<option value="">Elegí primero la obra social…</option>';
+  let items = [];
+  cats.forEach(c => { items = items.concat(listarPrestaciones({ categoria: c, incluirInactivos: false })); });
+  items = items.filter(v => valorContrato(os, v.grupo, fecha || hoyISO()) != null);
+  if (items.length === 0) return '<option value="">(esta OS no tiene contratos de este tipo — cargalos en Contratos)</option>';
+  return '<option value="">Elegí…</option>' + items.map(v =>
+    `<option value="${v.grupo}"${v.grupo === sel ? ' selected' : ''}>${escHtml(v.descripcion)}</option>`).join('');
+}
+
+// Al cambiar la OS, repoblar el tipo (nomenclador) con lo contratado para esa OS.
+function cdConOsChange() {
+  _cdSet('cd_con_tipo', '');
+  const el = document.getElementById('cd_con_tipo');
+  if (el) el.innerHTML = _optsNomencladorCatsOS(['consulta'], _cdGet('cd_con_os'), _cdGet('cd_fecha'), null);
+}
+function cdEstOsChange() {
+  _cdSet('cd_est_tipo', '');
+  const el = document.getElementById('cd_est_tipo');
+  if (el) el.innerHTML = _optsNomencladorCatsOS(['realizacion_estudio', 'practica'], _cdGet('cd_est_os'), _cdGet('cd_fecha'), null);
+}
+
 function cdSedeChange() {
   const el = document.getElementById('cd_consultorio');
   if (el) el.innerHTML = _optsConsultorios(Number(_cdGet('cd_sede')));
@@ -47,10 +71,13 @@ function renderCargaDiaria() {
   const sede = prev.sede ? Number(prev.sede) : sedeActiva();
   setHTML('cd_sede', _optsSedes(sede));
   setHTML('cd_consultorio', _optsConsultorios(sede, prev.consultorio ? Number(prev.consultorio) : null));
-  setHTML('cd_con_tipo', _optsNomencladorCats(['consulta'], fecha, prev.conTipo ? Number(prev.conTipo) : null));
-  setHTML('cd_con_os', _optsOS(prev.conOs || 'Particular'));
-  setHTML('cd_est_tipo', _optsNomencladorCats(['realizacion_estudio', 'practica'], fecha, prev.estTipo ? Number(prev.estTipo) : null));
-  setHTML('cd_est_os', _optsOS(prev.estOs || 'Particular'));
+  // Primero la OS (contrato), después el nomenclador filtrado por esa OS.
+  const conOs = prev.conOs || 'Particular';
+  const estOs = prev.estOs || 'Particular';
+  setHTML('cd_con_os', _optsOS(conOs));
+  setHTML('cd_con_tipo', _optsNomencladorCatsOS(['consulta'], conOs, fecha, prev.conTipo ? Number(prev.conTipo) : null));
+  setHTML('cd_est_os', _optsOS(estOs));
+  setHTML('cd_est_tipo', _optsNomencladorCatsOS(['realizacion_estudio', 'practica'], estOs, fecha, prev.estTipo ? Number(prev.estTipo) : null));
 
   const lbl = document.getElementById('cd_fecha_lbl');
   if (lbl) lbl.textContent = fecha || '—';
@@ -164,11 +191,15 @@ function cdEditarCantidad(id) {
 }
 
 // Cirugía: modal completo (paciente, insumo, derivador) con día/médico prellenados.
+// La cirugía se detalla en el modal (paciente, OS, médico, insumo), así que NO
+// exige elegir antes el médico de arriba: el realizador se elige en el modal.
 function cdNuevaCirugia() {
-  const base = _cdComun(); if (!base) return;
   abrirNuevaPrestacionRealizada({
-    categoria: 'cirugia', fecha: base.fecha, medicoRealizadorId: base.medicoRealizadorId,
-    sedeId: base.sedeId, consultorioId: base.consultorioId,
+    categoria: 'cirugia',
+    fecha: _cdGet('cd_fecha') || hoyISO(),
+    medicoRealizadorId: _cdGet('cd_medico') || null,   // opcional: precarga el de arriba si hay
+    sedeId: Number(_cdGet('cd_sede')) || sedeActiva(),
+    consultorioId: _cdGet('cd_consultorio') || null,
   });
 }
 

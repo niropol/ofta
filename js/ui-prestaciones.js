@@ -27,8 +27,15 @@ function _optsSedes(sel) {
 
 // Opciones del nomenclador para una categoría (solo descripción; los valores
 // quedan para la parte restringida).
-function _optsPrestacionesCat(categoria, fecha, sel) {
-  const items = listarPrestaciones({ categoria, incluirInactivos: false });
+function _optsPrestacionesCat(categoria, fecha, sel, os) {
+  const all = listarPrestaciones({ categoria, incluirInactivos: false });
+  // Primero el contrato: si hay OS, ofrecer las que tienen contrato para esa OS
+  // (+ la ya seleccionada). Si ninguna está contratada, fallback a todas (no bloquear).
+  let items = all;
+  if (os) {
+    const contratadas = all.filter(v => valorContrato(os, v.grupo, fecha) != null || v.grupo === sel);
+    if (contratadas.length) items = contratadas;
+  }
   if (items.length === 0) return '<option value="">(no hay prestaciones de esta categoría en el nomenclador)</option>';
   return '<option value="">Elegí la prestación…</option>' + items.map(v =>
     `<option value="${v.grupo}"${v.grupo === sel ? ' selected' : ''}>${escHtml(v.descripcion)}</option>`).join('');
@@ -129,7 +136,8 @@ function onCategoriaChangeReg() {
   const categoria = document.getElementById('reg_categoria').value;
   const fecha = document.getElementById('reg_fecha').value || hoyISO();
   const cur = document.getElementById('reg_prestacion').value;
-  document.getElementById('reg_prestacion').innerHTML = _optsPrestacionesCat(categoria, fecha, cur ? Number(cur) : null);
+  const os = (document.getElementById('reg_os') || {}).value || '';   // primero el contrato: filtra por OS
+  document.getElementById('reg_prestacion').innerHTML = _optsPrestacionesCat(categoria, fecha, cur ? Number(cur) : null, os);
   const cat = categoriaInfo(categoria);
   const box = document.getElementById('reg_derivador_box');
   if (box) box.style.display = (cat && cat.permiteDerivador) ? 'block' : 'none';

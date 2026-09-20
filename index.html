@@ -251,10 +251,10 @@
       <div class="cd-grid">
         <div class="cd-card">
           <h4>Consultas</h4>
-          <p class="muted">Por cantidad y obra social (ej. 5 de IOMA). Sin paciente.</p>
+          <p class="muted">Elegí primero la obra social (contrato) y después la consulta. Por cantidad, sin paciente.</p>
           <div class="cd-form">
+            <select id="cd_con_os" title="Obra social" onchange="cdConOsChange()"></select>
             <select id="cd_con_tipo" title="Tipo de consulta"></select>
-            <select id="cd_con_os" title="Obra social"></select>
             <input id="cd_con_cant" type="number" min="1" step="1" placeholder="Cantidad" value="1">
             <button class="btn" onclick="cdAgregarConsulta()">+ Agregar</button>
           </div>
@@ -262,10 +262,10 @@
 
         <div class="cd-card">
           <h4>Estudios y prácticas</h4>
-          <p class="muted">Por cantidad: elegí el estudio, la obra social y cuántos.</p>
+          <p class="muted">Elegí primero la obra social (contrato), después el estudio/práctica y la cantidad.</p>
           <div class="cd-form">
+            <select id="cd_est_os" title="Obra social" onchange="cdEstOsChange()"></select>
             <select id="cd_est_tipo" title="Tipo de estudio/práctica"></select>
-            <select id="cd_est_os" title="Obra social"></select>
             <input id="cd_est_cant" type="number" min="1" step="1" placeholder="Cantidad" value="1">
             <button class="btn" onclick="cdAgregarEstudio()">+ Agregar</button>
           </div>
@@ -673,11 +673,11 @@
     </div>
     <div class="row2">
       <div class="campo"><label>Categoría *</label><select id="reg_categoria" onchange="onCategoriaChangeReg()"></select></div>
-      <div class="campo"><label>Prestación *</label><select id="reg_prestacion"></select></div>
+      <div class="campo"><label>Obra social (contrato) *</label><select id="reg_os" onchange="onCategoriaChangeReg()"></select></div>
     </div>
     <div class="row2">
+      <div class="campo"><label>Prestación *</label><select id="reg_prestacion"></select></div>
       <div class="campo"><label>Médico realizador *</label><select id="reg_realizador"></select></div>
-      <div class="campo"><label>Obra social</label><select id="reg_os"></select></div>
     </div>
     <div class="row2">
       <div class="campo"><label>Sede</label><select id="reg_sede" onchange="onSedeChangeReg()"></select></div>
