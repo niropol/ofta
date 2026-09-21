@@ -48,12 +48,13 @@ function renderVistaClinica(cont, mes) {
       ${cardMargen('Margen estimado', r.margenEstimado)}
       ${card('Saldo caja pesos', fmtMoneda(r.saldos.ARS.total, 'ARS'))}
     </div>
-    <p class="muted" style="margin:-6px 0 14px">«Margen estimado» = SAM paga − honorarios (mismo cálculo que el Panel del mes; se actualiza al cambiar valores). «Saldo caja» es el dinero real ya movido (ingresos/egresos registrados).</p>
+    <p class="muted" style="margin:-6px 0 14px">«Margen estimado» = SAM paga − honorarios (se actualiza al cambiar valores). «Saldo caja» es el dinero real ya movido (ingresos/egresos registrados).</p>
     <div class="btn-group" style="margin-bottom:16px">
       <button class="btn" onclick="exportarResumenPDF('${mes}')">Resumen PDF</button>
       <button class="btn secundario" onclick="exportarResumenWhatsApp('${mes}')">Copiar para WhatsApp</button>
       <button class="btn secundario" onclick="descargarCSVContable('${mes}')">CSV contable</button>
     </div>
+    ${_avisosResumenHtml(mes)}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
       <div><h4>Prestaciones por categoría</h4>
         <table class="tabla"><thead><tr><th>Categoría</th><th class="num">Cantidad</th></tr></thead>
@@ -63,6 +64,25 @@ function renderVistaClinica(cont, mes) {
           <tbody>${dias || '<tr><td colspan="2" class="muted">Sin datos</td></tr>'}</tbody></table></div>
     </div>
     ${r.anuladas ? `<p class="nota">Anuladas en el mes: ${r.anuladas}.</p>` : ''}`;
+}
+
+// Avisos del mes en el resumen: falta de cobro de SAM y cirugías sin contrato.
+function _avisosResumenHtml(mes) {
+  const avisos = [];
+  if (typeof comparacionCobrosMes === 'function') {
+    const cob = comparacionCobrosMes(mes);
+    if (cob.pendientes > 0) {
+      const faltan = cob.filas.filter(f => !f.registrado)
+        .map(f => `${escHtml(f.obraSocial)} (${fmtMoneda(f.esperado, 'ARS')})`).join(', ');
+      avisos.push(`🔔 Falta registrar el cobro de SAM de <strong>${cob.pendientes}</strong> obra(s) social(es) de ${mes}: ${faltan}.`);
+    }
+  }
+  if (typeof ingresoSAMDelMes === 'function') {
+    const s = ingresoSAMDelMes(mes);
+    if (s.sinContrato > 0) avisos.push(`⚠️ ${s.sinContrato} prestación(es) sin contrato de OS cargado (facturan de menos).`);
+  }
+  if (!avisos.length) return '';
+  return `<div class="aviso" style="margin:-4px 0 16px">${avisos.join('<br>')}</div>`;
 }
 
 // ── Vista médico ──
@@ -126,19 +146,36 @@ function copiarResumenMedicoWhatsApp(medicoId, mes) {
 
 function exportarResumenPDF(mes) {
   const r = resumenMes(mes);
-  const cats = Object.keys(r.porCategoria).sort().map(c => `<tr><td>${escHtml(_catLabelSt(c))}</td><td style="text-align:right">${r.porCategoria[c]}</td></tr>`).join('');
+  const pct = DB.config.porcentajeSAM;
+  const desg = desgloseCategoriasMes(mes);
+  const cats = desg.map(d => `<tr>
+      <td>${escHtml(_catLabelSt(d.categoria))}</td>
+      <td style="text-align:right">${d.cantidad}</td>
+      <td style="text-align:right">${fmtMoneda(d.facturado, 'ARS')}</td>
+      <td style="text-align:right">${fmtMoneda(d.ingreso, 'ARS')}</td>
+    </tr>`).join('') || '<tr><td colspan="4">Sin prestaciones</td></tr>';
+  const totCant = desg.reduce((s, d) => s + d.cantidad, 0);
+  const cob = (typeof comparacionCobrosMes === 'function') ? comparacionCobrosMes(mes) : null;
+  const cobHtml = (cob && cob.pendientes > 0)
+    ? `<h3>Cobros pendientes de SAM</h3><p>${cob.pendientes} obra(s) social(es) sin cobro registrado: ${escHtml(cob.filas.filter(f => !f.registrado).map(f => f.obraSocial + ' (' + fmtMoneda(f.esperado, 'ARS') + ')').join(', '))}.</p>`
+    : '';
   const html = `<h1>OFTA — Oftalmología</h1><h2>Resumen mensual — ${escHtml(mes)}</h2>
     <table><tbody>
       <tr><td>Prestaciones</td><td style="text-align:right">${r.totalPrestaciones}</td></tr>
       <tr><td>Consultas</td><td style="text-align:right">${r.consultas}</td></tr>
-      <tr><td>Ingresos (pesos)</td><td style="text-align:right">${fmtMoneda(r.ingresosMes, 'ARS')}</td></tr>
-      <tr><td>Egresos (pesos)</td><td style="text-align:right">${fmtMoneda(r.egresosMes, 'ARS')}</td></tr>
+      <tr><td>SAM factura a las OS</td><td style="text-align:right">${fmtMoneda(r.facturadoSAM, 'ARS')}</td></tr>
+      <tr><td>SAM paga (${pct}%)</td><td style="text-align:right">${fmtMoneda(r.ingresoSAM, 'ARS')}</td></tr>
       <tr><td>Honorarios del mes</td><td style="text-align:right">${fmtMoneda(r.honorariosCalc, 'ARS')}</td></tr>
       <tr><td>Liquidado</td><td style="text-align:right">${fmtMoneda(r.liquidado, 'ARS')}</td></tr>
+      <tr><td>Margen estimado</td><td style="text-align:right">${fmtMoneda(r.margenEstimado, 'ARS')}</td></tr>
+      <tr><td>Ingresos / egresos de caja</td><td style="text-align:right">${fmtMoneda(r.ingresosMes, 'ARS')} / ${fmtMoneda(r.egresosMes, 'ARS')}</td></tr>
       <tr><td>Saldo caja pesos</td><td style="text-align:right">${fmtMoneda(r.saldos.ARS.total, 'ARS')}</td></tr>
     </tbody></table>
     <h3>Prestaciones por categoría</h3>
-    <table><thead><tr><th>Categoría</th><th style="text-align:right">Cantidad</th></tr></thead><tbody>${cats}</tbody></table>`;
+    <table><thead><tr><th>Categoría</th><th style="text-align:right">Cantidad</th><th style="text-align:right">Facturado a SAM</th><th style="text-align:right">SAM paga (${pct}%)</th></tr></thead>
+      <tbody>${cats}</tbody>
+      <tfoot><tr><th>Total</th><th style="text-align:right">${totCant}</th><th style="text-align:right">${fmtMoneda(r.facturadoSAM, 'ARS')}</th><th style="text-align:right">${fmtMoneda(r.ingresoSAM, 'ARS')}</th></tr></tfoot></table>
+    ${cobHtml}`;
   _abrirVentanaImpresion('Resumen ' + mes, html);
 }
 

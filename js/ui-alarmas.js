@@ -32,11 +32,13 @@ function _renderAlarmas() {
   const rows = filas.map(a => {
     const vencida = a.estado === 'activa' && a.fecha && a.fecha <= hoy;
     const resuelta = a.estado === 'resuelta';
+    const nota = (a.nota || '').trim();
     return `<tr class="${resuelta ? 'fila-inactiva' : ''}">
-      <td>${_AVISO_ICON[a.tipo] || '•'} ${escHtml(a.texto)}</td>
+      <td>${_AVISO_ICON[a.tipo] || '•'} ${escHtml(a.texto)}${nota ? `<div class="muted" style="font-size:12px;margin-top:3px;white-space:pre-line">${escHtml(nota)}</div>` : ''}</td>
       <td>${escHtml(a.fecha || '')}${vencida ? ' <span class="badge-inactivo">vencido</span>' : ''}</td>
       <td>${resuelta ? '<span class="muted">resuelto</span>' : '<span class="badge-warn">activo</span>'}</td>
       <td class="acc">
+        <button onclick="editarAlarmaUI(${a.id})">✏️</button>
         <button onclick="resolverAlarmaUI(${a.id})">${resuelta ? 'Reactivar' : 'Resolver'}</button>
         <button class="danger" onclick="eliminarAlarmaUI(${a.id})">🗑</button>
       </td>
@@ -53,13 +55,43 @@ function actualizarBadgeAvisos() {
   b.style.display = n > 0 ? '' : 'none';
 }
 
+// id del recordatorio en edición (null = alta nueva).
+let _editAlarmaId = null;
+
 function agregarAlarmaUI() {
   const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
-  try { crearAlarma({ texto: val('alarma_texto'), fecha: val('alarma_fecha') || hoyISO(), tipo: val('alarma_tipo') }); }
-  catch (e) { avisoUI(e.message); return; }
-  ['alarma_texto', 'alarma_fecha'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const datos = { texto: val('alarma_texto'), nota: val('alarma_nota'), fecha: val('alarma_fecha') || hoyISO(), tipo: val('alarma_tipo') };
+  try {
+    if (_editAlarmaId != null) editarAlarma(_editAlarmaId, datos);
+    else crearAlarma(datos);
+  } catch (e) { avisoUI(e.message); return; }
+  _resetFormAlarma();
   if (typeof sincronizarUI === 'function') sincronizarUI(); else renderAvisos();
 }
+
+function editarAlarmaUI(id) {
+  const a = DB.alarmas.find(x => x.id === Number(id));
+  if (!a) { avisoUI('No se encontró el recordatorio.'); return; }
+  _editAlarmaId = a.id;
+  const set = (elid, v) => { const el = document.getElementById(elid); if (el) el.value = v; };
+  set('alarma_texto', a.texto || '');
+  set('alarma_nota', a.nota || '');
+  set('alarma_fecha', a.fecha || '');
+  set('alarma_tipo', a.tipo || 'importante');
+  const btn = document.getElementById('alarma_btn'); if (btn) btn.textContent = 'Guardar cambios';
+  const canc = document.getElementById('alarma_cancelar'); if (canc) canc.style.display = '';
+  const el = document.getElementById('alarma_texto'); if (el) { try { el.focus(); el.scrollIntoView({ block: 'center' }); } catch (e) {} }
+}
+
+function cancelarEdicionAlarmaUI() { _resetFormAlarma(); }
+
+function _resetFormAlarma() {
+  _editAlarmaId = null;
+  ['alarma_texto', 'alarma_nota', 'alarma_fecha'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const btn = document.getElementById('alarma_btn'); if (btn) btn.textContent = '+ Agregar';
+  const canc = document.getElementById('alarma_cancelar'); if (canc) canc.style.display = 'none';
+}
+
 function resolverAlarmaUI(id) { resolverAlarma(id); if (typeof sincronizarUI === 'function') sincronizarUI(); else renderAvisos(); }
 function eliminarAlarmaUI(id) {
   confirmarUI('¿Eliminar este recordatorio?').then(ok => {

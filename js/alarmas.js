@@ -36,6 +36,7 @@ function crearAlarma(datos) {
   const a = {
     id: nuevoId(),
     texto: String(datos.texto).trim(),
+    nota: (datos.nota || '').trim(),        // nota/descripción libre (como OIP)
     fecha: datos.fecha || hoyISO(),
     tipo: ALARMA_TIPOS.includes(datos.tipo) ? datos.tipo : 'importante',
     estado: 'activa',
@@ -43,6 +44,20 @@ function crearAlarma(datos) {
   };
   DB.alarmas.push(a);
   registrarAuditoria('alta', 'alarma', a.id, null, a);
+  marcarCambios('alarmas');
+  return a;
+}
+// Editar un recordatorio existente (texto, nota, fecha, tipo); conserva estado.
+function editarAlarma(id, datos) {
+  const a = DB.alarmas.find(x => x.id === Number(id));
+  if (!a) return false;
+  if (!(datos.texto || '').trim()) throw new Error('Escribí el texto del recordatorio.');
+  const antes = JSON.parse(JSON.stringify(a));
+  a.texto = String(datos.texto).trim();
+  a.nota = (datos.nota || '').trim();
+  if (datos.fecha) a.fecha = datos.fecha;
+  if (ALARMA_TIPOS.includes(datos.tipo)) a.tipo = datos.tipo;
+  registrarAuditoria('edicion', 'alarma', a.id, antes, a);
   marcarCambios('alarmas');
   return a;
 }

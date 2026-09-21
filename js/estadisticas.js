@@ -72,21 +72,64 @@ function controlInterno(mes) {
   return { anulaciones, diferenciasCaja, liquidacionesBorrador, sinLiquidar };
 }
 
-// ── Exportación: texto para WhatsApp (resumen del mes) ──
+// ── Desglose por categoría con la CANTIDAD y el dinero que la justifica ──
+//  Para cada categoría del mes: unidades hechas, lo facturado a SAM y lo que
+//  SAM paga (40%). Así el informe muestra "de dónde sale" cada monto.
+function desgloseCategoriasMes(mes) {
+  const acc = {};
+  DB.prestacionesRealizadas
+    .filter(r => r.estado === 'activa' && (r.fecha || '').slice(0, 7) === mes)
+    .forEach(r => {
+      const i = ingresoSAMDePrestacion(r);
+      const a = acc[r.categoria] || (acc[r.categoria] = { categoria: r.categoria, cantidad: 0, facturado: 0, ingreso: 0 });
+      a.cantidad += i.cantidad;      // unidades (consulta/estudio se cargan por cantidad)
+      a.facturado += i.facturado;
+      a.ingreso += i.ingreso;
+    });
+  return Object.values(acc).sort((a, b) => ((categoriaInfo(a.categoria) || {}).label || a.categoria)
+    .localeCompare((categoriaInfo(b.categoria) || {}).label || b.categoria, 'es'));
+}
+
+// ── Exportación: texto para WhatsApp (resumen del mes) — completo y detallado ──
 function resumenMesTextoWhatsApp(mes) {
   const r = resumenMes(mes);
-  const cats = Object.keys(r.porCategoria).sort()
-    .map(c => `   • ${(categoriaInfo(c) || {}).label || c}: ${r.porCategoria[c]}`).join('\n');
-  return `👁 *OFTA* — Resumen ${mes}\n\n` +
-    `🧾 Prestaciones: *${r.totalPrestaciones}* (consultas: ${r.consultas})\n` +
-    (cats ? cats + '\n' : '') +
-    (r.anuladas ? `⚠️ Anuladas: ${r.anuladas}\n` : '') +
-    `\n💵 Ingresos (pesos): *${fmtMoneda(r.ingresosMes, 'ARS')}*\n` +
-    `💸 Egresos (pesos): *${fmtMoneda(r.egresosMes, 'ARS')}*\n` +
-    (r.gastosMes ? `   (gastos: ${fmtMoneda(r.gastosMes, 'ARS')})\n` : '') +
-    `👨‍⚕️ Honorarios del mes: *${fmtMoneda(r.honorariosCalc, 'ARS')}* (liquidado: ${fmtMoneda(r.liquidado, 'ARS')})\n` +
-    (r.ingresoSAM ? `🏦 SAM paga (${DB.config.porcentajeSAM}%): ${fmtMoneda(r.ingresoSAM, 'ARS')} de ${fmtMoneda(r.facturadoSAM, 'ARS')} facturados\n` : '') +
-    `\n💰 Saldo caja pesos: *${fmtMoneda(r.saldos.ARS.total, 'ARS')}* · dólares: ${fmtMoneda(r.saldos.USD.total, 'USD')}`;
+  const pct = DB.config.porcentajeSAM;
+  const L = [];
+  L.push(`👁 *OFTA* — Resumen ${mes}`);
+  L.push('');
+
+  // Prestaciones: total + desglose por categoría con cantidad y facturado.
+  L.push(`🧾 *Prestaciones:* ${r.totalPrestaciones}  (consultas: ${r.consultas})`);
+  const desg = desgloseCategoriasMes(mes);
+  desg.forEach(d => {
+    const lbl = (categoriaInfo(d.categoria) || {}).label || d.categoria;
+    L.push(`   • ${lbl}: *${d.cantidad}*` + (d.facturado ? ` · ${fmtMoneda(d.facturado, 'ARS')} facturado` : ''));
+  });
+  if (r.anuladas) L.push(`   ⚠️ Anuladas: ${r.anuladas}`);
+  L.push('');
+
+  // Facturación y reparto con SAM (el 40% que justifica la cuenta).
+  L.push(`🏦 *SAM factura:* ${fmtMoneda(r.facturadoSAM, 'ARS')}`);
+  if (r.ingresoSAM) L.push(`🏦 *SAM paga (${pct}%):* ${fmtMoneda(r.ingresoSAM, 'ARS')}  (${r.totalPrestaciones} prestación/es)`);
+  L.push(`👨‍⚕️ *Honorarios del mes:* ${fmtMoneda(r.honorariosCalc, 'ARS')}  (liquidado: ${fmtMoneda(r.liquidado, 'ARS')})`);
+  L.push(`📈 *Margen estimado:* ${fmtMoneda(r.margenEstimado, 'ARS')}`);
+  L.push('');
+
+  // Caja real del mes.
+  L.push(`💵 Caja del mes — ingresos: ${fmtMoneda(r.ingresosMes, 'ARS')} · egresos: ${fmtMoneda(r.egresosMes, 'ARS')}`);
+  if (r.gastosMes) L.push(`   (gastos: ${fmtMoneda(r.gastosMes, 'ARS')})`);
+  L.push(`💰 *Saldo caja:* ${fmtMoneda(r.saldos.ARS.total, 'ARS')}` + (r.saldos.USD.total ? ` · USD ${fmtMoneda(r.saldos.USD.total, 'USD')}` : ''));
+
+  // Cobros pendientes de SAM (lo que falta cobrar del mes).
+  if (typeof comparacionCobrosMes === 'function') {
+    const cob = comparacionCobrosMes(mes);
+    if (cob.pendientes > 0) {
+      const faltan = cob.filas.filter(f => !f.registrado).map(f => f.obraSocial).join(', ');
+      L.push('');
+      L.push(`🔔 *Cobros pendientes:* ${cob.pendientes} OS sin registrar (${faltan})`);
+    }
+  }
+  return L.join('\n');
 }
 
 // ── Exportación contable: CSV de los movimientos de caja del mes ──

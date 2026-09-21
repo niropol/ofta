@@ -18,6 +18,16 @@ describe('Recordatorios manuales', () => {
     expect(app.DB.alarmas.length).toBe(0);
   });
   it('exige texto', () => { expect(() => app.crearAlarma({ texto: '  ' })).toThrow(); });
+  it('guarda una nota (como OIP) y la puede editar', () => {
+    const a = app.crearAlarma({ texto: 'Contrato PAMI', nota: 'Pedir por Dr. López\nInterno 42', fecha: '2026-03-01' });
+    expect(a.nota).toContain('Interno 42');
+    app.editarAlarma(a.id, { texto: 'Contrato PAMI 2026', nota: 'Actualizado', tipo: 'urgente' });
+    const b = app.DB.alarmas.find(x => x.id === a.id);
+    expect(b.texto).toBe('Contrato PAMI 2026');
+    expect(b.nota).toBe('Actualizado');
+    expect(b.tipo).toBe('urgente');
+    expect(b.estado).toBe('activa');            // editar conserva el estado
+  });
   it('vencidas = activas con fecha <= hoy', () => {
     app.crearAlarma({ texto: 'vieja', fecha: '2020-01-01' });
     app.crearAlarma({ texto: 'futura', fecha: '2999-01-01' });

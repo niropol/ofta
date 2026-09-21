@@ -75,7 +75,7 @@ const EXPONER = [
   'mensajeLiquidacionWhatsApp',
   'renderLiquidaciones', 'generarLiquidacionUI', 'cerrarLiquidacionUI',
   // estadísticas
-  'resumenMes', 'resumenMedicoMes', 'controlInterno', 'resumenMesTextoWhatsApp', 'csvContable',
+  'resumenMes', 'resumenMedicoMes', 'controlInterno', 'resumenMesTextoWhatsApp', 'csvContable', 'desgloseCategoriasMes',
   'renderEstadisticas', 'switchStatView',
   // usuarios / permisos / auditoría
   'ROL_LABEL', 'PERMISOS_SECCIONES', 'rolActual', 'puedeVerSeccion', 'setUsuarioActual',
@@ -101,8 +101,8 @@ const EXPONER = [
   'DERIV_ESTADOS', 'DERIV_URGENCIAS', 'crearDerivacion', 'editarDerivacion', 'cambiarEstadoDerivacion',
   'eliminarDerivacion', 'listarDerivaciones', 'resumenDerivaciones', 'renderDerivaciones',
   // avisos / alarmas
-  'avisosAutomaticos', 'crearAlarma', 'resolverAlarma', 'eliminarAlarma', 'listarAlarmas',
-  'alarmasVencidas', 'totalAvisos', 'renderAvisos',
+  'avisosAutomaticos', 'crearAlarma', 'editarAlarma', 'resolverAlarma', 'eliminarAlarma', 'listarAlarmas',
+  'alarmasVencidas', 'totalAvisos', 'renderAvisos', 'editarAlarmaUI',
   // pegar resumen (carga rápida)
   'parsearResumenDiario', 'aplicarResumenDiario',
   // diagnóstico (Etapa 9)

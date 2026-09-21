@@ -446,15 +446,6 @@
       <div id="statContenido"></div>
     </div>
 
-    <div class="adminpanel" data-p="panel">
-      <div class="section-head"><h3 style="margin:0">Panel del mes</h3></div>
-      <p class="muted" style="margin-top:0">Resumen calculado: qué factura SAM, cuánto te debe pagar (40%), cuánto te pagó, honorarios y margen.</p>
-      <div class="filtros">
-        <label class="muted">Mes <input type="month" id="panelMes" onchange="renderPanelMes()"></label>
-      </div>
-      <div id="panelContenido"></div>
-    </div>
-
     <div class="adminpanel" data-p="caja" hidden>
     <div class="section-head">
       <h3 style="margin:0">Caja</h3>
@@ -521,7 +512,13 @@
           <option value="urgente">Urgente</option>
           <option value="info">Info</option>
         </select></label>
-        <button class="btn" onclick="agregarAlarmaUI()">+ Agregar</button>
+      </div>
+      <div class="filtros" style="align-items:flex-end">
+        <label class="muted" style="flex:1">Nota (opcional) <textarea id="alarma_nota" rows="2" style="width:100%;resize:vertical" placeholder="Detalle, contexto, número de contacto, etc."></textarea></label>
+      </div>
+      <div class="filtros" style="align-items:flex-end">
+        <button class="btn" id="alarma_btn" onclick="agregarAlarmaUI()">+ Agregar</button>
+        <button class="btn secundario" id="alarma_cancelar" style="display:none" onclick="cancelarEdicionAlarmaUI()">Cancelar</button>
       </div>
       <div class="tabla-wrap"><div id="alarmasTabla"></div></div>
     </div>
@@ -1073,7 +1070,7 @@ function showSection(id) {
 // Admin en 2 niveles: áreas (Resumen / Finanzas / Configuración / Seguridad) →
 // cada una con sus sub-pestañas (paneles).
 const ADMIN_AREAS = {
-  resumen:   { tabs: [['panel', 'Panel del mes'], ['estadisticas', 'Estadísticas']] },
+  resumen:   { tabs: [['estadisticas', 'Resumen del mes']] },
   finanzas:  { tabs: [['cobros', 'Cobros de SAM'], ['liquidaciones', 'Liquidaciones'], ['caja', 'Caja']] },
   derivaciones: { tabs: [['derivaciones', 'Derivaciones']] },
   avisos:    { tabs: [['avisos', 'Avisos']] },
@@ -1093,7 +1090,7 @@ function adminArea(area) {
 function adminTab(p) {
   document.querySelectorAll('#section-admin .adminpanel').forEach(el => { el.hidden = el.dataset.p !== p; });
   document.querySelectorAll('#adminSubtabs button').forEach(b => b.classList.toggle('active', b.dataset.p === p));
-  const render = { derivaciones: 'renderDerivaciones', avisos: 'renderAvisos', liquidaciones: 'renderLiquidaciones', caja: 'renderCaja', medicos: 'renderMedicos', honorarios: 'renderAdmin' }[p];
+  const render = { derivaciones: 'renderDerivaciones', avisos: 'renderAvisos', liquidaciones: 'renderLiquidaciones', caja: 'renderCaja', medicos: 'renderMedicos', honorarios: 'renderAdmin', estadisticas: 'renderEstadisticas' }[p];
   if (render && typeof window[render] === 'function') { try { window[render](); } catch (e) {} }
 }
 
@@ -1116,7 +1113,7 @@ function init() {
   _poblarFiltroCategoria();
   // Por defecto, filtrar por el mes actual (con muchos datos, evita listas enormes).
   const mesActual = new Date().toISOString().slice(0, 7);
-  ['regFiltroMes', 'statMes', 'liqMes', 'prevMes', 'ctrMes', 'panelMes'].forEach(id => {
+  ['regFiltroMes', 'statMes', 'liqMes', 'prevMes', 'ctrMes'].forEach(id => {
     const el = document.getElementById(id);
     if (el && !el.value) el.value = mesActual;
   });
@@ -1137,7 +1134,7 @@ function sincronizarUI() {
     '_poblarFiltrosPrestaciones', 'renderPrestaciones', 'renderCargaDiaria',
     'renderMedicos', 'renderNomenclador', 'renderOS', 'renderSedes', 'renderConsultorios',
     'renderHorarios', 'renderContratos', 'renderValoresMedico', 'renderAdmin', 'renderCaja',
-    'renderLiquidaciones', 'renderDerivaciones', 'renderAvisos', 'renderEstadisticas', 'renderPanelMes', 'poblarActuandoComo',
+    'renderLiquidaciones', 'renderDerivaciones', 'renderAvisos', 'renderEstadisticas', 'poblarActuandoComo',
   ]);
 }
 </script>

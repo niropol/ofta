@@ -77,4 +77,34 @@ describe('Estadísticas — resumen del mes', () => {
     expect(csv.split('\n')[0]).toContain('Fecha');
     expect(csv).toContain('Pago SAM');
   });
+
+  it('desglose por categoría: cantidad + facturado + ingreso (40%)', () => {
+    const c = nom('consulta'); const faco = nom('cirugia');
+    app.setContrato('OSDE', c.grupo, 10000, '2026-01-01');
+    app.setContrato('OSDE', faco.grupo, 1000000, '2026-01-01');
+    app.registrarPrestacion({ fecha: '2026-03-01', categoria: 'consulta', grupoNomenclador: c.grupo, medicoRealizadorId: 501, obraSocial: 'OSDE', cantidad: 3 });
+    app.registrarPrestacion({ fecha: '2026-03-02', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 501, obraSocial: 'OSDE' });
+    const d = app.desgloseCategoriasMes('2026-03');
+    const cons = d.find(x => x.categoria === 'consulta');
+    const cir = d.find(x => x.categoria === 'cirugia');
+    expect(cons.cantidad).toBe(3);              // se cuentan las unidades
+    expect(cons.facturado).toBe(30000);         // 10.000 × 3
+    expect(cons.ingreso).toBe(12000);           // 40% de 30.000
+    expect(cir.cantidad).toBe(1);
+    expect(cir.ingreso).toBe(400000);           // 40% de 1.000.000
+  });
+
+  it('el WhatsApp incluye cantidad por categoría y avisa cobros pendientes', () => {
+    const faco = nom('cirugia');
+    app.DB.obrasSociales.push({ id: 700, nombre: 'OSDE', estado: 'Activa' });
+    app.setContrato('OSDE', faco.grupo, 1000000, '2026-01-01');
+    app.registrarPrestacion({ fecha: '2026-03-02', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 501, obraSocial: 'OSDE' });
+    const txt = app.resumenMesTextoWhatsApp('2026-03');
+    expect(txt).toContain('SAM paga');
+    expect(txt).toMatch(/Cirug[ií]a/i);         // desglose por categoría
+    expect(txt).toContain('Cobros pendientes'); // OSDE sin cobro registrado
+    // registrado el cobro, ya no debe avisar pendiente
+    app.registrarCobroSAM('2026-03', 'OSDE', '2026-03-31');
+    expect(app.resumenMesTextoWhatsApp('2026-03')).not.toContain('Cobros pendientes');
+  });
 });

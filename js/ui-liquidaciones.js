@@ -36,7 +36,7 @@ function renderLiquidaciones() {
       const faltaP = (liq.faltaValor && liq.faltaValor.length) ? ' <span class="badge-inactivo">falta valor fijo</span>' : '';
       estado = 'Borrador' + drift + faltaP;
       acciones = `
-        <button onclick="generarLiquidacionUI(${mid})">Regenerar</button>
+        <button title="Vuelve a calcular el borrador con las prestaciones y valores actuales del mes (por si cambiaron)." onclick="generarLiquidacionUI(${mid})">Regenerar</button>
         <button onclick="cerrarLiquidacionUI(${liq.id})">Cerrar y pagar</button>
         <button onclick="verComprobante(${liq.id})">Comprobante</button>
         <button onclick="copiarWhatsApp(${liq.id})">WhatsApp</button>
@@ -65,9 +65,20 @@ function renderLiquidaciones() {
 }
 
 function generarLiquidacionUI(medicoId) {
-  try { generarLiquidacion(medicoId, _liqGV('liqMes')); }
+  const mes = _liqGV('liqMes');
+  const yaExistia = !!liquidacionDe(Number(medicoId), mes);
+  let liq;
+  try { liq = generarLiquidacion(medicoId, mes); }
   catch (e) { avisoUI(e.message); return; }
   renderLiquidaciones();
+  // Regenerar (borrador que ya existía) no cambia de fila, así que sin aviso
+  // parecía que "no hacía nada". Confirmamos con el total recalculado.
+  if (yaExistia && liq) {
+    const falta = (liq.faltaValor && liq.faltaValor.length)
+      ? ' Faltan valores fijos de: ' + liq.faltaValor.map(f => (typeof f === 'string' ? f : f.descripcion || '')).join(', ') + '.'
+      : '';
+    avisoUI('Liquidación de ' + medicoNombre(Number(medicoId)) + ' regenerada con los datos actuales del mes.\n\nTotal a depositar: ' + fmtMoneda(liq.total, 'ARS') + '.' + falta, 'Liquidación regenerada');
+  }
 }
 
 function cerrarLiquidacionUI(id) {

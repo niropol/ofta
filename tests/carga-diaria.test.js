@@ -85,14 +85,17 @@ describe('Carga diaria por cantidad', () => {
     expect(app.DB.prestacionesRealizadas[0].cantidad).toBe(7);
   });
 
-  it('renderPanelMes calcula el resumen del mes sin romper', () => {
+  it('renderEstadisticas (Resumen del mes) calcula el resumen sin romper', () => {
     const faco = seedNom('cirugia', 'Faco', 0);
     app.setContrato('OSDE', faco.grupo, 1000000, '2026-01-01');
     app.registrarPrestacion({ fecha: '2026-03-05', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 501, obraSocial: 'OSDE' });
-    setInput(win, 'panelMes', '2026-03');
-    app.renderPanelMes();
-    const html = win.document.getElementById('panelContenido').innerHTML;
-    expect(html).toContain('SAM te debe pagar');
+    setInput(win, 'statMes', '2026-03');
+    app.switchStatView('clinica');
+    app.renderEstadisticas();
+    const html = win.document.getElementById('statContenido').innerHTML;
+    expect(html).toContain('SAM paga');
     expect(html).toContain('Margen estimado');
+    // El aviso de cobro pendiente aparece (OSDE sin cobro registrado del mes).
+    expect(html).toContain('Falta registrar el cobro');
   });
 });
