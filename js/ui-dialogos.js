@@ -27,6 +27,20 @@ function _confirmResp(ok) {
   if (r) r(!!ok);
 }
 
+// ── Aviso (reemplaza alert(): validaciones, bloqueos, mensajes de éxito) ──
+//  Muchos navegadores y el panel embebido no muestran alert(); el usuario
+//  hacía clic y "no pasaba nada". Este modal sí aparece siempre dentro de la app.
+function avisoUI(mensaje, titulo) {
+  const modal = document.getElementById('modalAviso');
+  if (!modal) { if (typeof alert === 'function') alert(mensaje); return; }
+  const m = document.getElementById('avisoMsg');
+  const t = document.getElementById('avisoTitulo');
+  if (m) m.textContent = mensaje;
+  if (t) t.textContent = titulo || 'Aviso';
+  modal.style.display = 'flex';
+}
+function cerrarAvisoUI() { const m = document.getElementById('modalAviso'); if (m) m.style.display = 'none'; }
+
 // ── Documento imprimible (comprobante / informe) ──
 function mostrarDocModal(titulo, contenidoHTML) {
   const modal = document.getElementById('modalDoc');

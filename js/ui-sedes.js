@@ -53,10 +53,10 @@ function editarSede(id) {
 function guardarSede() {
   const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
   const nombre = val('sede_nombre');
-  if (!nombre) { alert('El nombre de la sede es obligatorio.'); return false; }
+  if (!nombre) { avisoUI('El nombre de la sede es obligatorio.'); return false; }
   const idEdit = val('sede_id') ? Number(val('sede_id')) : null;
   const dup = DB.sedes.find(s => (s.nombre || '').toLowerCase() === nombre.toLowerCase() && s.id !== idEdit);
-  if (dup) { alert('Ya existe una sede con ese nombre.'); return false; }
+  if (dup) { avisoUI('Ya existe una sede con ese nombre.'); return false; }
 
   if (idEdit) {
     const s = DB.sedes.find(x => x.id === idEdit);
@@ -77,7 +77,7 @@ function guardarSede() {
 
 function marcarSedeActiva(id) {
   const s = DB.sedes.find(x => x.id === Number(id));
-  if (!s || s.estado === 'Inactiva') { alert('La sede debe estar activa.'); return; }
+  if (!s || s.estado === 'Inactiva') { avisoUI('La sede debe estar activa.'); return; }
   DB.config.sedeActiva = s.id;
   marcarCambios();
   renderSedes();
@@ -87,7 +87,7 @@ function toggleEstadoSede(id) {
   const s = DB.sedes.find(x => x.id === Number(id));
   if (!s) return;
   if (s.estado !== 'Inactiva' && DB.sedes.filter(x => x.estado !== 'Inactiva' && x.id !== s.id).length === 0) {
-    alert('Debe quedar al menos una sede activa.'); return;
+    avisoUI('Debe quedar al menos una sede activa.'); return;
   }
   const antes = JSON.parse(JSON.stringify(s));
   s.estado = (s.estado === 'Inactiva') ? 'Activa' : 'Inactiva';
@@ -104,8 +104,8 @@ function eliminarSede(id) {
   const s = DB.sedes.find(x => x.id === Number(id));
   if (!s) return;
   const ref = _referenciasSede(s.id);
-  if (ref.total > 0) { alert(`No se puede eliminar "${s.nombre}": tiene ${ref.med} médico(s), ${ref.prest} prestación(es) y ${ref.caja} movimiento(s) de caja. Inactivala en su lugar.`); return; }
-  if (DB.sedes.filter(x => x.id !== s.id).length === 0) { alert('Debe existir al menos una sede.'); return; }
+  if (ref.total > 0) { avisoUI(`No se puede eliminar "${s.nombre}": tiene ${ref.med} médico(s), ${ref.prest} prestación(es) y ${ref.caja} movimiento(s) de caja. Inactivala en su lugar.`); return; }
+  if (DB.sedes.filter(x => x.id !== s.id).length === 0) { avisoUI('Debe existir al menos una sede.'); return; }
   confirmarUI(`¿Eliminar la sede "${s.nombre}"? Queda en auditoría.`).then(ok => {
     if (!ok) return;
     const antes = JSON.parse(JSON.stringify(s));

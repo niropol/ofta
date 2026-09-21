@@ -60,7 +60,7 @@ function editarConsultorio(id) {
 function guardarConsultorio() {
   const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
   const nombre = val('cons_nombre');
-  if (!nombre) { alert('El nombre del consultorio es obligatorio.'); return false; }
+  if (!nombre) { avisoUI('El nombre del consultorio es obligatorio.'); return false; }
   const idEdit = val('cons_id') ? Number(val('cons_id')) : null;
   const sedeId = Number(val('cons_sede')) || sedeActiva();
   if (idEdit) {
@@ -93,7 +93,7 @@ function toggleEstadoConsultorio(id) {
 function eliminarConsultorio(id) {
   const c = DB.consultorios.find(x => x.id === Number(id));
   if (!c) return;
-  if (_referenciasConsultorio(c.id) > 0) { alert('No se puede eliminar: está en uso por prestaciones u horarios. Inactivalo.'); return; }
+  if (_referenciasConsultorio(c.id) > 0) { avisoUI('No se puede eliminar: está en uso por prestaciones u horarios. Inactivalo.'); return; }
   confirmarUI(`¿Eliminar el consultorio "${c.nombre}"?`).then(ok => {
     if (!ok) return;
     const antes = JSON.parse(JSON.stringify(c));
@@ -173,7 +173,7 @@ function abrirNuevoHorario() {
 function guardarHorario() {
   const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
   const medicoId = Number(val('hor_medico'));
-  if (!medicoId) { alert('Elegí un médico.'); return false; }
+  if (!medicoId) { avisoUI('Elegí un médico.'); return false; }
   const nuevo = {
     id: nuevoId(), medicoId, consultorioId: Number(val('hor_consultorio')) || null,
     dia: val('hor_dia'), horaDesde: val('hor_desde'), horaHasta: val('hor_hasta'),

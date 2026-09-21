@@ -167,7 +167,7 @@ function agregarInsumoReg() {
   const fecha = document.getElementById('reg_fecha').value || hoyISO();
   const item = versionActual(Number(g));
   const ver = item ? precioVigente(item.grupo, fecha) : null;
-  if (!ver) { alert('Ese insumo no tiene precio vigente a la fecha.'); return; }
+  if (!ver) { avisoUI('Ese insumo no tiene precio vigente a la fecha.'); return; }
   const ingEl = document.getElementById('reg_insumo_ingreso');
   const ing = ingEl && ingEl.value !== '' ? Number(ingEl.value) : (ver.moneda === 'ARS' ? (ver.precio || 0) : 0);
   _regInsumos.push({ grupo: item.grupo, descripcion: ver.descripcion, costo: ver.costo != null ? ver.costo : 0, costoMoneda: ver.costoMoneda || 'ARS', ingreso: ing });
@@ -265,7 +265,7 @@ function guardarPrestacionReg() {
     if (idEdit) editarPrestacionRealizada(Number(idEdit), datos);
     else registrarPrestacion(datos);
   } catch (e) {
-    alert(e.message);
+    avisoUI(e.message);
     return false;
   }
   cerrarModalReg();

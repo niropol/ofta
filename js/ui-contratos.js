@@ -148,7 +148,7 @@ function agregarContratoManualUI() {
     // Aprende la equivalencia (OS + código/nombre → prestación) para futuras importaciones.
     if (typeof guardarAliasContrato === 'function') guardarAliasContrato(os, cod, desc, r.grupo);
     _msgImport((r.creada ? 'Prestación creada y ' : '') + 'contrato cargado para ' + os + '.', false);
-  } catch (e) { alert(e.message); return; }
+  } catch (e) { avisoUI(e.message); return; }
   ['ctrNuevoCodigo', 'ctrNuevoDesc', 'ctrNuevoValor'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   const hint = document.getElementById('ctrNuevoHint'); if (hint) hint.textContent = '';
   if (typeof sincronizarUI === 'function') sincronizarUI(); else { renderContratos(); if (typeof renderPanelMes === 'function') renderPanelMes(); }
@@ -157,15 +157,15 @@ function agregarContratoManualUI() {
 // Aviso si ya se registró el cobro de esa OS (el cambio no lo toca hasta deshacerlo).
 function _avisoCobrosRegistrados(os) {
   const meses = [...new Set(DB.cajaMovimientos.filter(m => m.origen === 'cobro_sam' && m.obraSocial === os).map(m => m.mesCobro))].filter(Boolean);
-  if (meses.length) alert('Aviso: ya registraste el cobro de ' + os + ' (' + meses.join(', ') + '). El cambio no lo modifica; para aplicarlo, deshacé y volvé a registrar el cobro en Finanzas ▸ Cobros.');
+  if (meses.length) avisoUI('Aviso: ya registraste el cobro de ' + os + ' (' + meses.join(', ') + '). El cambio no lo modifica; para aplicarlo, deshacé y volvé a registrar el cobro en Finanzas ▸ Cobros.');
 }
 
 function guardarValorContratoUI(grupo) {
   const os = document.getElementById('ctrOS').value;
   const v = document.getElementById('ctr_' + grupo).value;
-  if (v === '' || isNaN(Number(v))) { alert('El valor debe ser un número.'); return; }
+  if (v === '' || isNaN(Number(v))) { avisoUI('El valor debe ser un número.'); return; }
   try { _upsertContrato(os, grupo, v, hoyISO().slice(0, 7) + '-01'); }
-  catch (e) { alert(e.message); return; }
+  catch (e) { avisoUI(e.message); return; }
   renderContratos();
   if (typeof renderPanelMes === 'function') renderPanelMes();
   _avisoCobrosRegistrados(os);
@@ -180,12 +180,12 @@ function _msgImport(text, isError) {
 function aumentarContratosOSUI() {
   const os = (document.getElementById('ctrOS') || {}).value;
   const pct = (document.getElementById('ctrAumento') || {}).value;
-  if (!os) { alert('Elegí una obra social.'); return; }
-  if (pct === '' || isNaN(Number(pct))) { alert('Ingresá el porcentaje.'); return; }
+  if (!os) { avisoUI('Elegí una obra social.'); return; }
+  if (pct === '' || isNaN(Number(pct))) { avisoUI('Ingresá el porcentaje.'); return; }
   confirmarUI('¿Aumentar un ' + pct + '% todos los contratos de ' + os + '? Rige desde el 1° de este mes.').then(ok => {
     if (!ok) return;
     let r; try { r = aumentarContratosOS(os, pct, hoyISO().slice(0, 7) + '-01'); }
-    catch (e) { alert(e.message); return; }
+    catch (e) { avisoUI(e.message); return; }
     document.getElementById('ctrAumento').value = '';
     _msgImport('Actualizados ' + r.actualizados + ' contrato(s) de ' + os + ' (+' + pct + '%).', false);
     if (typeof sincronizarUI === 'function') sincronizarUI(); else { renderContratos(); if (typeof renderPanelMes === 'function') renderPanelMes(); }
@@ -469,7 +469,7 @@ function registrarCobroSAMUI(i) {
   const recEl = document.getElementById('cob_rec_' + i);
   const fecEl = document.getElementById('cob_fec_' + i);
   try { registrarCobroSAM(mes, os, fecEl ? fecEl.value : null, recEl ? recEl.value : null); }
-  catch (e) { alert(e.message); return; }
+  catch (e) { avisoUI(e.message); return; }
   renderCobroSAM();
   if (typeof renderCaja === 'function') renderCaja();
   if (typeof renderPanelMes === 'function') renderPanelMes();

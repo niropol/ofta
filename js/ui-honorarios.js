@@ -137,7 +137,7 @@ function renderValoresMedico() {
 function _avisoLiquidacionesCerradas() {
   const cerradas = [...new Set(DB.pagosMedicos.filter(p => p.estado === 'cerrada').map(p => p.mes))];
   if (cerradas.length) {
-    alert('Aviso: hay liquidaciones CERRADAS (' + cerradas.join(', ') + '). El cambio no las modifica. Para aplicarlo a esos meses, reabrilas en Finanzas ▸ Liquidaciones.');
+    avisoUI('Aviso: hay liquidaciones CERRADAS (' + cerradas.join(', ') + '). El cambio no las modifica. Para aplicarlo a esos meses, reabrilas en Finanzas ▸ Liquidaciones.');
   }
 }
 
@@ -146,7 +146,7 @@ function guardarValorInlineUI(categoria, grupo, medicoId, inputId) {
   const v = el ? el.value.trim() : '';
   if (v === '') return;  // vacío = sin cambio (para el override vacío usá "quitar" — próxima)
   try { setValorMedicoActual(categoria, medicoId || null, v, grupo || null); }
-  catch (e) { alert(e.message); return; }
+  catch (e) { avisoUI(e.message); return; }
   if (typeof sincronizarUI === 'function') sincronizarUI(); else renderValoresMedico();
   _avisoLiquidacionesCerradas();
 }
@@ -155,7 +155,7 @@ function guardarHonInsumoInlineUI(grupo) {
   const el = document.getElementById('vmi_' + grupo);
   const v = el ? el.value.trim() : '';
   try { setHonorarioMedicoInsumo(grupo, v === '' ? 0 : v); }
-  catch (e) { alert(e.message); return; }
+  catch (e) { avisoUI(e.message); return; }
   if (typeof sincronizarUI === 'function') sincronizarUI(); else renderValoresMedico();
   _avisoLiquidacionesCerradas();
 }
@@ -194,7 +194,7 @@ function guardarValorMedico() {
   const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
   try {
     setValorMedico(val('valor_categoria'), val('valor_medico') || null, val('valor_monto'), val('valor_vigencia') || (hoyISO().slice(0, 7) + '-01'), val('valor_prestacion') || null);
-  } catch (e) { alert(e.message); return false; }
+  } catch (e) { avisoUI(e.message); return false; }
   cerrarModalValor();
   renderValoresMedico();
   return true;

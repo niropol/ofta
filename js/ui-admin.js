@@ -88,9 +88,9 @@ function abrirNuevoInsumo() {
 function guardarNuevoInsumo() {
   const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
   const desc = val('insu_desc');
-  if (!desc) { alert('La descripción es obligatoria.'); return false; }
-  if (val('insu_precio') === '' || isNaN(Number(val('insu_precio')))) { alert('El precio cobrado debe ser un número.'); return false; }
-  if (val('insu_costo') === '' || isNaN(Number(val('insu_costo')))) { alert('El costo real debe ser un número.'); return false; }
+  if (!desc) { avisoUI('La descripción es obligatoria.'); return false; }
+  if (val('insu_precio') === '' || isNaN(Number(val('insu_precio')))) { avisoUI('El precio cobrado debe ser un número.'); return false; }
+  if (val('insu_costo') === '' || isNaN(Number(val('insu_costo')))) { avisoUI('El costo real debe ser un número.'); return false; }
   const v = crearPrestacion({
     categoria: 'insumo', descripcion: desc,
     precio: val('insu_precio'), moneda: val('insu_moneda') || 'ARS',
@@ -108,10 +108,10 @@ function guardarCostoInsumoUI(grupo) {
   const moneda = document.getElementById('costoMon_' + grupo).value;
   const honEl = document.getElementById('hon_' + grupo);
   const hon = honEl ? honEl.value : '';
-  if (costo === '' || isNaN(Number(costo))) { alert('El costo debe ser un número.'); return false; }
+  if (costo === '' || isNaN(Number(costo))) { avisoUI('El costo debe ser un número.'); return false; }
   try {
     setCostoInsumo(grupo, costo, moneda, hon);
-  } catch (e) { alert(e.message); return false; }
+  } catch (e) { avisoUI(e.message); return false; }
   renderAdminInsumos();
   if (typeof sincronizarUI === 'function') sincronizarUI();
   return true;

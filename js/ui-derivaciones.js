@@ -123,7 +123,7 @@ function guardarDerivacion() {
     } else {
       crearDerivacion(datos);
     }
-  } catch (e) { alert(e.message); return; }
+  } catch (e) { avisoUI(e.message); return; }
   cerrarModalDeriv();
   if (typeof sincronizarUI === 'function') sincronizarUI(); else renderDerivaciones();
 }
@@ -139,7 +139,7 @@ function cambiarEstadoDerivUI(id, estado) {
   const msg = estado === 'cancelada' ? '¿Cancelar esta derivación?' : '¿Marcar la derivación como ' + (_DERIV_ESTADO_LABEL[estado] || estado) + '?';
   confirmarUI(msg).then(ok => {
     if (!ok) return;
-    try { cambiarEstadoDerivacion(id, estado); } catch (e) { alert(e.message); return; }
+    try { cambiarEstadoDerivacion(id, estado); } catch (e) { avisoUI(e.message); return; }
     if (typeof sincronizarUI === 'function') sincronizarUI(); else renderDerivaciones();
   });
 }
@@ -156,7 +156,7 @@ function eliminarDerivacionUI(id) {
 function cargarDerivacionComoPrestacionUI(id) {
   const d = DB.derivaciones.find(x => x.id === Number(id));
   if (!d) return;
-  if (!d.medicoCirujanoId) { alert('Asigná el cirujano (✎ editar) antes de cargarla para facturar.'); return; }
+  if (!d.medicoCirujanoId) { avisoUI('Asigná el cirujano (✎ editar) antes de cargarla para facturar.'); return; }
   confirmarUI('¿Cargar esta cirugía como prestación para facturar? Se registra en la carga diaria con el derivador.').then(ok => {
     if (!ok) return;
     let reg;
@@ -171,9 +171,9 @@ function cargarDerivacionComoPrestacionUI(id) {
         paciente: { apellido: d.pacienteApellido, nombre: d.pacienteNombre, dni: d.pacienteDni },
         cantidad: 1,
       });
-    } catch (e) { alert('No se pudo cargar: ' + e.message); return; }
+    } catch (e) { avisoUI('No se pudo cargar: ' + e.message); return; }
     cambiarEstadoDerivacion(id, 'realizada', { prestacionId: reg && reg.id });
     if (typeof sincronizarUI === 'function') sincronizarUI(); else renderDerivaciones();
-    alert('Cirugía cargada para facturar. Revisala en Carga diaria ▸ Todas las prestaciones.');
+    avisoUI('Cirugía cargada para facturar. Revisala en Carga diaria ▸ Todas las prestaciones.');
   });
 }

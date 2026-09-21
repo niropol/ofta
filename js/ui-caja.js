@@ -121,7 +121,7 @@ function guardarMovimientoCaja() {
     } else {
       registrarMovimientoCaja(datos);
     }
-  } catch (e) { alert(e.message); return false; }
+  } catch (e) { avisoUI(e.message); return false; }
   cerrarModalMov();
   renderCaja();
   return true;
@@ -131,7 +131,7 @@ function eliminarMovimientoCajaUI(id) {
   confirmarUI('¿Eliminar este movimiento de caja? Queda registrado en auditoría.').then(ok => {
     if (!ok) return;
     const r = eliminarMovimientoCaja(id);
-    if (!r.ok && r.automatico) { alert('Es un pago a médico automático: se corrige desde la liquidación (Etapa 6).'); return; }
+    if (!r.ok && r.automatico) { avisoUI('Es un pago a médico automático: se corrige desde la liquidación (Etapa 6).'); return; }
     if (typeof sincronizarUI === 'function') sincronizarUI(); else renderCaja();
   });
 }
@@ -166,9 +166,9 @@ function guardarCierreCaja() {
       saldoContado: val('cierre_contado'), observacion: val('cierre_obs'),
     });
     if (c.diferencia !== 0) {
-      alert(`Cierre guardado con DIFERENCIA de ${fmtMoneda(c.diferencia, c.moneda)} (contado − sistema).`);
+      avisoUI(`Cierre guardado con DIFERENCIA de ${fmtMoneda(c.diferencia, c.moneda)} (contado − sistema).`);
     }
-  } catch (e) { alert(e.message); return false; }
+  } catch (e) { avisoUI(e.message); return false; }
   cerrarModalCierre();
   renderCierresCaja();
   return true;

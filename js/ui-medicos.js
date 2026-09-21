@@ -124,7 +124,7 @@ function _leerFormMedico() {
 // ── Guardar (alta o edición) ──
 function guardarMedico() {
   const datos = _leerFormMedico();
-  if (!datos.nombre) { alert('El nombre del médico es obligatorio.'); return false; }
+  if (!datos.nombre) { avisoUI('El nombre del médico es obligatorio.'); return false; }
 
   const idField = document.getElementById('med_id');
   const idEdit = idField && idField.value ? Number(idField.value) : null;
@@ -169,7 +169,7 @@ function eliminarMedico(id) {
   if (!m) return false;
   const ref = _referenciasMedico(m.id);
   if (ref.total > 0) {
-    alert(`No se puede eliminar a ${m.nombre}: tiene ${ref.prest} prestación(es), ${ref.reglas} regla(s) de reparto y ${ref.liq} liquidación(es) asociadas.\n\nInactivalo en su lugar (deja de aparecer para cargar, pero conserva el historial).`);
+    avisoUI(`No se puede eliminar a ${m.nombre}: tiene ${ref.prest} prestación(es), ${ref.reglas} regla(s) de reparto y ${ref.liq} liquidación(es) asociadas.\n\nInactivalo en su lugar (deja de aparecer para cargar, pero conserva el historial).`);
     return false;
   }
   const antes = JSON.parse(JSON.stringify(m));

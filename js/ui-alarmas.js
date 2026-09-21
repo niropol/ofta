@@ -56,7 +56,7 @@ function actualizarBadgeAvisos() {
 function agregarAlarmaUI() {
   const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
   try { crearAlarma({ texto: val('alarma_texto'), fecha: val('alarma_fecha') || hoyISO(), tipo: val('alarma_tipo') }); }
-  catch (e) { alert(e.message); return; }
+  catch (e) { avisoUI(e.message); return; }
   ['alarma_texto', 'alarma_fecha'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   if (typeof sincronizarUI === 'function') sincronizarUI(); else renderAvisos();
 }

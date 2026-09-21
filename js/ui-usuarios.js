@@ -84,14 +84,14 @@ function guardarUsuario() {
   const idEdit = val('usr_id') ? Number(val('usr_id')) : null;
   try {
     guardarUsuarioDatos({ nombre: val('usr_nombre'), email: val('usr_email'), rol: val('usr_rol'), estado: val('usr_estado') }, idEdit);
-  } catch (e) { alert(e.message); return false; }
+  } catch (e) { avisoUI(e.message); return false; }
   cerrarModalUsuario();
   renderUsuarios(); poblarActuandoComo();
   return true;
 }
 
 function toggleEstadoUsuarioUI(id) {
-  try { toggleEstadoUsuario(id); } catch (e) { alert(e.message); return; }
+  try { toggleEstadoUsuario(id); } catch (e) { avisoUI(e.message); return; }
   renderUsuarios(); poblarActuandoComo(); aplicarPermisos();
 }
 
@@ -99,7 +99,7 @@ function eliminarUsuarioUI(id) {
   confirmarUI('¿Eliminar este usuario? Queda registrado en auditoría.').then(ok => {
     if (!ok) return;
     const r = eliminarUsuario(id);
-    if (!r.ok) { alert('No se puede eliminar: ' + (r.motivo || '')); return; }
+    if (!r.ok) { avisoUI('No se puede eliminar: ' + (r.motivo || '')); return; }
     renderUsuarios(); poblarActuandoComo();
   });
 }

@@ -128,8 +128,8 @@ function renderCargaDiaria() {
 function _cdComun() {
   const fecha = _cdGet('cd_fecha');
   const medico = _cdGet('cd_medico');
-  if (!fecha) { alert('Elegí el día.'); return null; }
-  if (!medico) { alert('Elegí el médico.'); return null; }
+  if (!fecha) { avisoUI('Elegí el día.'); return null; }
+  if (!medico) { avisoUI('Elegí el médico.'); return null; }
   return {
     fecha, medicoRealizadorId: medico,
     sedeId: Number(_cdGet('cd_sede')) || sedeActiva(),
@@ -151,7 +151,7 @@ function _cdContador(base, categoria, grupo, os) {
 function _cdAgregarContador(categoria, grupoId, osId, cantId) {
   const base = _cdComun(); if (!base) return;
   const grupo = _cdGet(grupoId);
-  if (!grupo) { alert('Elegí el tipo.'); return; }
+  if (!grupo) { avisoUI('Elegí el tipo.'); return; }
   const cant = Math.max(1, Math.floor(Number(_cdGet(cantId)) || 1));
   const os = _cdGet(osId) || 'Particular';
   const cat = (versionActual(Number(grupo)) || {}).categoria || categoria;
@@ -165,7 +165,7 @@ function _cdAgregarContador(categoria, grupoId, osId, cantId) {
     } else {
       registrarPrestacion({ ...base, categoria: cat, grupoNomenclador: grupo, obraSocial: os, cantidad: cant });
     }
-  } catch (e) { alert(e.message); return; }
+  } catch (e) { avisoUI(e.message); return; }
   _cdSet(cantId, '');
   renderCargaDiaria();
 }
@@ -177,12 +177,12 @@ function cdAgregarEstudio() { _cdAgregarContador('realizacion_estudio', 'cd_est_
 function cdEditarCantidad(id) {
   const reg = DB.prestacionesRealizadas.find(r => r.id === Number(id));
   if (!reg) return;
-  if (typeof prestacionBloqueada === 'function' && prestacionBloqueada(reg)) { alert('El período está liquidado. Reabrí la liquidación para corregir.'); return; }
+  if (typeof prestacionBloqueada === 'function' && prestacionBloqueada(reg)) { avisoUI('El período está liquidado. Reabrí la liquidación para corregir.'); return; }
   const actual = Math.max(1, Math.floor(Number(reg.cantidad) || 1));
   const nueva = (typeof prompt === 'function') ? prompt('Cantidad de ' + reg.descripcion + ' (' + reg.obraSocial + '):', actual) : actual;
   if (nueva === null) return;
   const n = Math.floor(Number(nueva));
-  if (!(n >= 1)) { alert('La cantidad debe ser un entero ≥ 1.'); return; }
+  if (!(n >= 1)) { avisoUI('La cantidad debe ser un entero ≥ 1.'); return; }
   const antes = JSON.parse(JSON.stringify(reg));
   reg.cantidad = n;
   registrarAuditoria('edicion', 'prestacionRealizada', reg.id, antes, reg);
@@ -240,11 +240,11 @@ function previsualizarPegar() {
 function confirmarPegarResumen() {
   const fecha = (document.getElementById('cd_fecha') || {}).value || hoyISO();
   const medicoId = (document.getElementById('cd_medico') || {}).value || null;
-  if (!medicoId) { alert('Elegí el médico arriba antes de cargar.'); return; }
+  if (!medicoId) { avisoUI('Elegí el médico arriba antes de cargar.'); return; }
   if (!_pegarPlan.length) { previsualizarPegar(); }
   const r = aplicarResumenDiario(_pegarPlan, { fecha, medicoRealizadorId: Number(medicoId) });
   if (r.ok === 0) { const msg = document.getElementById('pegarMsg'); if (msg) msg.innerHTML = '<div class="diag-err" style="margin:8px 0">No se cargó ninguna línea (revisá la detección).</div>'; return; }
   cerrarModalPegar();
   if (typeof sincronizarUI === 'function') sincronizarUI(); else renderCargaDiaria();
-  alert('Cargadas ' + r.ok + ' línea(s) (' + r.unidades + ' unidad/es)' + (r.omitidas ? ', ' + r.omitidas + ' omitida(s)' : '') + '.');
+  avisoUI('Cargadas ' + r.ok + ' línea(s) (' + r.unidades + ' unidad/es)' + (r.omitidas ? ', ' + r.omitidas + ' omitida(s)' : '') + '.');
 }

@@ -76,12 +76,12 @@ function editarOS(id) {
 function guardarOS() {
   const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
   const nombre = val('os_nombre');
-  if (!nombre) { alert('El nombre de la obra social es obligatorio.'); return false; }
+  if (!nombre) { avisoUI('El nombre de la obra social es obligatorio.'); return false; }
   const idEdit = val('os_id') ? Number(val('os_id')) : null;
 
   // Evitar duplicados por nombre (case-insensitive), salvo el que se está editando.
   const dup = DB.obrasSociales.find(o => (o.nombre || '').toLowerCase() === nombre.toLowerCase() && o.id !== idEdit);
-  if (dup) { alert('Ya existe una obra social con ese nombre.'); return false; }
+  if (dup) { avisoUI('Ya existe una obra social con ese nombre.'); return false; }
 
   const datos = { nombre, codigo: val('os_codigo'), estado: val('os_estado') || 'Activa', modalidadIVA: val('os_modalidadIVA') || 'ambas' };
 
@@ -127,7 +127,7 @@ function eliminarOS(id) {
   if (!o) return false;
   const ref = _referenciasOS(o.nombre);
   if (ref > 0) {
-    alert(`No se puede eliminar "${o.nombre}": hay ${ref} prestación(es) que la usan. Inactivala en su lugar.`);
+    avisoUI(`No se puede eliminar "${o.nombre}": hay ${ref} prestación(es) que la usan. Inactivala en su lugar.`);
     return false;
   }
   const antes = JSON.parse(JSON.stringify(o));

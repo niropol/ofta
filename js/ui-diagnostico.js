@@ -80,14 +80,14 @@ function restaurarBackupUI(input) {
   reader.onload = e => {
     let dump;
     try { dump = JSON.parse(e.target.result); }
-    catch (err) { alert('No se pudo leer el archivo JSON: ' + err.message); input.value = ''; return; }
+    catch (err) { avisoUI('No se pudo leer el archivo JSON: ' + err.message); input.value = ''; return; }
     const registros = (typeof COLECCIONES !== 'undefined' ? COLECCIONES : []).reduce((s, c) => s + (Array.isArray(dump[c]) ? dump[c].length : 0), 0);
     confirmarUI('Restaurar esta copia REEMPLAZA todos los datos actuales por los del archivo (' + registros + ' registro/s). ¿Continuar?').then(ok => {
       input.value = '';
       if (!ok) return;
       let r;
       try { r = importarBackupObj(dump); }
-      catch (err) { alert('No se pudo restaurar: ' + err.message); return; }
+      catch (err) { avisoUI('No se pudo restaurar: ' + err.message); return; }
       if (typeof sincronizarUI === 'function') sincronizarUI();
       const box = _diagBox(); if (box) box.innerHTML = '<div class="diag-ok">✅ Copia restaurada: ' + r.registros + ' registro/s en ' + r.colecciones + ' colección(es).</div>';
     });

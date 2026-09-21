@@ -66,7 +66,7 @@ function renderLiquidaciones() {
 
 function generarLiquidacionUI(medicoId) {
   try { generarLiquidacion(medicoId, _liqGV('liqMes')); }
-  catch (e) { alert(e.message); return; }
+  catch (e) { avisoUI(e.message); return; }
   renderLiquidaciones();
 }
 
@@ -74,7 +74,7 @@ function cerrarLiquidacionUI(id) {
   confirmarUI('¿Cerrar la liquidación? Se carga el egreso en caja y se bloquea el período (podés reabrirla después).').then(ok => {
     if (!ok) return;
     try { cerrarLiquidacion(id); }
-    catch (e) { alert(e.message); return; }
+    catch (e) { avisoUI(e.message); return; }
     if (typeof sincronizarUI === 'function') sincronizarUI(); else { renderLiquidaciones(); if (typeof renderCaja === 'function') renderCaja(); }
   });
 }

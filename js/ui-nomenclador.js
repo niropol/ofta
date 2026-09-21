@@ -121,7 +121,7 @@ function guardarPrestacion() {
     costoMoneda: val('prest_costoMoneda') || 'ARS',
     vigenciaDesde: val('prest_vigencia') || hoyISO(),
   };
-  if (!datos.descripcion) { alert('La descripción es obligatoria.'); return false; }
+  if (!datos.descripcion) { avisoUI('La descripción es obligatoria.'); return false; }
 
   let r;
   if (grupo) {
@@ -158,11 +158,11 @@ function guardarNuevoPrecio() {
     precio: val('precio_valor'),
     moneda: val('precio_moneda') || 'ARS',
   };
-  if (datos.precio === '' || isNaN(Number(datos.precio))) { alert('El precio debe ser un número.'); return false; }
+  if (datos.precio === '' || isNaN(Number(datos.precio))) { avisoUI('El precio debe ser un número.'); return false; }
   try {
     versionarPrecio(grupo, datos);
   } catch (e) {
-    alert(e.message);
+    avisoUI(e.message);
     return false;
   }
   cerrarModalPrecio();
@@ -205,7 +205,7 @@ function eliminarPrestacionUI(grupo) {
     if (!ok) return;
     const r = eliminarPrestacion(grupo);
     if (!r.ok) {
-      alert(`No se puede eliminar: hay ${r.referencias} prestación(es) realizada(s) que usan este ítem. Inactivalo en su lugar.`);
+      avisoUI(`No se puede eliminar: hay ${r.referencias} prestación(es) realizada(s) que usan este ítem. Inactivalo en su lugar.`);
       return;
     }
     if (typeof sincronizarUI === "function") sincronizarUI(); else renderNomenclador();
