@@ -5,24 +5,34 @@
 //  configurado (SUPABASE_URL/ANON en persistencia.js). Sin credenciales
 //  (tests / modo local) NO se pide login y todo sigue como antes.
 //
-//  Quién puede entrar y con qué permisos se define en ACCESOS: un email → un rol.
+//  Quién puede entrar y con qué permisos se define en la BASE DE DATOS (tabla
+//  `autorizados` en Supabase: email + rol). Así los emails del personal NO viven
+//  en el código público. Roles posibles:
 //    · 'admin'         → ve TODO (todos los permisos)
 //    · 'secretaria_1'  → solo Carga diaria
 //    · 'secretaria_2'  → solo Carga diaria
-//  Para dar de alta a alguien: agregá una línea con su email (en minúsculas) y su
-//  rol. Un email que no esté en la lista NO puede entrar, aunque tenga Google.
+//  Para dar de alta/baja a alguien: se edita esa tabla (una línea SQL), sin tocar
+//  el código. Un email que no esté en la tabla NO puede entrar, aunque tenga Google.
+//
+//  ACCESOS queda como override LOCAL opcional (normalmente vacío). Sirve para los
+//  tests y como respaldo offline; nunca guardes acá emails reales del equipo.
 // ═══════════════════════════════════════════════════════════════════════════
 
 const ACCESOS = {
-  // ── Administradores (todos los permisos) ──
-  'niropol@gmail.com': 'admin',
-  // 'admin2@gmail.com': 'admin',
-  // 'admin3@gmail.com': 'admin',
-
-  // ── Secretarías (solo Carga diaria) ──
-  // 'secretaria1@gmail.com': 'secretaria_1',
-  // 'secretaria2@gmail.com': 'secretaria_1',
+  // (vacío a propósito: los accesos reales viven en la tabla `autorizados`)
 };
+
+// Consulta el rol del email en la tabla `autorizados` de la nube (fuente real).
+async function obtenerRolDeUsuario(email) {
+  const e = String(email || '').toLowerCase().trim();
+  if (!e || !sb) return null;
+  try {
+    const { data, error } = await sb.from('autorizados').select('rol').ilike('email', e).limit(1).maybeSingle();
+    if (error || !data || !data.rol) return null;
+    const rol = data.rol;
+    return (typeof ROLES === 'undefined' || ROLES.includes(rol)) ? rol : null;
+  } catch (e2) { return null; }
+}
 
 // ¿Hay que pedir login? Solo cuando hay proyecto Supabase configurado.
 function loginActivo() {
@@ -125,7 +135,8 @@ async function onLoginOk() {
     nombre = (data && data.user && data.user.user_metadata && data.user.user_metadata.full_name) || '';
   } catch (e) {}
 
-  const rol = resolverRolPorEmail(email);
+  // El rol viene de la tabla `autorizados` (nube). ACCESOS es solo override local.
+  const rol = resolverRolPorEmail(email) || await obtenerRolDeUsuario(email);
   if (!rol) {
     try { await sb.auth.signOut(); } catch (e) {}
     loginLoading(false);

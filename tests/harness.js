@@ -110,7 +110,7 @@ const EXPONER = [
   // navegación
   'showSection', 'init',
   // autenticación y roles por email
-  'ACCESOS', 'loginActivo', 'resolverRolPorEmail', '_usuarioParaEmail',
+  'ACCESOS', 'loginActivo', 'resolverRolPorEmail', 'obtenerRolDeUsuario', '_usuarioParaEmail',
 ];
 
 export function loadApp() {
