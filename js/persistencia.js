@@ -274,10 +274,15 @@ async function arranque() {
     // dejar la UI utilizable; los cambios se guardan en localStorage.
     cargarLocal();
     datosCargados = true;
+    if (typeof ocultarPantallaLogin === 'function') ocultarPantallaLogin();  // sin nube no se pide login
     if (typeof init === 'function') { try { init(); } catch (e) {} }
     _setIndicador('guardado');
     return;
   }
+  // Con nube configurada, la app EXIGE login (Google o email/contraseña). El
+  // módulo de auth verifica el email, carga la nube y recién ahí arranca init().
+  if (typeof iniciarAuth === 'function') { await iniciarAuth(); return; }
+  // Respaldo (sin módulo de auth): comportamiento directo sin login.
   await cargarDesdeNube();
   if (typeof init === 'function') { try { init(); } catch (e) {} }
 }

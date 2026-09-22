@@ -109,6 +109,8 @@ const EXPONER = [
   'runSelfTests', 'diagnosticoDatos', 'estadoNube', 'verificarNube',
   // navegación
   'showSection', 'init',
+  // autenticación y roles por email
+  'ACCESOS', 'loginActivo', 'resolverRolPorEmail', '_usuarioParaEmail',
 ];
 
 export function loadApp() {
