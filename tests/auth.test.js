@@ -8,8 +8,10 @@ let ctx, app;
 beforeEach(() => { ctx = loadApp(); app = ctx.app; resetDatos(app); });
 
 describe('Accesos por email y rol', () => {
-  it('sin credenciales de nube, no se exige login (modo local)', () => {
-    expect(app.loginActivo()).toBe(false);
+  it('con credenciales de nube configuradas, el login queda activo', () => {
+    // En los tests (jsdom sin el SDK de Supabase) la app igual corre en modo local:
+    // initSupabase() corta y no se pisa nada. loginActivo() refleja que hay proyecto.
+    expect(app.loginActivo()).toBe(true);
   });
 
   it('resuelve el rol de un email autorizado (case-insensitive) y rechaza los demás', () => {

@@ -84,9 +84,9 @@ describe('Verificación de cálculos (self-tests) y nube', () => {
     expect(app.DB.prestacionesRealizadas[0].id).toBe(p.id);
   });
 
-  it('estadoNube informa modo local cuando no hay credenciales', () => {
+  it('estadoNube: hay credenciales de nube, pero en jsdom (sin SDK) no conecta', () => {
     const e = app.estadoNube();
-    expect(e.hayCredenciales).toBe(false);
-    expect(e.conectado).toBe(false);
+    expect(e.hayCredenciales).toBe(true);   // proyecto Supabase configurado
+    expect(e.conectado).toBe(false);        // sin el SDK de Supabase no se crea el cliente
   });
 });

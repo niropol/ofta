@@ -14,8 +14,8 @@
 //  Vacías = modo local/tests: initSupabase corta y la app trabaja solo en memoria.
 // ═══════════════════════════════════════════════════════════════════════════
 
-const SUPABASE_URL  = '';   // ← completar con el proyecto Supabase de SAM
-const SUPABASE_ANON = '';   // ← completar con la anon key de SAM
+const SUPABASE_URL  = 'https://atrwkvjadnymkbziojxu.supabase.co';   // proyecto Supabase de OFTA
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0cndrdmphZG55bWtiemlvanh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwMzI2NTQsImV4cCI6MjEwNTYwODY1NH0.-jE9WujjQ34MqIHXvL5nmX4QAyMMj5-t3uQpUWnVvYo';
 
 const OBRAS_SOCIALES_BASE = JSON.parse(JSON.stringify(DB.obrasSociales || []));
 const SEDES_BASE          = JSON.parse(JSON.stringify(DB.sedes || []));
