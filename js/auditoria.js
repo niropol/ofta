@@ -28,6 +28,22 @@ function registrarAuditoria(accion, entidad, entidadId, antes, despues) {
   return reg;
 }
 
+// Borra un registro de auditoría puntual (para limpiar marcas de pruebas/errores).
+function eliminarAuditoria(id) {
+  const antes = DB.auditoria.length;
+  DB.auditoria = DB.auditoria.filter(a => a.id !== Number(id));
+  const borro = DB.auditoria.length !== antes;
+  if (borro && typeof marcarCambios === 'function') marcarCambios('auditoria');
+  return borro;
+}
+// Vacía TODO el historial de auditoría.
+function vaciarAuditoria() {
+  const habia = DB.auditoria.length;
+  DB.auditoria = [];
+  if (habia && typeof marcarCambios === 'function') marcarCambios('auditoria');
+  return habia;
+}
+
 // Devuelve el historial de auditoría de una entidad/registro puntual, más nuevo primero.
 function auditoriaDe(entidad, entidadId) {
   return DB.auditoria

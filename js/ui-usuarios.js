@@ -149,12 +149,33 @@ function renderAuditoria() {
       <td>${escHtml(a.accion)}</td>
       <td>${escHtml(a.entidad)} <span class="muted">#${escHtml(String(a.entidadId))}</span></td>
       <td class="muted">${escHtml(_diffResumen(a))}</td>
+      <td class="acc"><button class="danger" title="Borrar este registro de auditoría" onclick="eliminarAuditoriaUI(${a.id})">🗑</button></td>
     </tr>`).join('');
   cont.innerHTML = `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+      <button class="btn secundario" onclick="vaciarAuditoriaUI()">Vaciar historial completo</button>
+    </div>
     <table class="tabla">
-      <thead><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Entidad</th><th>Cambios</th></tr></thead>
+      <thead><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Entidad</th><th>Cambios</th><th></th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
+}
+
+// Borra un registro de auditoría (con confirmación in-app).
+function eliminarAuditoriaUI(id) {
+  confirmarUI('¿Borrar este registro de auditoría? No se puede deshacer.').then(ok => {
+    if (!ok) return;
+    eliminarAuditoria(id);
+    if (typeof renderAuditoria === 'function') renderAuditoria();
+  });
+}
+// Vacía todo el historial de auditoría.
+function vaciarAuditoriaUI() {
+  confirmarUI('¿Borrar TODO el historial de auditoría? Elimina todas las marcas y no se puede deshacer.').then(ok => {
+    if (!ok) return;
+    vaciarAuditoria();
+    if (typeof renderAuditoria === 'function') renderAuditoria();
+  });
 }
 
 function renderUsuariosYAuditoria() {
