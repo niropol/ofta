@@ -4,6 +4,30 @@
 
 const DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
+// Con qué frecuencia del mes viene el médico ese día. 'todas' = todo el mes.
+const FRECUENCIAS = [
+  ['todas', 'Todas las semanas (todo el mes)'],
+  ['1-3', '1ª y 3ª semana (cada 15 días)'],
+  ['2-4', '2ª y 4ª semana (cada 15 días)'],
+  ['1', 'Solo 1ª semana del mes'],
+  ['2', 'Solo 2ª semana del mes'],
+  ['3', 'Solo 3ª semana del mes'],
+  ['4', 'Solo 4ª semana del mes'],
+  ['unica', 'Una sola vez (fecha puntual)'],
+];
+function _fechaCorta(iso) {
+  if (!iso) return '';
+  const p = String(iso).split('-');   // 2026-09-12 → 12/09
+  return p.length === 3 ? p[2] + '/' + p[1] : iso;
+}
+// Etiqueta corta para mostrar en la grilla/tabla (vacío = todas las semanas).
+function frecuenciaLabel(h) {
+  const f = h.frecuencia || 'todas';
+  if (f === 'unica') return h.fecha ? '1 vez: ' + _fechaCorta(h.fecha) : '1 sola vez';
+  const map = { 'todas': '', '1-3': '1ª y 3ª sem.', '2-4': '2ª y 4ª sem.', '1': '1ª sem.', '2': '2ª sem.', '3': '3ª sem.', '4': '4ª sem.' };
+  return map[f] || '';
+}
+
 function _nombreSede(id) { return (DB.sedes.find(s => s.id === Number(id)) || {}).nombre || '—'; }
 function _nombreConsultorio(id) { return (DB.consultorios.find(c => c.id === Number(id)) || {}).nombre || '—'; }
 
@@ -131,9 +155,10 @@ function renderHorarios() {
     return;
   }
 
-  // Días a mostrar: Lun–Vie siempre; Sáb/Dom solo si tienen turnos.
+  // Días a mostrar: Lun–Sáb siempre; Domingo solo si tiene turnos. (Vista de solo
+  // lectura: la agenda se edita en Admin ▸ Configuración ▸ Agenda.)
   const conTurnos = new Set(lista.map(h => h.dia));
-  const dias = DIAS_SEMANA.filter((d, i) => i < 5 || conTurnos.has(d));
+  const dias = DIAS_SEMANA.filter((d, i) => i < 6 || conTurnos.has(d));
 
   const cols = dias.map(dia => {
     const delDia = lista
@@ -144,12 +169,13 @@ function renderHorarios() {
       : delDia.map(h => {
           const color = _medicoColor(h.medicoId);
           const horas = (h.horaDesde || '') + (h.horaHasta ? '–' + h.horaHasta : '');
+          const frec = frecuenciaLabel(h);
           return `
           <div class="ag-bloque" style="border-left-color:${color}">
-            <button class="ag-del" title="Eliminar" onclick="eliminarHorario(${h.id})">✕</button>
             <div class="ag-hora">${escHtml(horas || 'sin hora')}</div>
             <div class="ag-medico">${escHtml(medicoNombre(h.medicoId))}</div>
             <div class="ag-cons">${escHtml(_nombreConsultorio(h.consultorioId))}</div>
+            ${frec ? `<div class="ag-frec" style="font-size:11px;color:var(--muted);margin-top:2px">🗓 ${escHtml(frec)}</div>` : ''}
           </div>`;
         }).join('');
     return `<div class="ag-col"><div class="ag-dia">${escHtml(dia)}</div>${bloques}</div>`;
@@ -158,31 +184,123 @@ function renderHorarios() {
   cont.innerHTML = `<div class="ag-grid" style="grid-template-columns:repeat(${dias.length},minmax(140px,1fr))">${cols}</div>`;
 }
 
+// ── Gestión de la agenda (Configuración): tabla con alta / edición / baja ──
+function renderAgendaConfig() {
+  renderHorarios();   // refresca también la grilla de solo lectura de Carga diaria
+  const cont = document.getElementById('agendaAdminTabla');
+  if (!cont) return;
+  const lista = DB.horarios.slice().sort((a, b) =>
+    (DIAS_SEMANA.indexOf(a.dia) - DIAS_SEMANA.indexOf(b.dia)) || (a.horaDesde || '').localeCompare(b.horaDesde || ''));
+  if (!lista.length) { cont.innerHTML = '<p class="vacio">No hay horarios cargados. Usá «+ Nuevo horario».</p>'; return; }
+  const rows = lista.map(h => {
+    const horas = (h.horaDesde || '') + (h.horaHasta ? '–' + h.horaHasta : '');
+    const frec = frecuenciaLabel(h) || 'Todas las semanas';
+    return `<tr>
+      <td>${escHtml(medicoNombre(h.medicoId))}</td>
+      <td>${escHtml(h.dia || '')}</td>
+      <td>${escHtml(horas || '—')}</td>
+      <td>${escHtml(frec)}</td>
+      <td>${escHtml(_nombreConsultorio(h.consultorioId))}</td>
+      <td class="acc">
+        <button onclick="editarHorarioUI(${h.id})">Editar</button>
+        <button class="danger" onclick="eliminarHorario(${h.id})">Eliminar</button>
+      </td>
+    </tr>`;
+  }).join('');
+  cont.innerHTML = `<table class="tabla"><thead><tr>
+      <th>Médico</th><th>Día</th><th>Horario</th><th>Frecuencia</th><th>Consultorio</th><th></th>
+    </tr></thead><tbody>${rows}</tbody></table>`;
+}
+function _refrescarAgenda() {
+  if (typeof renderAgendaConfig === 'function') renderAgendaConfig(); else renderHorarios();
+}
+
 function _mostrarModalHorario(on) { const m = document.getElementById('modalHorario'); if (m) m.style.display = on ? 'flex' : 'none'; }
 function cerrarModalHorario() { _mostrarModalHorario(false); }
 
-function abrirNuevoHorario() {
-  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v == null ? '' : v; };
+let _editHorarioId = null;   // null = alta nueva
+
+function _poblarModalHorario() {
   document.getElementById('hor_dia').innerHTML = DIAS_SEMANA.map(d => `<option value="${d}">${d}</option>`).join('');
   document.getElementById('hor_medico').innerHTML = getMedicosActivos().sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es')).map(m => `<option value="${m.id}">${escHtml(m.nombre)}</option>`).join('');
   document.getElementById('hor_consultorio').innerHTML = getConsultoriosActivos().map(c => `<option value="${c.id}">${escHtml(c.nombre)} · ${escHtml(_nombreSede(c.sedeId))}</option>`).join('');
-  set('hor_desde', ''); set('hor_hasta', '');
+  const frec = document.getElementById('hor_frec');
+  if (frec) frec.innerHTML = FRECUENCIAS.map(f => `<option value="${f[0]}">${escHtml(f[1])}</option>`).join('');
+}
+// Muestra el campo de fecha solo cuando la frecuencia es "una sola vez".
+function _horFrecChange() {
+  const f = (document.getElementById('hor_frec') || {}).value;
+  const wrap = document.getElementById('hor_fecha_wrap');
+  if (wrap) wrap.style.display = (f === 'unica') ? '' : 'none';
+}
+
+function abrirNuevoHorario() {
+  _editHorarioId = null;
+  _poblarModalHorario();
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v == null ? '' : v; };
+  set('hor_desde', ''); set('hor_hasta', ''); set('hor_fecha', '');
+  const frec = document.getElementById('hor_frec'); if (frec) frec.value = 'todas';
+  _horFrecChange();
+  const t = document.getElementById('hor_titulo'); if (t) t.textContent = 'Nuevo horario';
   _mostrarModalHorario(true);
+}
+
+function editarHorarioUI(id) {
+  const h = DB.horarios.find(x => x.id === Number(id));
+  if (!h) { avisoUI('No se encontró el horario.'); return; }
+  _editHorarioId = h.id;
+  _poblarModalHorario();
+  const set = (elid, v) => { const el = document.getElementById(elid); if (el) el.value = v == null ? '' : v; };
+  set('hor_medico', h.medicoId); set('hor_dia', h.dia || 'Lunes');
+  set('hor_consultorio', h.consultorioId || '');
+  set('hor_desde', h.horaDesde || ''); set('hor_hasta', h.horaHasta || '');
+  set('hor_frec', h.frecuencia || 'todas'); set('hor_fecha', h.fecha || '');
+  _horFrecChange();
+  const t = document.getElementById('hor_titulo'); if (t) t.textContent = 'Editar horario';
+  _mostrarModalHorario(true);
+}
+
+// Motor: crea/edita un horario (testeable, sin DOM).
+function crearHorario(datos) {
+  if (!datos || !Number(datos.medicoId)) throw new Error('Elegí un médico.');
+  const frec = FRECUENCIAS.some(f => f[0] === datos.frecuencia) ? datos.frecuencia : 'todas';
+  const h = {
+    id: nuevoId(), medicoId: Number(datos.medicoId), consultorioId: Number(datos.consultorioId) || null,
+    dia: datos.dia || 'Lunes', horaDesde: datos.horaDesde || '', horaHasta: datos.horaHasta || '',
+    frecuencia: frec, fecha: frec === 'unica' ? (datos.fecha || '') : '',
+  };
+  DB.horarios.push(h);
+  registrarAuditoria('alta', 'horario', h.id, null, h);
+  marcarCambios('horarios');
+  return h;
+}
+function editarHorario(id, datos) {
+  const h = DB.horarios.find(x => x.id === Number(id));
+  if (!h) return false;
+  if (!Number(datos.medicoId)) throw new Error('Elegí un médico.');
+  const antes = JSON.parse(JSON.stringify(h));
+  const frec = FRECUENCIAS.some(f => f[0] === datos.frecuencia) ? datos.frecuencia : 'todas';
+  h.medicoId = Number(datos.medicoId); h.consultorioId = Number(datos.consultorioId) || null;
+  h.dia = datos.dia || 'Lunes'; h.horaDesde = datos.horaDesde || ''; h.horaHasta = datos.horaHasta || '';
+  h.frecuencia = frec; h.fecha = frec === 'unica' ? (datos.fecha || '') : '';
+  registrarAuditoria('edicion', 'horario', h.id, antes, h);
+  marcarCambios('horarios');
+  return h;
 }
 
 function guardarHorario() {
   const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
-  const medicoId = Number(val('hor_medico'));
-  if (!medicoId) { avisoUI('Elegí un médico.'); return false; }
-  const nuevo = {
-    id: nuevoId(), medicoId, consultorioId: Number(val('hor_consultorio')) || null,
+  const datos = {
+    medicoId: Number(val('hor_medico')), consultorioId: Number(val('hor_consultorio')) || null,
     dia: val('hor_dia'), horaDesde: val('hor_desde'), horaHasta: val('hor_hasta'),
+    frecuencia: val('hor_frec'), fecha: val('hor_fecha'),
   };
-  DB.horarios.push(nuevo);
-  registrarAuditoria('alta', 'horario', nuevo.id, null, nuevo);
-  marcarCambios('horarios');
+  try {
+    if (_editHorarioId != null) editarHorario(_editHorarioId, datos); else crearHorario(datos);
+  } catch (e) { avisoUI(e.message); return false; }
+  _editHorarioId = null;
   cerrarModalHorario();
-  renderHorarios();
+  _refrescarAgenda();
   return true;
 }
 
@@ -192,5 +310,5 @@ function eliminarHorario(id) {
   DB.horarios = DB.horarios.filter(x => x.id !== h.id);
   registrarAuditoria('baja', 'horario', h.id, h, null);
   marcarCambios('horarios');
-  renderHorarios();
+  _refrescarAgenda();
 }

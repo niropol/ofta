@@ -77,7 +77,6 @@ function renderPrestaciones() {
       <td class="num">${Math.max(1, Math.floor(Number(r.cantidad) || 1))}</td>
       <td>${escHtml(medicoNombre(r.medicoRealizadorId))}</td>
       <td>${escHtml(deriv)}</td>
-      <td class="num">${fmtMoneda(r.precioNomenclador, r.moneda)}</td>
       <td class="acc">
         ${anulada
           ? `<button onclick="reactivarPrestacionUI(${r.id})">Reactivar</button>`
@@ -101,7 +100,7 @@ function renderPrestaciones() {
       <thead><tr>
         <th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Obra social</th>
         <th>Paciente</th><th class="num">Cant.</th><th>Realizador</th><th>Derivador</th>
-        <th class="num">Precio nomenclador</th><th>Acciones</th>
+        <th>Acciones</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>${pager}`;

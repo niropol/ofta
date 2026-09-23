@@ -107,6 +107,17 @@ async function logout() {
   window.location.reload();
 }
 
+// Mostrar/ocultar la contraseña del login.
+function toggleLoginPass() {
+  const inp = document.getElementById('login-pass');
+  const btn = document.getElementById('login-pass-toggle');
+  if (!inp) return;
+  const ver = inp.type === 'password';
+  inp.type = ver ? 'text' : 'password';
+  if (btn) { btn.textContent = ver ? '🙈' : '👁'; btn.style.color = ver ? 'var(--primario)' : 'var(--muted)'; }
+  try { inp.focus(); } catch (e) {}
+}
+
 // Busca (o crea) el registro de usuario para ese email y lo deja como el actual,
 // con el rol autorizado. Así la auditoría atribuye cada cambio a la persona real.
 function _usuarioParaEmail(email, rol, nombreGoogle) {

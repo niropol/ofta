@@ -31,9 +31,17 @@ function _catLabelSt(id) { return (categoriaInfo(id) || {}).label || id; }
 // ── Vista clínica ──
 function renderVistaClinica(cont, mes) {
   const r = resumenMes(mes);
+  const pct = DB.config.porcentajeSAM;
   const card = (t, v) => `<div class="saldo-card"><div class="saldo-titulo">${escHtml(t)}</div><div class="saldo-monto">${v}</div></div>`;
-  const cats = Object.keys(r.porCategoria).sort()
-    .map(c => `<tr><td>${escHtml(_catLabelSt(c))}</td><td class="num">${r.porCategoria[c]}</td></tr>`).join('');
+  // Por categoría: cantidad hecha + lo facturado + lo que corresponde cobrar (40%).
+  const desg = desgloseCategoriasMes(mes);
+  const totCant = desg.reduce((s, d) => s + d.cantidad, 0);
+  const cats = desg.map(d => `<tr>
+      <td>${escHtml(_catLabelSt(d.categoria))}</td>
+      <td class="num">${d.cantidad}</td>
+      <td class="num">${fmtMoneda(d.facturado, 'ARS')}</td>
+      <td class="num">${fmtMoneda(d.ingreso, 'ARS')}</td>
+    </tr>`).join('');
   const dias = Object.keys(r.porDia).sort()
     .map(d => `<tr><td>${escHtml(d)}</td><td class="num">${r.porDia[d]}</td></tr>`).join('');
 
@@ -57,8 +65,9 @@ function renderVistaClinica(cont, mes) {
     ${_avisosResumenHtml(mes)}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
       <div><h4>Prestaciones por categoría</h4>
-        <table class="tabla"><thead><tr><th>Categoría</th><th class="num">Cantidad</th></tr></thead>
-          <tbody>${cats || '<tr><td colspan="2" class="muted">Sin datos</td></tr>'}</tbody></table></div>
+        <table class="tabla"><thead><tr><th>Categoría</th><th class="num">Cantidad</th><th class="num">Facturado</th><th class="num">A cobrar (${pct}%)</th></tr></thead>
+          <tbody>${cats || '<tr><td colspan="4" class="muted">Sin datos</td></tr>'}</tbody>
+          <tfoot><tr><th>Total</th><th class="num">${totCant}</th><th class="num">${fmtMoneda(r.facturadoSAM, 'ARS')}</th><th class="num">${fmtMoneda(r.ingresoSAM, 'ARS')}</th></tr></tfoot></table></div>
       <div><h4>Consultas/prestaciones por día</h4>
         <table class="tabla"><thead><tr><th>Día</th><th class="num">Cantidad</th></tr></thead>
           <tbody>${dias || '<tr><td colspan="2" class="muted">Sin datos</td></tr>'}</tbody></table></div>
