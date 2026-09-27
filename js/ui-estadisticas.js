@@ -46,10 +46,13 @@ function renderVistaClinica(cont, mes) {
     .map(d => `<tr><td>${escHtml(d)}</td><td class="num">${r.porDia[d]}</td></tr>`).join('');
 
   const cardMargen = (t, v) => `<div class="saldo-card total"><div class="saldo-titulo">${escHtml(t)}</div><div class="saldo-monto ${v < 0 ? 'neg' : ''}">${fmtMoneda(v, 'ARS')}</div></div>`;
+  const pc = r.porCategoria || {};
   cont.innerHTML = `
     <div class="saldos">
-      ${card('Prestaciones', r.totalPrestaciones)}
-      ${card('Consultas', r.consultas)}
+      ${card('Consultas', pc['consulta'] || 0)}
+      ${card('Estudios', pc['realizacion_estudio'] || 0)}
+      ${card('Prácticas', pc['practica'] || 0)}
+      ${card('Cirugías', pc['cirugia'] || 0)}
       ${card('Facturado a SAM', fmtMoneda(r.facturadoSAM, 'ARS'))}
       ${card('SAM paga (' + DB.config.porcentajeSAM + '%)', fmtMoneda(r.ingresoSAM, 'ARS'))}
       ${card('Honorarios médicos', fmtMoneda(r.honorariosCalc, 'ARS'))}

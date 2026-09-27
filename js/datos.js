@@ -81,6 +81,7 @@ const DB = {
     insumoModo: 'total',
     ivaAlicuota: 10.5,       // % de IVA de las PRESTACIONES gravadas (consulta/estudio/práctica/cirugía)
     ivaInsumo: 21,           // % de IVA de los INSUMOS (generalmente el proveedor pasa precio + IVA 21 aparte)
+    agendaAclaracion: '',    // mensaje/aclaración que el admin muestra en la Agenda de Carga diaria
   },
 
   // ── Usuarios del sistema (secretarias + admin). Sin login todavía (Etapa 10),

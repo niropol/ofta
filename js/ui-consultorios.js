@@ -141,17 +141,25 @@ function _poblarFiltroConsultorioAgenda() {
   if (cur) sel.value = cur;
 }
 
+// Aclaración/mensaje que el admin muestra en la Agenda de Carga diaria.
+function _agendaAclaracionBanner() {
+  const txt = ((DB.config && DB.config.agendaAclaracion) || '').trim();
+  if (!txt) return '';
+  return `<div class="aviso" style="margin-bottom:14px;white-space:pre-line">📌 ${escHtml(txt)}</div>`;
+}
+
 function renderHorarios() {
   const cont = document.getElementById('horariosTabla');
   if (!cont) return;
   _poblarFiltroConsultorioAgenda();
   const filtroCons = (document.getElementById('agFiltroConsultorio') || {}).value || '';
+  const banner = _agendaAclaracionBanner();
 
   let lista = DB.horarios.slice();
   if (filtroCons) lista = lista.filter(h => Number(h.consultorioId) === Number(filtroCons));
 
   if (lista.length === 0) {
-    cont.innerHTML = '<p class="vacio">No hay horarios cargados' + (filtroCons ? ' para este consultorio' : '') + '. Usá «+ Nuevo horario».</p>';
+    cont.innerHTML = banner + '<p class="vacio">No hay horarios cargados' + (filtroCons ? ' para este consultorio' : '') + '. Usá «+ Nuevo horario».</p>';
     return;
   }
 
@@ -181,12 +189,23 @@ function renderHorarios() {
     return `<div class="ag-col"><div class="ag-dia">${escHtml(dia)}</div>${bloques}</div>`;
   }).join('');
 
-  cont.innerHTML = `<div class="ag-grid" style="grid-template-columns:repeat(${dias.length},minmax(140px,1fr))">${cols}</div>`;
+  cont.innerHTML = banner + `<div class="ag-grid" style="grid-template-columns:repeat(${dias.length},minmax(140px,1fr))">${cols}</div>`;
+}
+
+// Guarda la aclaración de la agenda (la escribe el admin en Configuración ▸ Agenda).
+function guardarAgendaAclaracion() {
+  const el = document.getElementById('agendaAclaracion');
+  DB.config.agendaAclaracion = el ? el.value.trim() : '';
+  if (typeof marcarCambios === 'function') marcarCambios();
+  renderHorarios();
+  if (typeof avisoUI === 'function') avisoUI('Aclaración guardada. Se ve en Carga diaria ▸ Agenda.', 'Listo');
 }
 
 // ── Gestión de la agenda (Configuración): tabla con alta / edición / baja ──
 function renderAgendaConfig() {
   renderHorarios();   // refresca también la grilla de solo lectura de Carga diaria
+  const acl = document.getElementById('agendaAclaracion');
+  if (acl && document.activeElement !== acl) acl.value = (DB.config && DB.config.agendaAclaracion) || '';
   const cont = document.getElementById('agendaAdminTabla');
   if (!cont) return;
   const lista = DB.horarios.slice().sort((a, b) =>
