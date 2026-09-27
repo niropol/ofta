@@ -193,12 +193,12 @@ function exportarResumenPDF(mes) {
 
 function verResumenMedicoPDF(medicoId, mes) {
   const r = resumenMedicoMes(Number(medicoId), mes);
-  const filas = r.detalle.map(d => `<tr><td>${escHtml(d.fecha)}</td><td>${escHtml(d.descripcion)}</td><td>${d.rol === 'derivador' ? 'Derivador' : 'Realizador'}</td><td style="text-align:right">${fmtMoneda(d.monto, 'ARS')}</td></tr>`).join('');
+  const filas = r.detalle.map(d => `<tr><td>${escHtml(d.fecha)}</td><td>${escHtml(d.descripcion)}</td><td style="text-align:right">${Math.max(1, Math.floor(Number(d.cantidad) || 1))}</td><td>${d.rol === 'derivador' ? 'Derivador' : 'Realizador'}</td><td style="text-align:right">${fmtMoneda(d.monto, 'ARS')}</td></tr>`).join('');
   const html = `<h1>OFTA — Oftalmología</h1><h2>Informe del médico — ${escHtml(mes)}</h2>
     <p><strong>${escHtml(medicoNombre(Number(medicoId)))}</strong> · Prestaciones: ${r.cantidad}</p>
-    <table><thead><tr><th>Fecha</th><th>Prestación</th><th>Rol</th><th style="text-align:right">Honorario</th></tr></thead>
+    <table><thead><tr><th>Fecha</th><th>Prestación</th><th style="text-align:right">Cant.</th><th>Rol</th><th style="text-align:right">Honorario</th></tr></thead>
       <tbody>${filas}</tbody>
-      <tfoot><tr><th colspan="3" style="text-align:right">TOTAL</th><th style="text-align:right">${fmtMoneda(r.total, 'ARS')}</th></tr></tfoot></table>`;
+      <tfoot><tr><th colspan="4" style="text-align:right">TOTAL</th><th style="text-align:right">${fmtMoneda(r.total, 'ARS')}</th></tr></tfoot></table>`;
   _abrirVentanaImpresion('Informe ' + medicoNombre(Number(medicoId)) + ' ' + mes, html);
 }
 

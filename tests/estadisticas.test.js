@@ -51,6 +51,15 @@ describe('Estadísticas — resumen del mes', () => {
     expect(r.porCategoria.cirugia).toBe(1);
   });
 
+  it('resumen por médico cuenta UNIDADES (7 consultas = 7, no 1 línea)', () => {
+    const c = nom('consulta');
+    app.registrarPrestacion({ fecha: '2026-03-03', categoria: 'consulta', grupoNomenclador: c.grupo, medicoRealizadorId: 501, cantidad: 7 });
+    const r = app.resumenMedicoMes(501, '2026-03');
+    expect(r.cantidad).toBe(7);            // unidades, no cantidad de líneas
+    expect(r.porCategoria.consulta).toBe(7);
+    expect(r.total).toBe(56000);           // 7 × 8.000 (valor médico consulta)
+  });
+
   it('control interno: anulaciones, diferencias de caja y pendientes de liquidar', () => {
     const faco = nom('cirugia');
     app.registrarPrestacion({ fecha: '2026-03-02', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 501 });

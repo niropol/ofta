@@ -47,14 +47,16 @@ function resumenMes(mes) {
 function resumenMedicoMes(medicoId, mes) {
   const h = honorariosDeMedico(medicoId, mes);
   const porCategoria = {};
+  const unidades = d => Math.max(1, Math.floor(Number(d.cantidad) || 1));  // consulta/estudio van por cantidad
   h.detalle.forEach(d => {
     const reg = DB.prestacionesRealizadas.find(r => r.id === d.prestacionId);
     const cat = reg ? reg.categoria : d.rol;
-    porCategoria[cat] = (porCategoria[cat] || 0) + 1;
+    porCategoria[cat] = (porCategoria[cat] || 0) + unidades(d);
   });
   return {
-    medicoId, mes, total: h.total, cantidad: h.detalle.length, porCategoria,
-    detalle: h.detalle, faltaValor: h.faltaValor,
+    medicoId, mes, total: h.total,
+    cantidad: h.detalle.reduce((s, d) => s + unidades(d), 0),   // total de unidades (no de líneas)
+    porCategoria, detalle: h.detalle, faltaValor: h.faltaValor,
   };
 }
 
