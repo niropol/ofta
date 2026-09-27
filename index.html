@@ -6,24 +6,30 @@
 <title>OFTA — Gestión Oftalmológica</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   :root {
-    --bg: #eef2f7; --panel: #ffffff; --texto: #172033; --muted: #6b7789;
-    --borde: #e4e9f0; --borde-fuerte: #d3dae4;
-    --primario: #22492f; --primario-osc: #143022; --primario-soft: #dce9df;
+    --bg: #edeae3; --panel: #ffffff; --texto: #211f1b; --muted: #726d64;
+    --borde: #e6e1d8; --borde-fuerte: #d5cfc4;
+    --primario: #22492f; --primario-osc: #143022; --primario-soft: #e3ebdf;
     --acento: #2f6040;
-    --danger: #c33636; --ok: #1f6b3a; --warn: #b45309;
+    --danger: #b34040; --ok: #1f6b3a; --warn: #8c6820;
     --grad: linear-gradient(120deg, #0f2419 0%, #1a3d29 52%, #275236 100%);
     --radio: 14px; --radio-sm: 9px; --radio-lg: 20px;
-    --sombra: 0 1px 2px rgba(15,35,60,.05), 0 4px 14px rgba(15,35,60,.05);
-    --sombra-hover: 0 2px 6px rgba(15,35,60,.08), 0 10px 26px rgba(15,35,60,.10);
+    --sombra: 0 1px 3px rgba(40,34,22,.05), 0 4px 14px rgba(40,34,22,.05);
+    --sombra-hover: 0 2px 6px rgba(40,34,22,.08), 0 10px 26px rgba(40,34,22,.10);
+    --mono: "DM Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   }
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: "Inter", -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  body { margin: 0; font-family: "DM Sans", -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
     background: var(--bg); color: var(--texto); font-size: 14px; -webkit-font-smoothing: antialiased; }
+  /* Números de plata (saldos/KPIs) con mono elegante y alineado, como OIP. */
+  .saldo-monto, .num { font-variant-numeric: tabular-nums; }
+  .saldo-monto { font-family: var(--mono); letter-spacing: -.01em; }
+  /* Todos los controles heredan la tipografía (evita que fechas/selects se vean “de sistema”). */
+  input, select, textarea, button { font-family: inherit; }
   header.top { background: var(--grad); color: #fff; padding: 15px 24px;
     display: flex; align-items: center; justify-content: space-between;
     box-shadow: 0 6px 22px rgba(11,72,86,.22); position: relative; z-index: 2; }
@@ -213,7 +219,7 @@
 <!-- ── Pantalla de login (cubre la app hasta que haya un ingreso válido) ── -->
 <div id="login-screen" style="display:flex;position:fixed;inset:0;z-index:100000;background:var(--grad);align-items:center;justify-content:center;padding:20px">
   <div style="background:var(--panel);border-radius:var(--radio-lg);box-shadow:0 20px 60px rgba(0,0,0,.35);padding:34px 30px;width:100%;max-width:380px;text-align:center">
-    <img src="logo.png?v=3" alt="SAM — Centro de Diagnóstico Médico" style="width:230px;max-width:78%;height:auto;margin:0 auto 20px;display:block">
+    <img src="logo.png?v=4" alt="SAM — Centro de Diagnóstico Médico" style="width:230px;max-width:78%;height:auto;margin:0 auto 20px;display:block">
     <p style="margin:-6px 0 20px;color:var(--muted);font-size:13px">Gestión oftalmológica</p>
 
     <button id="login-google" class="btn" onclick="loginGoogle()" style="width:100%;justify-content:center;background:#fff;color:#3c4043;border:1px solid var(--borde-fuerte);box-shadow:none;display:flex;align-items:center;gap:10px;font-weight:600">
@@ -243,7 +249,7 @@
 
 <header class="top">
   <div class="brand">
-    <img src="logo.png?v=3" alt="SAM — Centro de Diagnóstico Médico" style="height:42px;background:#fff;border-radius:9px;padding:5px 10px;display:block">
+    <img src="logo.png?v=4" alt="SAM — Centro de Diagnóstico Médico" style="height:42px;background:#fff;border-radius:9px;padding:5px 10px;display:block">
   </div>
   <div style="display:flex;align-items:center;gap:14px">
     <div id="indicadorGuardado"></div>
@@ -1066,42 +1072,42 @@
   </div>
 </div>
 
-<script src="js/datos.js?v=3"></script>
-<script src="js/auditoria.js?v=3"></script>
-<script src="js/usuarios.js?v=3"></script>
-<script src="js/nomenclador.js?v=3"></script>
-<script src="js/contratos.js?v=3"></script>
-<script src="js/matching.js?v=3"></script>
-<script src="js/pegar-resumen.js?v=3"></script>
-<script src="js/prestaciones.js?v=3"></script>
-<script src="js/honorarios.js?v=3"></script>
-<script src="js/caja.js?v=3"></script>
-<script src="js/liquidaciones.js?v=3"></script>
-<script src="js/derivaciones.js?v=3"></script>
-<script src="js/alarmas.js?v=3"></script>
-<script src="js/estadisticas.js?v=3"></script>
-<script src="js/ui-medicos.js?v=3"></script>
-<script src="js/ui-nomenclador.js?v=3"></script>
-<script src="js/ui-prestaciones.js?v=3"></script>
-<script src="js/ui-obras-sociales.js?v=3"></script>
-<script src="js/ui-sedes.js?v=3"></script>
-<script src="js/ui-consultorios.js?v=3"></script>
-<script src="js/ui-contratos.js?v=3"></script>
-<script src="js/ui-admin.js?v=3"></script>
-<script src="js/ui-honorarios.js?v=3"></script>
-<script src="js/ui-caja.js?v=3"></script>
-<script src="js/ui-liquidaciones.js?v=3"></script>
-<script src="js/ui-derivaciones.js?v=3"></script>
-<script src="js/ui-alarmas.js?v=3"></script>
-<script src="js/ui-estadisticas.js?v=3"></script>
-<script src="js/ui-carga-diaria.js?v=3"></script>
-<script src="js/ui-panel.js?v=3"></script>
-<script src="js/ui-usuarios.js?v=3"></script>
-<script src="js/diagnostico.js?v=3"></script>
-<script src="js/ui-diagnostico.js?v=3"></script>
-<script src="js/ui-dialogos.js?v=3"></script>
-<script src="js/auth.js?v=3"></script>
-<script src="js/persistencia.js?v=3"></script>
+<script src="js/datos.js?v=4"></script>
+<script src="js/auditoria.js?v=4"></script>
+<script src="js/usuarios.js?v=4"></script>
+<script src="js/nomenclador.js?v=4"></script>
+<script src="js/contratos.js?v=4"></script>
+<script src="js/matching.js?v=4"></script>
+<script src="js/pegar-resumen.js?v=4"></script>
+<script src="js/prestaciones.js?v=4"></script>
+<script src="js/honorarios.js?v=4"></script>
+<script src="js/caja.js?v=4"></script>
+<script src="js/liquidaciones.js?v=4"></script>
+<script src="js/derivaciones.js?v=4"></script>
+<script src="js/alarmas.js?v=4"></script>
+<script src="js/estadisticas.js?v=4"></script>
+<script src="js/ui-medicos.js?v=4"></script>
+<script src="js/ui-nomenclador.js?v=4"></script>
+<script src="js/ui-prestaciones.js?v=4"></script>
+<script src="js/ui-obras-sociales.js?v=4"></script>
+<script src="js/ui-sedes.js?v=4"></script>
+<script src="js/ui-consultorios.js?v=4"></script>
+<script src="js/ui-contratos.js?v=4"></script>
+<script src="js/ui-admin.js?v=4"></script>
+<script src="js/ui-honorarios.js?v=4"></script>
+<script src="js/ui-caja.js?v=4"></script>
+<script src="js/ui-liquidaciones.js?v=4"></script>
+<script src="js/ui-derivaciones.js?v=4"></script>
+<script src="js/ui-alarmas.js?v=4"></script>
+<script src="js/ui-estadisticas.js?v=4"></script>
+<script src="js/ui-carga-diaria.js?v=4"></script>
+<script src="js/ui-panel.js?v=4"></script>
+<script src="js/ui-usuarios.js?v=4"></script>
+<script src="js/diagnostico.js?v=4"></script>
+<script src="js/ui-diagnostico.js?v=4"></script>
+<script src="js/ui-dialogos.js?v=4"></script>
+<script src="js/auth.js?v=4"></script>
+<script src="js/persistencia.js?v=4"></script>
 <script>
 // ── Navegación entre secciones ──
 function showSection(id) {
