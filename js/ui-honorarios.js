@@ -148,7 +148,7 @@ function guardarValorInlineUI(categoria, grupo, medicoId, inputId) {
   try { setValorMedicoActual(categoria, medicoId || null, v, grupo || null); }
   catch (e) { avisoUI(e.message); return; }
   if (typeof sincronizarUI === 'function') sincronizarUI(); else renderValoresMedico();
-  _avisoLiquidacionesCerradas();
+  if (typeof ofrecerRecalcularAfectadas === "function") ofrecerRecalcularAfectadas();
 }
 
 function guardarHonInsumoInlineUI(grupo) {
@@ -157,7 +157,7 @@ function guardarHonInsumoInlineUI(grupo) {
   try { setHonorarioMedicoInsumo(grupo, v === '' ? 0 : v); }
   catch (e) { avisoUI(e.message); return; }
   if (typeof sincronizarUI === 'function') sincronizarUI(); else renderValoresMedico();
-  _avisoLiquidacionesCerradas();
+  if (typeof ofrecerRecalcularAfectadas === "function") ofrecerRecalcularAfectadas();
 }
 
 // Al cambiar la categoría en el modal: repuebla la lista de prestaciones específicas.
@@ -196,7 +196,8 @@ function guardarValorMedico() {
     setValorMedico(val('valor_categoria'), val('valor_medico') || null, val('valor_monto'), val('valor_vigencia') || (hoyISO().slice(0, 7) + '-01'), val('valor_prestacion') || null);
   } catch (e) { avisoUI(e.message); return false; }
   cerrarModalValor();
-  renderValoresMedico();
+  if (typeof sincronizarUI === 'function') sincronizarUI(); else renderValoresMedico();
+  if (typeof ofrecerRecalcularAfectadas === 'function') ofrecerRecalcularAfectadas();
   return true;
 }
 

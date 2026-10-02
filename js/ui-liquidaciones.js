@@ -42,11 +42,15 @@ function renderLiquidaciones() {
         <button onclick="copiarWhatsApp(${liq.id})">WhatsApp</button>
         <button class="danger" onclick="eliminarLiquidacionUI(${liq.id})">Eliminar</button>`;
     } else {
-      estado = '<span class="pos">Cerrada</span> <span class="muted">' + escHtml(liq.fechaCierre || '') + '</span>';
+      const driftC = liq.total !== totalCalc;
+      estado = '<span class="pos">Cerrada</span> <span class="muted">' + escHtml(liq.fechaCierre || '') + '</span>'
+        + (driftC ? ` <span class="badge-inactivo" title="Los valores cambiaron después del cierre">⚠ cambió a ${fmtMoneda(totalCalc, 'ARS')}</span>` : '');
       acciones = `
         <button onclick="verComprobante(${liq.id})">Comprobante</button>
         <button onclick="copiarWhatsApp(${liq.id})">WhatsApp</button>
-        <button onclick="reabrirLiquidacionUI(${liq.id})">Reabrir</button>`;
+        ${driftC
+          ? `<button class="danger" title="Reabre y recalcula con los valores actuales (queda en borrador para revisar y cerrar de nuevo)." onclick="recalcularLiquidacionUI(${liq.id})">Reabrir y regenerar</button>`
+          : `<button onclick="reabrirLiquidacionUI(${liq.id})">Reabrir</button>`}`;
     }
     const montoMostrado = liq ? liq.total : totalCalc;
     return `<tr>
@@ -104,6 +108,88 @@ function eliminarLiquidacionUI(id) {
     eliminarLiquidacion(id);
     if (typeof sincronizarUI === 'function') sincronizarUI(); else { renderLiquidaciones(); if (typeof renderCaja === 'function') renderCaja(); }
   });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  RECÁLCULO RETROACTIVO: valores que llegan tarde (ej. en octubre, los de sept.)
+// ───────────────────────────────────────────────────────────────────────────
+//  Si se corrige un valor a médico, las liquidaciones ya generadas de meses
+//  pasados quedan "desactualizadas" (su total guardado difiere del recalculado).
+//  Se ofrece reabrir (si están cerradas) y regenerar con los valores nuevos.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Liquidaciones cuyo total guardado ya no coincide con el cálculo actual.
+function liquidacionesDesactualizadas() {
+  return (DB.pagosMedicos || [])
+    .map(liq => ({ liq, totalNuevo: honorariosDeMedico(liq.medicoId, liq.mes).total }))
+    .filter(x => x.totalNuevo !== x.liq.total);
+}
+
+// Reabre (si está cerrada) y regenera una liquidación con los valores actuales.
+// Queda en BORRADOR para que el usuario la revise y la cierre de nuevo.
+function recalcularLiquidacion(id) {
+  const liq = DB.pagosMedicos.find(p => p.id === Number(id));
+  if (!liq) return false;
+  if (liq.estado === 'cerrada') reabrirLiquidacion(liq.id);
+  return generarLiquidacion(liq.medicoId, liq.mes);
+}
+
+function recalcularLiquidacionUI(id) {
+  const liq = DB.pagosMedicos.find(p => p.id === Number(id));
+  if (!liq) return;
+  const nombre = medicoNombre(liq.medicoId);
+  const msg = liq.estado === 'cerrada'
+    ? `¿Reabrir y regenerar la liquidación de ${nombre} (${liq.mes})? Se quita el egreso de la caja y queda en borrador con los valores nuevos, para que la revises y la cierres de nuevo.`
+    : `¿Regenerar la liquidación de ${nombre} (${liq.mes}) con los valores actuales?`;
+  confirmarUI(msg).then(ok => {
+    if (!ok) return;
+    recalcularLiquidacion(id);
+    if (typeof sincronizarUI === 'function') sincronizarUI(); else { renderLiquidaciones(); if (typeof renderCaja === 'function') renderCaja(); }
+  });
+}
+
+// Tras cambiar un valor a médico: si hay liquidaciones afectadas, ofrecer
+// recalcularlas en 1 paso (lo que el usuario eligió: "automático").
+function ofrecerRecalcularAfectadas() {
+  const afec = liquidacionesDesactualizadas();
+  if (!afec.length) return;
+  const lista = afec.map(a => '• ' + medicoNombre(a.liq.medicoId) + ' — ' + a.liq.mes
+    + (a.liq.estado === 'cerrada' ? ' (cerrada)' : ' (borrador)')
+    + ': ' + fmtMoneda(a.liq.total, 'ARS') + ' → ' + fmtMoneda(a.totalNuevo, 'ARS')).join('\n');
+  confirmarUI('El cambio de valores afecta liquidaciones ya generadas:\n\n' + lista
+    + '\n\n¿Reabrir las cerradas y regenerarlas con los valores nuevos? Quedan en borrador para revisar y cerrar de nuevo.').then(ok => {
+    if (!ok) return;
+    afec.forEach(a => recalcularLiquidacion(a.liq.id));
+    if (typeof sincronizarUI === 'function') sincronizarUI();
+    avisoUI('Se regeneraron ' + afec.length + ' liquidación(es) con los valores nuevos. Revisalas y cerralas en Pagos ▸ Liquidaciones del mes.', 'Recalculado');
+  });
+}
+
+// ── Historial de pagos: todas las liquidaciones CERRADAS, de todos los meses ──
+function renderHistorialPagos() {
+  const cont = document.getElementById('histPagosTabla');
+  if (!cont) return;
+  const cerradas = (DB.pagosMedicos || [])
+    .filter(p => p.estado === 'cerrada')
+    .sort((a, b) => (a.mes < b.mes ? 1 : a.mes > b.mes ? -1 : (medicoNombre(a.medicoId) < medicoNombre(b.medicoId) ? -1 : 1)));
+  if (!cerradas.length) { cont.innerHTML = '<p class="vacio">Todavía no hay pagos cerrados. Cerrá una liquidación en «Liquidaciones del mes».</p>'; return; }
+  const total = cerradas.reduce((s, l) => s + l.total, 0);
+  const rows = cerradas.map(l => `<tr>
+      <td>${escHtml(l.mes)}</td>
+      <td>${escHtml(medicoNombre(l.medicoId))}</td>
+      <td>${escHtml(l.fechaCierre || '')}</td>
+      <td class="num">${fmtMoneda(l.total, 'ARS')}</td>
+      <td class="acc">
+        <button onclick="verComprobante(${l.id})">Comprobante</button>
+        <button onclick="copiarWhatsApp(${l.id})">WhatsApp</button>
+      </td>
+    </tr>`).join('');
+  cont.innerHTML = `
+    <table class="tabla">
+      <thead><tr><th>Mes</th><th>Médico</th><th>Pagado el</th><th class="num">Monto</th><th>Comprobante</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr><th colspan="3" style="text-align:right">Total pagado</th><th class="num">${fmtMoneda(total, 'ARS')}</th><th></th></tr></tfoot>
+    </table>`;
 }
 
 // ── WhatsApp: muestra el mensaje en un modal para copiar ──

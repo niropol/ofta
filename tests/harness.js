@@ -75,6 +75,7 @@ const EXPONER = [
   'cerrarLiquidacion', 'reabrirLiquidacion', 'eliminarLiquidacion', 'listarLiquidaciones',
   'mensajeLiquidacionWhatsApp',
   'renderLiquidaciones', 'generarLiquidacionUI', 'cerrarLiquidacionUI',
+  'liquidacionesDesactualizadas', 'recalcularLiquidacion', 'renderHistorialPagos',
   // estadísticas
   'resumenMes', 'resumenMedicoMes', 'controlInterno', 'resumenMesTextoWhatsApp', 'csvContable', 'desgloseCategoriasMes',
   'renderEstadisticas', 'switchStatView',

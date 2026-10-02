@@ -87,4 +87,26 @@ describe('Liquidaciones a médicos', () => {
     expect(msg).toContain('2026-03');
     expect(msg).toContain('120.000');
   });
+
+  it('retroactivo: cambiar un valor marca la liquidación como desactualizada y se recalcula', () => {
+    const faco = nomFaco();
+    app.registrarPrestacion({ fecha: '2026-03-10', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 501 });
+    const l = app.generarLiquidacion(501, '2026-03');
+    app.cerrarLiquidacion(l.id);
+    expect(app.liquidacionesDesactualizadas().length).toBe(0);  // todo al día
+
+    // En otro momento cambian el valor de la cirugía (retroactivo): la liq. de marzo queda desactualizada.
+    app.setValorMedicoActual('cirugia', null, 150000);
+    const desact = app.liquidacionesDesactualizadas();
+    expect(desact.length).toBe(1);
+    expect(desact[0].liq.id).toBe(l.id);
+    expect(desact[0].totalNuevo).toBe(150000);
+
+    // Recalcular: reabre (saca el egreso de caja) y regenera con el valor nuevo, queda borrador.
+    app.recalcularLiquidacion(l.id);
+    const l2 = app.DB.pagosMedicos.find(p => p.id === l.id);
+    expect(l2.estado).toBe('borrador');
+    expect(l2.total).toBe(150000);
+    expect(app.liquidacionesDesactualizadas().length).toBe(0);  // ya quedó al día
+  });
 });
