@@ -318,3 +318,27 @@ describe('Contratos e ingreso de SAM', () => {
     expect(c.registrado).toBe(true);
   });
 });
+
+describe('Contrato por mes (setContratoDeMes) y recálculo', () => {
+  it('editar el valor de un mes no cambia los meses anteriores', () => {
+    const faco = nomFaco();
+    app.setContrato('OSDE', faco.grupo, 1000000, '2026-01-01');       // rige desde enero
+    app.setContratoDeMes('OSDE', faco.grupo, 1200000, '2026-09');     // valor nuevo desde septiembre
+    expect(app.valorContrato('OSDE', faco.grupo, '2026-08-15')).toBe(1000000);
+    expect(app.valorContrato('OSDE', faco.grupo, '2026-09-15')).toBe(1200000);
+    expect(app.vigenciaContrato('OSDE', faco.grupo, '2026-09-15')).toBe('2026-09-01');
+  });
+
+  it('el facturado/ingreso de SAM usa el valor del contrato a la fecha de la prestación', () => {
+    const faco = nomFaco();
+    app.setContrato('OSDE', faco.grupo, 1000000, '2026-01-01');
+    app.setContratoDeMes('OSDE', faco.grupo, 1200000, '2026-09');
+    // una cirugía en agosto y otra en septiembre
+    const pAgo = app.registrarPrestacion({ fecha: '2026-08-10', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 501, obraSocial: 'OSDE' });
+    const pSep = app.registrarPrestacion({ fecha: '2026-09-10', categoria: 'cirugia', grupoNomenclador: faco.grupo, medicoRealizadorId: 501, obraSocial: 'OSDE' });
+    expect(app.ingresoSAMDePrestacion(pAgo).facturado).toBe(1000000);   // agosto, valor viejo
+    expect(app.ingresoSAMDePrestacion(pSep).facturado).toBe(1200000);   // septiembre, valor nuevo
+    expect(app.ingresoSAMDelMes('2026-08').facturado).toBe(1000000);
+    expect(app.ingresoSAMDelMes('2026-09').facturado).toBe(1200000);
+  });
+});

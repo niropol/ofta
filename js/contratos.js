@@ -183,14 +183,73 @@ function eliminarContrato(obraSocial, grupo) {
 
 // Valores de contrato ACTUALES de una OS, uno por prestación del nomenclador
 // (todas menos insumos: cada OS tiene su propio valor por prestación).
-function contratosDeOS(obraSocial) {
+// Contratos de una OS. Si se pasa `fecha`, devuelve el valor VIGENTE en esa fecha
+// (para ver/editar los valores de un mes puntual); si no, el valor actual.
+function contratosDeOS(obraSocial, fecha) {
   const grupos = [...new Set(DB.nomenclador.map(n => n.grupo))];
   return grupos.map(g => {
     const item = versionActual(g);
-    const actual = _contratoActual(obraSocial, g);
+    let valor = null, vigenciaDesde = null;
+    if (fecha) {
+      const c = DB.contratos.find(x => x.obraSocial === obraSocial && x.grupoNomenclador === g
+        && x.estado !== 'Inactivo' && x.vigenciaDesde <= fecha && (!x.vigenciaHasta || x.vigenciaHasta >= fecha));
+      if (c) { valor = c.valor; vigenciaDesde = c.vigenciaDesde; }
+    } else {
+      const actual = _contratoActual(obraSocial, g);
+      if (actual) { valor = actual.valor; vigenciaDesde = actual.vigenciaDesde; }
+    }
     return { grupo: g, codigo: item ? (item.codigo || '') : '', descripcion: item ? item.descripcion : '', categoria: item ? item.categoria : '',
-             valor: actual ? actual.valor : null, vigenciaDesde: actual ? actual.vigenciaDesde : null };
+             valor, vigenciaDesde };
   }).filter(x => x.descripcion && x.categoria !== 'insumo');
+}
+
+// vigenciaDesde del contrato que rige a una fecha (para mostrar "rige desde…").
+function vigenciaContrato(obraSocial, grupo, fecha) {
+  const f = fecha || hoyISO();
+  const c = DB.contratos.find(x => x.obraSocial === obraSocial && x.grupoNomenclador === Number(grupo)
+    && x.estado !== 'Inactivo' && x.vigenciaDesde <= f && (!x.vigenciaHasta || x.vigenciaHasta >= f));
+  return c ? c.vigenciaDesde : null;
+}
+
+// Define/edita el valor de contrato que rige EN UN MES dado (y de ahí en adelante,
+// hasta el próximo cambio), sin pisar los meses anteriores. Mismos 3 casos que
+// setValorMedicoDeMes: editar en el lugar / partir el período / crear.
+function setContratoDeMes(obraSocial, grupo, valor, mes) {
+  const g = Number(grupo);
+  const val = Number(valor);
+  if (isNaN(val) || val < 0) throw new Error('El valor debe ser un número ≥ 0.');
+  const item = versionActual(g);
+  if (!item) throw new Error('Prestación inexistente.');
+  const desde = (mes || hoyISO().slice(0, 7)) + '-01';
+  const vers = _contratosDe(obraSocial, g).slice().sort((a, b) => (a.vigenciaDesde < b.vigenciaDesde ? -1 : 1));
+
+  const exacta = vers.find(v => v.vigenciaDesde === desde);
+  if (exacta) {
+    const antes = JSON.parse(JSON.stringify(exacta));
+    exacta.valor = val; exacta.estado = 'Activo';
+    registrarAuditoria('edicion', 'contrato', exacta.id, antes, exacta);
+    marcarCambios('contratos');
+    return exacta;
+  }
+  const cubre = vers.find(v => v.vigenciaDesde < desde && (!v.vigenciaHasta || v.vigenciaHasta >= desde));
+  if (cubre) {
+    const antes = JSON.parse(JSON.stringify(cubre));
+    const finOriginal = cubre.vigenciaHasta;
+    cubre.vigenciaHasta = _diaAnterior(desde);
+    registrarAuditoria('edicion', 'contrato', cubre.id, antes, cubre);
+    const nuevo = { id: nuevoId(), obraSocial, grupoNomenclador: g, descripcion: item.descripcion, valor: val, vigenciaDesde: desde, vigenciaHasta: finOriginal, estado: 'Activo' };
+    DB.contratos.push(nuevo);
+    registrarAuditoria('alta', 'contrato', nuevo.id, null, nuevo);
+    marcarCambios('contratos');
+    return nuevo;
+  }
+  const primera = vers[0];
+  const hasta = primera ? _diaAnterior(primera.vigenciaDesde) : null;
+  const nuevo = { id: nuevoId(), obraSocial, grupoNomenclador: g, descripcion: item.descripcion, valor: val, vigenciaDesde: desde, vigenciaHasta: hasta, estado: 'Activo' };
+  DB.contratos.push(nuevo);
+  registrarAuditoria('alta', 'contrato', nuevo.id, null, nuevo);
+  marcarCambios('contratos');
+  return nuevo;
 }
 
 // ── Comparativa de contratos entre obras sociales ──

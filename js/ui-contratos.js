@@ -89,16 +89,20 @@ function renderContratosTabla() {
   if (!cont) return;
   const os = document.getElementById('ctrOS') ? document.getElementById('ctrOS').value : '';
   if (!os) { cont.innerHTML = '<p class="vacio">Cargá una obra social primero (pestaña «Obras sociales»).</p>'; return; }
+  // Mes elegido: muestra los valores de contrato vigentes EN ese mes; al guardar,
+  // el valor rige desde ese mes. Sin selector → mes actual.
+  const mesSel = (document.getElementById('ctrMes') || {}).value || hoyISO().slice(0, 7);
+  const fecha = mesSel + '-01';
   const orden = { consulta: 0, realizacion_estudio: 1, practica: 2, cirugia: 3 };
-  const filas = contratosDeOS(os).sort((a, b) =>
+  const filas = contratosDeOS(os, fecha).sort((a, b) =>
     ((orden[a.categoria] ?? 9) - (orden[b.categoria] ?? 9)) || (a.descripcion || '').localeCompare(b.descripcion || '', 'es'));
   if (filas.length === 0) { cont.innerHTML = '<p class="vacio">No hay prestaciones en el nomenclador. Cargalas en «Prestaciones» o con el alta manual de acá.</p>'; return; }
   const modoOS = (typeof _modalidadIVAdeOS === 'function') ? _modalidadIVAdeOS(os) : 'ambas';
   const rows = filas.map(f => {
     const v = versionActual(f.grupo);
     const exenta = !(v && v.ivaExento === false);
-    const grav = (typeof lineaGravada === 'function') ? lineaGravada(os, f.grupo) : !exenta;
-    const iva = (f.valor != null && typeof ivaDeLinea === 'function') ? ivaDeLinea(os, f.grupo, f.valor) : 0;
+    const grav = (typeof lineaGravada === 'function') ? lineaGravada(os, f.grupo, fecha) : !exenta;
+    const iva = (f.valor != null && typeof ivaDeLinea === 'function') ? ivaDeLinea(os, f.grupo, f.valor, fecha) : 0;
     const nosPaga = f.valor != null ? Math.floor((f.valor + iva) * porcentajeSAM() / 100) : null;
     const pill = exenta
       ? '<button class="pill" style="border:1px solid var(--borde);background:#eef2f7;cursor:pointer;font-size:11px;padding:3px 8px;border-radius:10px" onclick="toggleIvaPrestacionUI(' + f.grupo + ')">Exenta</button>'
@@ -110,7 +114,7 @@ function renderContratosTabla() {
       <td>${escHtml(f.codigo || '—')}</td>
       <td>${escHtml(f.descripcion)}</td>
       <td>${pill}${forzada}</td>
-      <td><input type="number" step="0.01" id="ctr_${f.grupo}" value="${f.valor != null ? f.valor : ''}" style="width:130px" placeholder="sin cargar"></td>
+      <td><input type="number" step="0.01" id="ctr_${f.grupo}" value="${f.valor != null ? f.valor : ''}" style="width:130px" placeholder="sin cargar">${f.vigenciaDesde ? `<br><span class="muted" style="font-size:10px">rige desde ${escHtml(f.vigenciaDesde.slice(0, 7))}</span>` : ''}</td>
       <td class="num">${nosPaga != null ? fmtMoneda(nosPaga, 'ARS') + (iva > 0 ? '<br><span class="muted" style="font-size:10px">c/IVA ' + fmtMoneda(f.valor + iva, 'ARS') + '</span>' : '') : '—'}</td>
       <td class="acc">
         <button onclick="guardarValorContratoUI(${f.grupo})">Guardar</button>
@@ -164,10 +168,10 @@ function guardarValorContratoUI(grupo) {
   const os = document.getElementById('ctrOS').value;
   const v = document.getElementById('ctr_' + grupo).value;
   if (v === '' || isNaN(Number(v))) { avisoUI('El valor debe ser un número.'); return; }
-  try { _upsertContrato(os, grupo, v, hoyISO().slice(0, 7) + '-01'); }
+  const mes = (document.getElementById('ctrMes') || {}).value || hoyISO().slice(0, 7);
+  try { setContratoDeMes(os, grupo, v, mes); }
   catch (e) { avisoUI(e.message); return; }
-  renderContratos();
-  if (typeof renderPanelMes === 'function') renderPanelMes();
+  if (typeof sincronizarUI === 'function') sincronizarUI(); else renderContratos();
   _avisoCobrosRegistrados(os);
 }
 
@@ -182,9 +186,10 @@ function aumentarContratosOSUI() {
   const pct = (document.getElementById('ctrAumento') || {}).value;
   if (!os) { avisoUI('Elegí una obra social.'); return; }
   if (pct === '' || isNaN(Number(pct))) { avisoUI('Ingresá el porcentaje.'); return; }
-  confirmarUI('¿Aumentar un ' + pct + '% todos los contratos de ' + os + '? Rige desde el 1° de este mes.').then(ok => {
+  const mes = (document.getElementById('ctrMes') || {}).value || hoyISO().slice(0, 7);
+  confirmarUI('¿Aumentar un ' + pct + '% todos los contratos de ' + os + '? Rige desde el 1° de ' + mes + '.').then(ok => {
     if (!ok) return;
-    let r; try { r = aumentarContratosOS(os, pct, hoyISO().slice(0, 7) + '-01'); }
+    let r; try { r = aumentarContratosOS(os, pct, mes + '-01'); }
     catch (e) { avisoUI(e.message); return; }
     document.getElementById('ctrAumento').value = '';
     _msgImport('Actualizados ' + r.actualizados + ' contrato(s) de ' + os + ' (+' + pct + '%).', false);

@@ -219,7 +219,7 @@
 <!-- ── Pantalla de login (cubre la app hasta que haya un ingreso válido) ── -->
 <div id="login-screen" style="display:flex;position:fixed;inset:0;z-index:100000;background:var(--grad);align-items:center;justify-content:center;padding:20px">
   <div style="background:var(--panel);border-radius:var(--radio-lg);box-shadow:0 20px 60px rgba(0,0,0,.35);padding:34px 30px;width:100%;max-width:380px;text-align:center">
-    <img src="logo.png?v=7" alt="SAM — Centro de Diagnóstico Médico" style="width:230px;max-width:78%;height:auto;margin:0 auto 20px;display:block">
+    <img src="logo.png?v=8" alt="SAM — Centro de Diagnóstico Médico" style="width:230px;max-width:78%;height:auto;margin:0 auto 20px;display:block">
     <p style="margin:-6px 0 20px;color:var(--muted);font-size:13px">Gestión oftalmológica</p>
 
     <button id="login-google" class="btn" onclick="loginGoogle()" style="width:100%;justify-content:center;background:#fff;color:#3c4043;border:1px solid var(--borde-fuerte);box-shadow:none;display:flex;align-items:center;gap:10px;font-weight:600">
@@ -249,7 +249,7 @@
 
 <header class="top">
   <div class="brand">
-    <img src="logo.png?v=7" alt="SAM — Centro de Diagnóstico Médico" style="height:42px;background:#fff;border-radius:9px;padding:5px 10px;display:block">
+    <img src="logo.png?v=8" alt="SAM — Centro de Diagnóstico Médico" style="height:42px;background:#fff;border-radius:9px;padding:5px 10px;display:block">
   </div>
   <div style="display:flex;align-items:center;gap:14px">
     <div id="indicadorGuardado"></div>
@@ -404,8 +404,9 @@
 
       <div class="nomconpanel" data-p="contr">
         <div class="section-head"><h4 style="margin:0">Contratos por obra social</h4></div>
-        <p class="muted" style="margin-top:0">Todos los valores en un solo lugar: elegí la obra social y cargá/editá el valor de <strong>cada prestación</strong> (cada OS su valor; SAM te paga el 40%). Podés editar, aplicar un aumento a toda la OS, importar un archivo o dar de alta una prestación (tipo + código + descripción + valor).</p>
+        <p class="muted" style="margin-top:0">Elegí un <strong>mes</strong> y una <strong>obra social</strong>: la tabla muestra el valor de cada prestación que <strong>rige en ese mes</strong> (columna «rige desde»). Al <strong>editar y Guardar</strong>, el valor rige <strong>desde ese mes</strong> en adelante (sin pisar los meses anteriores). Todos los cálculos de la app (facturado, lo que SAM paga, margen, menor valor) usan el valor del contrato <strong>a la fecha de cada prestación</strong>, así que <strong>se recalculan solos</strong> por mes.</p>
         <div class="filtros">
+          <label class="muted">Mes <input type="month" id="ctrMes" onchange="renderContratosTabla()"></label>
           <label class="muted">Obra social <select id="ctrOS" onchange="renderContratosTabla()"></select></label>
           <label class="muted">Aumentar esta OS <input type="number" id="ctrAumento" step="0.01" style="width:70px" placeholder="%"> %</label>
           <button class="btn secundario" onclick="aumentarContratosOSUI()">Aplicar aumento</button>
@@ -1080,42 +1081,42 @@
   </div>
 </div>
 
-<script src="js/datos.js?v=7"></script>
-<script src="js/auditoria.js?v=7"></script>
-<script src="js/usuarios.js?v=7"></script>
-<script src="js/nomenclador.js?v=7"></script>
-<script src="js/contratos.js?v=7"></script>
-<script src="js/matching.js?v=7"></script>
-<script src="js/pegar-resumen.js?v=7"></script>
-<script src="js/prestaciones.js?v=7"></script>
-<script src="js/honorarios.js?v=7"></script>
-<script src="js/caja.js?v=7"></script>
-<script src="js/liquidaciones.js?v=7"></script>
-<script src="js/derivaciones.js?v=7"></script>
-<script src="js/alarmas.js?v=7"></script>
-<script src="js/estadisticas.js?v=7"></script>
-<script src="js/ui-medicos.js?v=7"></script>
-<script src="js/ui-nomenclador.js?v=7"></script>
-<script src="js/ui-prestaciones.js?v=7"></script>
-<script src="js/ui-obras-sociales.js?v=7"></script>
-<script src="js/ui-sedes.js?v=7"></script>
-<script src="js/ui-consultorios.js?v=7"></script>
-<script src="js/ui-contratos.js?v=7"></script>
-<script src="js/ui-admin.js?v=7"></script>
-<script src="js/ui-honorarios.js?v=7"></script>
-<script src="js/ui-caja.js?v=7"></script>
-<script src="js/ui-liquidaciones.js?v=7"></script>
-<script src="js/ui-derivaciones.js?v=7"></script>
-<script src="js/ui-alarmas.js?v=7"></script>
-<script src="js/ui-estadisticas.js?v=7"></script>
-<script src="js/ui-carga-diaria.js?v=7"></script>
-<script src="js/ui-panel.js?v=7"></script>
-<script src="js/ui-usuarios.js?v=7"></script>
-<script src="js/diagnostico.js?v=7"></script>
-<script src="js/ui-diagnostico.js?v=7"></script>
-<script src="js/ui-dialogos.js?v=7"></script>
-<script src="js/auth.js?v=7"></script>
-<script src="js/persistencia.js?v=7"></script>
+<script src="js/datos.js?v=8"></script>
+<script src="js/auditoria.js?v=8"></script>
+<script src="js/usuarios.js?v=8"></script>
+<script src="js/nomenclador.js?v=8"></script>
+<script src="js/contratos.js?v=8"></script>
+<script src="js/matching.js?v=8"></script>
+<script src="js/pegar-resumen.js?v=8"></script>
+<script src="js/prestaciones.js?v=8"></script>
+<script src="js/honorarios.js?v=8"></script>
+<script src="js/caja.js?v=8"></script>
+<script src="js/liquidaciones.js?v=8"></script>
+<script src="js/derivaciones.js?v=8"></script>
+<script src="js/alarmas.js?v=8"></script>
+<script src="js/estadisticas.js?v=8"></script>
+<script src="js/ui-medicos.js?v=8"></script>
+<script src="js/ui-nomenclador.js?v=8"></script>
+<script src="js/ui-prestaciones.js?v=8"></script>
+<script src="js/ui-obras-sociales.js?v=8"></script>
+<script src="js/ui-sedes.js?v=8"></script>
+<script src="js/ui-consultorios.js?v=8"></script>
+<script src="js/ui-contratos.js?v=8"></script>
+<script src="js/ui-admin.js?v=8"></script>
+<script src="js/ui-honorarios.js?v=8"></script>
+<script src="js/ui-caja.js?v=8"></script>
+<script src="js/ui-liquidaciones.js?v=8"></script>
+<script src="js/ui-derivaciones.js?v=8"></script>
+<script src="js/ui-alarmas.js?v=8"></script>
+<script src="js/ui-estadisticas.js?v=8"></script>
+<script src="js/ui-carga-diaria.js?v=8"></script>
+<script src="js/ui-panel.js?v=8"></script>
+<script src="js/ui-usuarios.js?v=8"></script>
+<script src="js/diagnostico.js?v=8"></script>
+<script src="js/ui-diagnostico.js?v=8"></script>
+<script src="js/ui-dialogos.js?v=8"></script>
+<script src="js/auth.js?v=8"></script>
+<script src="js/persistencia.js?v=8"></script>
 <script>
 // ── Navegación entre secciones ──
 function showSection(id) {
