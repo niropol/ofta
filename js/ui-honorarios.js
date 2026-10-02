@@ -28,7 +28,10 @@ function renderValoresMedico() {
   const catFiltro = (document.getElementById('valCat') || {}).value || '';
   const q = (((document.getElementById('valBuscar') || {}).value) || '').trim().toLowerCase();
   const coincide = txt => !q || (txt || '').toLowerCase().includes(q);
-  const fecha = hoyISO();
+  // Mes elegido: la tabla muestra los valores vigentes EN ese mes; al guardar, el
+  // valor rige desde ese mes. Sin selector → mes actual.
+  const mesSel = (document.getElementById('valMes') || {}).value || hoyISO().slice(0, 7);
+  const fecha = mesSel + '-01';
 
   // Sugerencia: menor y promedio de los contratos (entre OS) de cada prestación,
   // y el 40% de cada uno (lo que SAM efectivamente nos paga).
@@ -47,12 +50,15 @@ function renderValoresMedico() {
   const fila = (label, categoria, grupo) => {
     const gen = valorMedicoVigente(categoria, null, fecha, grupo);
     let valorInput = gen ? gen.valor : '';
-    let hint = '';
+    // "rige desde" de la versión mostrada (para saber qué valor correspondía al mes).
+    const vigDesde = vigenciaValorMedico(categoria, mid, fecha, grupo) || vigenciaValorMedico(categoria, null, fecha, grupo);
+    const rige = vigDesde ? `<span style="font-size:11px" title="Este valor rige desde ese mes">rige desde ${escHtml(vigDesde.slice(0, 7))}</span>` : '';
+    let hint = rige;
     if (mid != null) {
       const propio = valorMedicoVigente(categoria, mid, fecha, grupo);
       const esOverride = propio && /^medico/.test(propio.origen);
       valorInput = esOverride ? propio.valor : '';
-      hint = gen ? `general ${fmtMoneda(gen.valor, 'ARS')}` : 'sin general';
+      hint = (gen ? `general ${fmtMoneda(gen.valor, 'ARS')} · ` : 'sin general · ') + rige;
     }
     const id = 'vm_' + categoria + '_' + (grupo || 'g') + '_' + (mid || 'gen');
     // Rojo si el pago supera el 40% del contrato MÁS BARATO: pagarías más de lo que SAM te deja.
@@ -145,7 +151,8 @@ function guardarValorInlineUI(categoria, grupo, medicoId, inputId) {
   const el = document.getElementById(inputId);
   const v = el ? el.value.trim() : '';
   if (v === '') return;  // vacío = sin cambio (para el override vacío usá "quitar" — próxima)
-  try { setValorMedicoActual(categoria, medicoId || null, v, grupo || null); }
+  const mes = (document.getElementById('valMes') || {}).value || hoyISO().slice(0, 7);
+  try { setValorMedicoDeMes(categoria, medicoId || null, v, mes, grupo || null); }
   catch (e) { avisoUI(e.message); return; }
   if (typeof sincronizarUI === 'function') sincronizarUI(); else renderValoresMedico();
   if (typeof ofrecerRecalcularAfectadas === "function") ofrecerRecalcularAfectadas();

@@ -103,6 +103,71 @@ function setValorMedicoActual(categoria, medicoId, valor, grupo) {
   return setValorMedico(categoria, mid, val, hoyISO().slice(0, 7) + '-01', g);
 }
 
+// Define/edita el valor que rige EN UN MES dado (y de ahí en adelante, hasta el
+// próximo cambio). Así se puede corregir el valor de un mes puntual —incluso uno
+// ya pasado— sin perder qué valor correspondía a cada mes. Casos:
+//   1) ya hay una versión que arranca ese mes → se edita en el lugar.
+//   2) hay una versión que cubre ese mes (empezó antes) → se parte en ese mes.
+//   3) no hay versión que lo cubra (mes anterior a todas / sin versiones) → se crea.
+function setValorMedicoDeMes(categoria, medicoId, valor, mes, grupo) {
+  if (!CATEGORIAS_VALOR_MEDICO.some(c => c.id === categoria)) throw new Error('Categoría de valor inválida.');
+  const val = Number(valor);
+  if (isNaN(val) || val < 0) throw new Error('El valor debe ser un número ≥ 0.');
+  const mid = (medicoId != null && medicoId !== '') ? Number(medicoId) : null;
+  const g = (grupo != null && grupo !== '') ? Number(grupo) : null;
+  const desde = (mes || hoyISO().slice(0, 7)) + '-01';
+
+  const vers = DB.valoresMedico
+    .filter(v => v.categoria === categoria
+      && (v.medicoId != null ? Number(v.medicoId) : null) === mid
+      && (v.grupo != null ? Number(v.grupo) : null) === g)
+    .sort((a, b) => (a.vigenciaDesde < b.vigenciaDesde ? -1 : 1));
+
+  // 1) Versión que arranca exactamente ese mes → editar en el lugar.
+  const exacta = vers.find(v => v.vigenciaDesde === desde);
+  if (exacta) {
+    const antes = JSON.parse(JSON.stringify(exacta));
+    exacta.valor = val; exacta.estado = 'Activo';
+    registrarAuditoria('edicion', 'valorMedico', exacta.id, antes, exacta);
+    marcarCambios('valoresMedico');
+    return exacta;
+  }
+  // 2) Versión que cubre ese mes (empezó antes) → partirla en ese mes.
+  const cubre = vers.find(v => v.vigenciaDesde < desde && (!v.vigenciaHasta || v.vigenciaHasta >= desde));
+  if (cubre) {
+    const antes = JSON.parse(JSON.stringify(cubre));
+    const finOriginal = cubre.vigenciaHasta;
+    cubre.vigenciaHasta = _diaAnterior(desde);
+    registrarAuditoria('edicion', 'valorMedico', cubre.id, antes, cubre);
+    const nuevo = { id: nuevoId(), categoria, medicoId: mid, grupo: g, valor: val, vigenciaDesde: desde, vigenciaHasta: finOriginal, estado: 'Activo' };
+    DB.valoresMedico.push(nuevo);
+    registrarAuditoria('alta', 'valorMedico', nuevo.id, null, nuevo);
+    marcarCambios('valoresMedico');
+    return nuevo;
+  }
+  // 3) No hay versión que cubra ese mes → crear (cerrando en la próxima, si hay).
+  const primera = vers[0];
+  const hasta = primera ? _diaAnterior(primera.vigenciaDesde) : null;
+  const nuevo = { id: nuevoId(), categoria, medicoId: mid, grupo: g, valor: val, vigenciaDesde: desde, vigenciaHasta: hasta, estado: 'Activo' };
+  DB.valoresMedico.push(nuevo);
+  registrarAuditoria('alta', 'valorMedico', nuevo.id, null, nuevo);
+  marcarCambios('valoresMedico');
+  return nuevo;
+}
+
+// vigenciaDesde de la versión que rige a una fecha (para mostrar "rige desde…").
+function vigenciaValorMedico(categoria, medicoId, fecha, grupo) {
+  const f = fecha || hoyISO();
+  const mid = (medicoId != null && medicoId !== '') ? Number(medicoId) : null;
+  const g = (grupo != null && grupo !== '') ? Number(grupo) : null;
+  const v = DB.valoresMedico.find(x => x.categoria === categoria
+    && (x.medicoId != null ? Number(x.medicoId) : null) === mid
+    && (x.grupo != null ? Number(x.grupo) : null) === g
+    && x.estado !== 'Inactivo'
+    && x.vigenciaDesde <= f && (!x.vigenciaHasta || x.vigenciaHasta >= f));
+  return v ? v.vigenciaDesde : null;
+}
+
 // Valores "actuales" (uno por categoría+médico+grupo) para la config.
 function listarValoresMedicoActuales() {
   const claves = new Set(DB.valoresMedico.map(v => v.categoria + '|' + (v.medicoId != null ? v.medicoId : '') + '|' + (v.grupo != null ? v.grupo : '')));

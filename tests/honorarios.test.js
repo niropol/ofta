@@ -140,3 +140,31 @@ describe('Agregación por médico / mes', () => {
     expect(app.honorariosDelMes('2026-03').length).toBe(2);
   });
 });
+
+describe('Valor por mes (setValorMedicoDeMes)', () => {
+  it('editar el valor de un mes puntual NO cambia los meses anteriores', () => {
+    app.setValorMedico('consulta', null, 8000, '2026-01-01');   // rige desde enero
+    // En octubre me pasan el valor nuevo que rige desde SEPTIEMBRE:
+    app.setValorMedicoDeMes('consulta', null, 9000, '2026-09');
+    expect(app.valorMedicoVigente('consulta', null, '2026-08-15').valor).toBe(8000); // agosto: viejo
+    expect(app.valorMedicoVigente('consulta', null, '2026-09-15').valor).toBe(9000); // septiembre en adelante: nuevo
+    expect(app.valorMedicoVigente('consulta', null, '2026-10-15').valor).toBe(9000);
+    expect(app.vigenciaValorMedico('consulta', null, '2026-09-15')).toBe('2026-09-01');
+  });
+
+  it('re-editar el mismo mes corrige en el lugar (no duplica versiones)', () => {
+    app.setValorMedico('consulta', null, 8000, '2026-01-01');
+    app.setValorMedicoDeMes('consulta', null, 9000, '2026-09');
+    app.setValorMedicoDeMes('consulta', null, 9500, '2026-09');   // corrige septiembre
+    expect(app.valorMedicoVigente('consulta', null, '2026-09-15').valor).toBe(9500);
+    const sept = app.DB.valoresMedico.filter(v => v.categoria === 'consulta' && v.vigenciaDesde === '2026-09-01');
+    expect(sept.length).toBe(1);   // una sola versión de septiembre
+  });
+
+  it('partir un período: octubre distinto no pisa septiembre', () => {
+    app.setValorMedicoDeMes('consulta', null, 9000, '2026-09');   // sept en adelante
+    app.setValorMedicoDeMes('consulta', null, 10000, '2026-10');  // octubre en adelante
+    expect(app.valorMedicoVigente('consulta', null, '2026-09-15').valor).toBe(9000);
+    expect(app.valorMedicoVigente('consulta', null, '2026-10-15').valor).toBe(10000);
+  });
+});
