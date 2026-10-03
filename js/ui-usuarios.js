@@ -20,13 +20,15 @@ function cambiarActuandoComo() {
 
 // ── Permisos: oculta las secciones no permitidas y redirige si hace falta ──
 function aplicarPermisos() {
-  document.querySelectorAll('#navTabs button').forEach(b => {
-    b.hidden = !puedeVerSeccion(b.dataset.sec);
+  // Oculta en la nav superior los ítems que el rol no puede ver (secretaría = solo Carga diaria).
+  document.querySelectorAll('#topnav .topnav-item').forEach(b => {
+    const sec = b.dataset.dest === 'carga' ? 'section-prestaciones' : 'section-admin';
+    b.hidden = !puedeVerSeccion(sec);
   });
   const activa = document.querySelector('.section.active');
   if (!activa || !puedeVerSeccion(activa.id)) {
-    const dest = primeraSeccionPermitida();
-    if (dest) showSection(dest);
+    const dest = puedeVerSeccion('section-prestaciones') ? 'carga' : (puedeVerSeccion('section-admin') ? 'resumen' : null);
+    if (dest && typeof irA === 'function') irA(dest);
   }
 }
 

@@ -23,8 +23,8 @@ function puedeVerSeccion(secId) {
   return perms.includes('*') || perms.includes(secId);
 }
 function primeraSeccionPermitida() {
-  const btns = document.querySelectorAll('#navTabs button');
-  for (const b of btns) if (puedeVerSeccion(b.dataset.sec)) return b.dataset.sec;
+  if (puedeVerSeccion('section-prestaciones')) return 'section-prestaciones';
+  if (puedeVerSeccion('section-admin')) return 'section-admin';
   return null;
 }
 

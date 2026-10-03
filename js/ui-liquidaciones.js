@@ -61,7 +61,21 @@ function renderLiquidaciones() {
     </tr>`;
   }).join('');
 
-  cont.innerHTML = `
+  // Resumen del mes (estilo OIP): total a pagar + estados.
+  const liqs = listarLiquidaciones(mes);
+  const totalMes = liqs.reduce((s, l) => s + l.total, 0);
+  const nCerradas = liqs.filter(l => l.estado === 'cerrada').length;
+  const nBorr = liqs.filter(l => l.estado === 'borrador').length;
+  const nSinGen = [...ids].filter(mid => !liquidacionDe(mid, mes)).length;
+  const tile = (t, v, cls) => `<div class="saldo-card ${cls || ''}"><div class="saldo-titulo">${t}</div><div class="saldo-monto">${v}</div></div>`;
+  const resumen = `<div class="saldos" style="margin-bottom:18px">
+    ${tile('A pagar este mes', fmtMoneda(totalMes, 'ARS'), 'total')}
+    ${tile('Médicos', ids.size)}
+    ${tile('Cerradas (pagadas)', nCerradas)}
+    ${tile('Borradores', nBorr + (nSinGen ? ' · ' + nSinGen + ' s/generar' : ''))}
+  </div>`;
+
+  cont.innerHTML = resumen + `
     <table class="tabla">
       <thead><tr><th>Médico</th><th class="num">A depositar</th><th>Estado</th><th>Acciones</th></tr></thead>
       <tbody>${rows}</tbody>

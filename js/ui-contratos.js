@@ -123,7 +123,22 @@ function renderContratosTabla() {
       </td>
     </tr>`;
   }).join('');
-  cont.innerHTML = `
+  // Resumen del contrato (estilo OIP): cuántas prestaciones con valor y totales.
+  const conValor = filas.filter(f => f.valor != null);
+  let totalValor = 0, totalNosPaga = 0;
+  conValor.forEach(f => {
+    const ivaF = (typeof ivaDeLinea === 'function') ? ivaDeLinea(os, f.grupo, f.valor, fecha) : 0;
+    totalValor += f.valor + ivaF;
+    totalNosPaga += Math.floor((f.valor + ivaF) * porcentajeSAM() / 100);
+  });
+  const tile = (t, v, cls) => `<div class="saldo-card ${cls || ''}"><div class="saldo-titulo">${t}</div><div class="saldo-monto">${v}</div></div>`;
+  const resumen = `<div class="saldos" style="margin-bottom:16px">
+    ${tile('Prestaciones con valor', conValor.length + ' / ' + filas.length)}
+    ${tile('Total facturado (c/IVA)', fmtMoneda(totalValor, 'ARS'))}
+    ${tile('Nos paga (' + porcentajeSAM() + '%)', fmtMoneda(totalNosPaga, 'ARS'), 'total')}
+  </div>`;
+
+  cont.innerHTML = resumen + `
     <table class="tabla">
       <thead><tr><th>Tipo</th><th>Código</th><th>Descripción</th><th>IVA</th><th>Valor de contrato</th>
         <th class="num">Nos paga (${porcentajeSAM()}%)</th><th></th></tr></thead>
