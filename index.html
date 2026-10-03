@@ -221,6 +221,17 @@
   .pager button { background: var(--panel-2); border: 1px solid var(--borde); border-radius: var(--radio-sm); padding: 7px 13px; cursor: pointer; font-size: 13px; transition: background .14s; }
   .pager button:not(:disabled):hover { background: var(--borde); }
   .pager button:disabled { opacity: .45; cursor: default; }
+  /* Zonas de acción estilo OIP (subir contrato / aumento %) */
+  .zona-contrato { flex: 1; min-width: 320px; border-radius: var(--radio); padding: 20px; text-align: center; }
+  .zona-contrato.azul { background: var(--acento-soft); border: 2px dashed #b9cfe6; }
+  .zona-contrato.verde { background: var(--ok-soft); border: 2px dashed #b2d9c2; }
+  .zona-contrato .zc-icon { font-size: 24px; margin-bottom: 8px; }
+  .zona-contrato .zc-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .zona-contrato.azul .zc-title { color: var(--acento); }
+  .zona-contrato.verde .zc-title { color: var(--ok); }
+  .zona-contrato .zc-desc { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+  .zona-contrato .zc-controles { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 12px; }
+  .zona-contrato .zc-controles input, .zona-contrato .zc-controles select { padding: 7px 10px; border: 1px solid var(--borde-fuerte); border-radius: var(--radio-sm); font-size: 13px; background: #fff; }
   .diag-ok { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; padding: 10px 12px; border-radius: 6px; margin-bottom: 10px; }
   .diag-err { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 10px 12px; border-radius: 6px; margin-bottom: 10px; }
 </style>
@@ -230,7 +241,7 @@
 <!-- ── Pantalla de login (cubre la app hasta que haya un ingreso válido) ── -->
 <div id="login-screen" style="display:flex;position:fixed;inset:0;z-index:100000;background:var(--grad);align-items:center;justify-content:center;padding:20px">
   <div style="background:var(--panel);border-radius:var(--radio-lg);box-shadow:0 20px 60px rgba(0,0,0,.35);padding:34px 30px;width:100%;max-width:380px;text-align:center">
-    <img src="logo.png?v=12" alt="SAM — Centro de Diagnóstico Médico" style="width:230px;max-width:78%;height:auto;margin:0 auto 20px;display:block">
+    <img src="logo.png?v=13" alt="SAM — Centro de Diagnóstico Médico" style="width:230px;max-width:78%;height:auto;margin:0 auto 20px;display:block">
     <p style="margin:-6px 0 20px;color:var(--muted);font-size:13px">Gestión oftalmológica</p>
 
     <button id="login-google" class="btn" onclick="loginGoogle()" style="width:100%;justify-content:center;background:#fff;color:#3c4043;border:1px solid var(--borde-fuerte);box-shadow:none;display:flex;align-items:center;gap:10px;font-weight:600">
@@ -260,7 +271,7 @@
 
 <header class="top">
   <div class="brand">
-    <img src="logo.png?v=12" alt="SAM — Centro de Diagnóstico Médico" style="height:34px;background:#fff;border-radius:7px;padding:4px 8px;display:block">
+    <img src="logo.png?v=13" alt="SAM — Centro de Diagnóstico Médico" style="height:34px;background:#fff;border-radius:7px;padding:4px 8px;display:block">
   </div>
   <nav class="topnav" id="topnav">
     <button class="topnav-item active" data-dest="carga" onclick="irA('carga')"><span class="nav-icon">📋</span> Carga diaria</button>
@@ -409,28 +420,58 @@
       </div>
 
       <div class="nomconpanel" data-p="contr">
-        <div class="section-head"><h4 style="margin:0">Contratos por obra social</h4></div>
-        <p class="muted" style="margin-top:0">Elegí un <strong>mes</strong> y una <strong>obra social</strong>: la tabla muestra el valor de cada prestación que <strong>rige en ese mes</strong> (columna «rige desde»). Al <strong>editar y Guardar</strong>, el valor rige <strong>desde ese mes</strong> en adelante (sin pisar los meses anteriores). Todos los cálculos de la app (facturado, lo que SAM paga, margen, menor valor) usan el valor del contrato <strong>a la fecha de cada prestación</strong>, así que <strong>se recalculan solos</strong> por mes.</p>
+        <div class="section-head"><h4 style="margin:0">Contratos por obra social</h4>
+          <button class="btn" onclick="abrirNuevaOS()">+ Nueva OS</button></div>
+
+        <!-- Dos formas de cargar/actualizar un contrato (estilo OIP) -->
+        <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px">
+          <div class="zona-contrato azul">
+            <div class="zc-icon">📂</div>
+            <div class="zc-title">Subir contrato de OS</div>
+            <div class="zc-desc">Excel (.xlsx) o CSV — el sistema extrae código, descripción y valor, y te deja confirmar antes de guardar.</div>
+            <div class="zc-controles">
+              <input type="file" id="ctrArchivo" accept=".csv,.xlsx,.xls" style="display:none" onchange="importarContratosArchivo(this)">
+              <button class="btn" onclick="document.getElementById('ctrArchivo').click()">📎 Elegir archivo</button>
+              <button class="btn secundario" onclick="descargarPlantillaContratos()">Descargar plantilla</button>
+            </div>
+            <div id="ctrImportMsg" style="font-size:12px"></div>
+          </div>
+          <div class="zona-contrato verde">
+            <div class="zc-icon">📈</div>
+            <div class="zc-title">Aumento por porcentaje</div>
+            <div class="zc-desc">Aplica un % a todo el contrato vigente de una OS, desde el mes elegido. Primero te muestra la vista previa.</div>
+            <div class="zc-controles">
+              <select id="ctrAumOS" style="width:160px"></select>
+              <input type="number" id="ctrAumPct" step="0.1" placeholder="%" style="width:80px;text-align:right">
+              <input type="month" id="ctrAumMes">
+            </div>
+            <button class="btn" style="background:var(--ok)" onclick="calcularAumentoUI()">🔍 Calcular aumento</button>
+          </div>
+        </div>
+
+        <!-- Vista previa del aumento -->
+        <div id="aumentoPreview" style="display:none;margin-bottom:18px"></div>
+
+        <!-- Valores del contrato (editar por mes) -->
+        <div class="section-head" style="margin-top:6px"><h4 style="margin:0">Valores del contrato</h4></div>
+        <p class="muted" style="margin-top:0">Elegí <strong>mes</strong> y <strong>obra social</strong>: ves el valor que rige en ese mes. Al editar y Guardar, rige <strong>desde ese mes</strong> (sin pisar los anteriores). Todo lo demás (facturado, lo que SAM paga, margen) se recalcula solo por mes.</p>
         <div class="filtros">
           <label class="muted">Mes <input type="month" id="ctrMes" onchange="renderContratosTabla()"></label>
           <label class="muted">Obra social <select id="ctrOS" onchange="renderContratosTabla()"></select></label>
-          <label class="muted">Aumentar esta OS <input type="number" id="ctrAumento" step="0.01" style="width:70px" placeholder="%"> %</label>
-          <button class="btn secundario" onclick="aumentarContratosOSUI()">Aplicar aumento</button>
-        </div>
-        <div class="filtros">
-          <label class="muted">Importar (.csv/.xlsx) <input type="file" id="ctrArchivo" accept=".csv,.xlsx,.xls" onchange="importarContratosArchivo(this)"></label>
-          <button class="btn secundario" onclick="descargarPlantillaContratos()">Descargar plantilla CSV</button>
         </div>
         <div class="filtros" style="align-items:flex-end">
-          <label class="muted">Descripción <input id="ctrNuevoDesc" style="width:240px" placeholder="ej. Facoemulsificación" oninput="_autoClasificarAlta()"></label>
-          <label class="muted">Clasificar como <select id="ctrNuevoCat" onchange="_altaCatManual()"></select></label>
-          <label class="muted">Código <input id="ctrNuevoCodigo" style="width:100px" placeholder="ej. 660101"></label>
-          <label class="muted">Valor <input id="ctrNuevoValor" type="number" step="0.01" style="width:120px" placeholder="$"></label>
+          <label class="muted">+ Prestación <input id="ctrNuevoDesc" style="width:220px" placeholder="ej. Facoemulsificación" oninput="_autoClasificarAlta()"></label>
+          <label class="muted">Tipo <select id="ctrNuevoCat" onchange="_altaCatManual()"></select></label>
+          <label class="muted">Código <input id="ctrNuevoCodigo" style="width:90px" placeholder="660101"></label>
+          <label class="muted">Valor <input id="ctrNuevoValor" type="number" step="0.01" style="width:110px" placeholder="$"></label>
           <button class="btn" onclick="agregarContratoManualUI()">+ Agregar</button>
         </div>
         <div id="ctrNuevoHint" class="muted" style="font-size:12px;min-height:16px;margin:-6px 0 8px"></div>
-        <div id="ctrImportMsg"></div>
         <div class="tabla-wrap"><div id="contratosTabla"></div></div>
+
+        <!-- Contratos y vigencias (estilo OIP) -->
+        <div class="section-head" style="margin-top:26px"><h4 style="margin:0">Contratos y vigencias</h4></div>
+        <div class="tabla-wrap"><div id="contratosVigencias"></div></div>
         <p class="muted" style="margin-top:10px">El cobro mensual (lo que SAM te paga y lo que te transfirió) está en <strong>Finanzas ▸ Cobros de SAM</strong>.</p>
       </div>
 
@@ -1086,42 +1127,42 @@
   </div>
 </div>
 
-<script src="js/datos.js?v=12"></script>
-<script src="js/auditoria.js?v=12"></script>
-<script src="js/usuarios.js?v=12"></script>
-<script src="js/nomenclador.js?v=12"></script>
-<script src="js/contratos.js?v=12"></script>
-<script src="js/matching.js?v=12"></script>
-<script src="js/pegar-resumen.js?v=12"></script>
-<script src="js/prestaciones.js?v=12"></script>
-<script src="js/honorarios.js?v=12"></script>
-<script src="js/caja.js?v=12"></script>
-<script src="js/liquidaciones.js?v=12"></script>
-<script src="js/derivaciones.js?v=12"></script>
-<script src="js/alarmas.js?v=12"></script>
-<script src="js/estadisticas.js?v=12"></script>
-<script src="js/ui-medicos.js?v=12"></script>
-<script src="js/ui-nomenclador.js?v=12"></script>
-<script src="js/ui-prestaciones.js?v=12"></script>
-<script src="js/ui-obras-sociales.js?v=12"></script>
-<script src="js/ui-sedes.js?v=12"></script>
-<script src="js/ui-consultorios.js?v=12"></script>
-<script src="js/ui-contratos.js?v=12"></script>
-<script src="js/ui-admin.js?v=12"></script>
-<script src="js/ui-honorarios.js?v=12"></script>
-<script src="js/ui-caja.js?v=12"></script>
-<script src="js/ui-liquidaciones.js?v=12"></script>
-<script src="js/ui-derivaciones.js?v=12"></script>
-<script src="js/ui-alarmas.js?v=12"></script>
-<script src="js/ui-estadisticas.js?v=12"></script>
-<script src="js/ui-carga-diaria.js?v=12"></script>
-<script src="js/ui-panel.js?v=12"></script>
-<script src="js/ui-usuarios.js?v=12"></script>
-<script src="js/diagnostico.js?v=12"></script>
-<script src="js/ui-diagnostico.js?v=12"></script>
-<script src="js/ui-dialogos.js?v=12"></script>
-<script src="js/auth.js?v=12"></script>
-<script src="js/persistencia.js?v=12"></script>
+<script src="js/datos.js?v=13"></script>
+<script src="js/auditoria.js?v=13"></script>
+<script src="js/usuarios.js?v=13"></script>
+<script src="js/nomenclador.js?v=13"></script>
+<script src="js/contratos.js?v=13"></script>
+<script src="js/matching.js?v=13"></script>
+<script src="js/pegar-resumen.js?v=13"></script>
+<script src="js/prestaciones.js?v=13"></script>
+<script src="js/honorarios.js?v=13"></script>
+<script src="js/caja.js?v=13"></script>
+<script src="js/liquidaciones.js?v=13"></script>
+<script src="js/derivaciones.js?v=13"></script>
+<script src="js/alarmas.js?v=13"></script>
+<script src="js/estadisticas.js?v=13"></script>
+<script src="js/ui-medicos.js?v=13"></script>
+<script src="js/ui-nomenclador.js?v=13"></script>
+<script src="js/ui-prestaciones.js?v=13"></script>
+<script src="js/ui-obras-sociales.js?v=13"></script>
+<script src="js/ui-sedes.js?v=13"></script>
+<script src="js/ui-consultorios.js?v=13"></script>
+<script src="js/ui-contratos.js?v=13"></script>
+<script src="js/ui-admin.js?v=13"></script>
+<script src="js/ui-honorarios.js?v=13"></script>
+<script src="js/ui-caja.js?v=13"></script>
+<script src="js/ui-liquidaciones.js?v=13"></script>
+<script src="js/ui-derivaciones.js?v=13"></script>
+<script src="js/ui-alarmas.js?v=13"></script>
+<script src="js/ui-estadisticas.js?v=13"></script>
+<script src="js/ui-carga-diaria.js?v=13"></script>
+<script src="js/ui-panel.js?v=13"></script>
+<script src="js/ui-usuarios.js?v=13"></script>
+<script src="js/diagnostico.js?v=13"></script>
+<script src="js/ui-diagnostico.js?v=13"></script>
+<script src="js/ui-dialogos.js?v=13"></script>
+<script src="js/auth.js?v=13"></script>
+<script src="js/persistencia.js?v=13"></script>
 <script>
 // ── Navegación entre secciones ──
 function showSection(id) {
@@ -1191,7 +1232,7 @@ function init() {
   _poblarFiltroCategoria();
   // Por defecto, filtrar por el mes actual (con muchos datos, evita listas enormes).
   const mesActual = new Date().toISOString().slice(0, 7);
-  ['regFiltroMes', 'statMes', 'liqMes', 'prevMes', 'ctrMes', 'valMes'].forEach(id => {
+  ['regFiltroMes', 'statMes', 'liqMes', 'prevMes', 'ctrMes', 'valMes', 'ctrAumMes'].forEach(id => {
     const el = document.getElementById(id);
     if (el && !el.value) el.value = mesActual;
   });

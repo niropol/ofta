@@ -203,6 +203,34 @@ function contratosDeOS(obraSocial, fecha) {
   }).filter(x => x.descripcion && x.categoria !== 'insumo');
 }
 
+// Vista previa de un aumento % a una OS (sin aplicar): valor actual → nuevo → dif.
+function previewAumentoContratos(obraSocial, pct, fecha) {
+  const p = Number(pct);
+  if (isNaN(p)) return [];
+  const f = fecha || (hoyISO().slice(0, 7) + '-01');
+  return contratosDeOS(obraSocial, f)
+    .filter(c => c.valor != null)
+    .map(c => {
+      const nuevo = Math.floor(c.valor * (1 + p / 100));
+      return { grupo: c.grupo, codigo: c.codigo, descripcion: c.descripcion, actual: c.valor, nuevo, diferencia: nuevo - c.valor };
+    });
+}
+
+// Resumen por OS de los contratos cargados: vigencias y cantidad de prestaciones.
+function resumenContratosPorOS() {
+  const porOS = {};
+  DB.contratos.filter(c => c.estado !== 'Inactivo').forEach(c => {
+    const o = porOS[c.obraSocial] || (porOS[c.obraSocial] = { obraSocial: c.obraSocial, grupos: new Set(), desdes: new Set() });
+    o.grupos.add(c.grupoNomenclador); o.desdes.add(c.vigenciaDesde);
+  });
+  return Object.values(porOS).map(o => ({
+    obraSocial: o.obraSocial,
+    prestaciones: o.grupos.size,
+    vigencias: [...o.desdes].sort(),
+    desde: [...o.desdes].sort()[0] || '',
+  })).sort((a, b) => a.obraSocial.localeCompare(b.obraSocial, 'es'));
+}
+
 // vigenciaDesde del contrato que rige a una fecha (para mostrar "rige desde…").
 function vigenciaContrato(obraSocial, grupo, fecha) {
   const f = fecha || hoyISO();

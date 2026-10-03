@@ -7,21 +7,102 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 function _poblarSelectOSContratos() {
-  const sel = document.getElementById('ctrOS');
-  if (!sel) return;
-  const cur = sel.value;
-  // Particular también factura por SAM (paga 40%), así que también tiene contratos de cirugía.
+  // Particular también factura por SAM (paga 40%), así que también tiene contratos.
   const activas = ['Particular', ...getObrasSocialesActivas().map(o => o.nombre)];
-  sel.innerHTML = activas.map(n => `<option value="${escHtml(n)}">${escHtml(n)}</option>`).join('');
-  if (cur && activas.includes(cur)) sel.value = cur;
+  const opts = activas.map(n => `<option value="${escHtml(n)}">${escHtml(n)}</option>`).join('');
+  // Select de la tabla de valores.
+  const sel = document.getElementById('ctrOS');
+  if (sel) { const cur = sel.value; sel.innerHTML = opts; if (cur && activas.includes(cur)) sel.value = cur; }
+  // Select de la zona de aumento (con opción vacía).
+  const aum = document.getElementById('ctrAumOS');
+  if (aum) { const cur = aum.value; aum.innerHTML = '<option value="">— Obra social —</option>' + opts; if (cur && activas.includes(cur)) aum.value = cur; }
 }
 
 function renderContratos() {
   _poblarSelectOSContratos();
   _poblarSelectCatContrato();
   renderContratosTabla();
+  renderContratosVigencias();
   renderMenorValor();
   renderCobroSAM();
+}
+
+// ── Aumento por % con vista previa (estilo OIP) ──
+function calcularAumentoUI() {
+  const os = (document.getElementById('ctrAumOS') || {}).value || '';
+  const pct = (document.getElementById('ctrAumPct') || {}).value || '';
+  const mes = (document.getElementById('ctrAumMes') || {}).value || hoyISO().slice(0, 7);
+  const cont = document.getElementById('aumentoPreview');
+  if (!os) { avisoUI('Elegí una obra social.'); return; }
+  if (pct === '' || isNaN(Number(pct))) { avisoUI('Ingresá el porcentaje.'); return; }
+  const filas = previewAumentoContratos(os, pct, mes + '-01');
+  if (!filas.length) { avisoUI('Esa OS no tiene contratos cargados para ' + mes + '.'); return; }
+  const totAct = filas.reduce((s, f) => s + f.actual, 0);
+  const totNue = filas.reduce((s, f) => s + f.nuevo, 0);
+  const rows = filas.map(f => `<tr>
+      <td>${escHtml(f.codigo || '—')}</td>
+      <td>${escHtml(f.descripcion)}</td>
+      <td class="num">${fmtMoneda(f.actual, 'ARS')}</td>
+      <td class="num">${fmtMoneda(f.nuevo, 'ARS')}</td>
+      <td class="num pos">+${fmtMoneda(f.diferencia, 'ARS')}</td>
+    </tr>`).join('');
+  cont.innerHTML = `
+    <div class="saldo-card" style="padding:0;border-top:3px solid var(--ok)">
+      <div class="section-head" style="padding:12px 16px;margin:0;border-bottom:1px solid var(--borde)">
+        <strong>Vista previa — +${escHtml(String(pct))}% a ${escHtml(os)} desde ${escHtml(mes)}</strong>
+        <div class="btn-group">
+          <button class="btn secundario" onclick="cancelarAumentoUI()">✕ Cancelar</button>
+          <button class="btn" style="background:var(--ok)" onclick="aplicarAumentoUI()">✓ Aplicar aumento</button>
+        </div>
+      </div>
+      <div class="tabla-wrap" style="max-height:320px;overflow:auto">
+        <table class="tabla" style="border:none;box-shadow:none;border-radius:0">
+          <thead><tr><th>Código</th><th>Descripción</th><th class="num">Valor actual</th><th class="num">Valor nuevo</th><th class="num">Diferencia</th></tr></thead>
+          <tbody>${rows}</tbody>
+          <tfoot><tr><th colspan="2" style="text-align:right">Total</th><th class="num">${fmtMoneda(totAct, 'ARS')}</th><th class="num">${fmtMoneda(totNue, 'ARS')}</th><th class="num pos">+${fmtMoneda(totNue - totAct, 'ARS')}</th></tr></tfoot>
+        </table>
+      </div>
+    </div>`;
+  cont.style.display = '';
+  cont.dataset.os = os; cont.dataset.pct = pct; cont.dataset.mes = mes;
+}
+function cancelarAumentoUI() { const c = document.getElementById('aumentoPreview'); if (c) { c.style.display = 'none'; c.innerHTML = ''; } }
+function aplicarAumentoUI() {
+  const c = document.getElementById('aumentoPreview');
+  const os = c.dataset.os, pct = c.dataset.pct, mes = c.dataset.mes;
+  let r; try { r = aumentarContratosOS(os, pct, mes + '-01'); }
+  catch (e) { avisoUI(e.message); return; }
+  cancelarAumentoUI();
+  if (typeof sincronizarUI === 'function') sincronizarUI(); else renderContratos();
+  avisoUI('Aumento aplicado: ' + r.actualizados + ' prestación(es) de ' + os + ' (+' + pct + '%) desde ' + mes + '.', 'Listo');
+  if (typeof _avisoCobrosRegistrados === 'function') _avisoCobrosRegistrados(os);
+}
+
+// ── Contratos y vigencias (estilo OIP): una fila por OS con contratos ──
+function renderContratosVigencias() {
+  const cont = document.getElementById('contratosVigencias');
+  if (!cont) return;
+  const lista = (typeof resumenContratosPorOS === 'function') ? resumenContratosPorOS() : [];
+  if (!lista.length) { cont.innerHTML = '<p class="vacio">Todavía no hay contratos cargados. Subí uno o cargá valores arriba.</p>'; return; }
+  const rows = lista.map(o => {
+    const vigs = o.vigencias.map(v => v.slice(0, 7)).join(', ');
+    return `<tr>
+      <td><strong>${escHtml(o.obraSocial)}</strong></td>
+      <td>${escHtml(o.desde.slice(0, 7))}</td>
+      <td class="num">${o.prestaciones}</td>
+      <td class="muted">${escHtml(vigs)}</td>
+      <td class="acc"><button onclick="verContratoOS('${escHtml(o.obraSocial)}')">Ver valores</button></td>
+    </tr>`;
+  }).join('');
+  cont.innerHTML = `<table class="tabla">
+    <thead><tr><th>Obra social</th><th>Vigente desde</th><th class="num">Prestaciones</th><th>Vigencias cargadas</th><th></th></tr></thead>
+    <tbody>${rows}</tbody></table>`;
+}
+// Clic en "Ver valores" → carga esa OS en la tabla de valores.
+function verContratoOS(os) {
+  const sel = document.getElementById('ctrOS'); if (sel) sel.value = os;
+  renderContratosTabla();
+  const t = document.getElementById('contratosTabla'); if (t) t.scrollIntoView({ block: 'center' });
 }
 
 // ── Prestaciones de menor valor: comparativa de precios entre obras sociales ──
