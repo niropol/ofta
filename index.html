@@ -241,7 +241,7 @@
 <!-- ── Pantalla de login (cubre la app hasta que haya un ingreso válido) ── -->
 <div id="login-screen" style="display:flex;position:fixed;inset:0;z-index:100000;background:var(--grad);align-items:center;justify-content:center;padding:20px">
   <div style="background:var(--panel);border-radius:var(--radio-lg);box-shadow:0 20px 60px rgba(0,0,0,.35);padding:34px 30px;width:100%;max-width:380px;text-align:center">
-    <img src="logo.png?v=13" alt="SAM — Centro de Diagnóstico Médico" style="width:230px;max-width:78%;height:auto;margin:0 auto 20px;display:block">
+    <img src="logo.png?v=14" alt="SAM — Centro de Diagnóstico Médico" style="width:230px;max-width:78%;height:auto;margin:0 auto 20px;display:block">
     <p style="margin:-6px 0 20px;color:var(--muted);font-size:13px">Gestión oftalmológica</p>
 
     <button id="login-google" class="btn" onclick="loginGoogle()" style="width:100%;justify-content:center;background:#fff;color:#3c4043;border:1px solid var(--borde-fuerte);box-shadow:none;display:flex;align-items:center;gap:10px;font-weight:600">
@@ -271,7 +271,7 @@
 
 <header class="top">
   <div class="brand">
-    <img src="logo.png?v=13" alt="SAM — Centro de Diagnóstico Médico" style="height:34px;background:#fff;border-radius:7px;padding:4px 8px;display:block">
+    <img src="logo.png?v=14" alt="SAM — Centro de Diagnóstico Médico" style="height:34px;background:#fff;border-radius:7px;padding:4px 8px;display:block">
   </div>
   <nav class="topnav" id="topnav">
     <button class="topnav-item active" data-dest="carga" onclick="irA('carga')"><span class="nav-icon">📋</span> Carga diaria</button>
@@ -392,9 +392,21 @@
     <div class="adminpanel" data-p="nomcon" hidden>
       <div class="section-head"><h3 style="margin:0">Nomenclador y contratos</h3></div>
       <div class="subtabs" id="nomconTabs">
-        <button class="active" data-p="contr" onclick="nomconTab('contr')">Contratos (valores por OS)</button>
+        <button class="active" data-p="prest" onclick="nomconTab('prest')">Prestaciones</button>
+        <button data-p="contr" onclick="nomconTab('contr')">Contratos OS</button>
         <button data-p="menor" onclick="nomconTab('menor')">Prestaciones de menor valor</button>
         <button data-p="os" onclick="nomconTab('os')">Obras sociales</button>
+      </div>
+
+      <div class="nomconpanel" data-p="prest">
+        <p class="muted" style="margin-top:0">Todas las prestaciones con su valor por obra social. <strong>Editar</strong> abre la ficha donde cambiás el valor y la <strong>vigencia</strong> (el mes desde el que rige) — así corregís valores de un mes pasado sin pisar los anteriores. Los pills de <strong>categoría</strong> e <strong>IVA</strong> se cambian con un clic.</p>
+        <div class="filtros">
+          <label class="muted">Filtrar por OS <select id="prestFiltroOS" onchange="renderPrestacionesOIP()"></select></label>
+          <input type="search" id="prestBuscarOIP" placeholder="Buscar por código o descripción…" oninput="renderPrestacionesOIP()" style="min-width:220px">
+          <div style="flex:1"></div>
+          <button class="btn" onclick="irAltaPrestacion()">+ Nueva prestación</button>
+        </div>
+        <div class="tabla-wrap"><div id="prestOIPTabla"></div></div>
       </div>
 
       <div class="nomconpanel" data-p="os" hidden>
@@ -972,6 +984,32 @@
   </div>
 </div>
 
+<!-- Modal: Editar prestación (estilo OIP) -->
+<div id="modalEditarPrest" class="modal">
+  <div class="modal-box" style="width:520px">
+    <h3>✏️ Editar prestación</h3>
+    <input type="hidden" id="ep_grupo">
+    <div class="campo"><label>Obra social</label><input id="ep_os" readonly style="background:var(--panel-2);color:var(--muted)"></div>
+    <div class="row2">
+      <div class="campo"><label>Código</label><input id="ep_codigo" placeholder="ej. 660101"></div>
+      <div class="campo"><label>Categoría</label><select id="ep_cat"></select></div>
+    </div>
+    <div class="campo"><label>Descripción</label><input id="ep_desc" placeholder="ej. Facoemulsificación"></div>
+    <div class="row2">
+      <div class="campo"><label>Valor ($)</label><input id="ep_valor" type="number" step="0.01" style="font-weight:700"></div>
+      <div class="campo"><label>Vigencia (rige desde el mes)</label><input id="ep_vigencia" type="month"></div>
+    </div>
+    <div class="campo"><label>IVA</label><select id="ep_iva">
+      <option value="true">✓ Exenta</option>
+      <option value="false">⚡ Gravada</option>
+    </select></div>
+    <div class="modal-acciones">
+      <button class="btn secundario" onclick="cerrarEditarPrestOIP()">Cancelar</button>
+      <button class="btn" onclick="guardarEditarPrestOIP()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Modal sede ── -->
 <div id="modalSede" class="modal">
   <div class="modal-box">
@@ -1127,42 +1165,42 @@
   </div>
 </div>
 
-<script src="js/datos.js?v=13"></script>
-<script src="js/auditoria.js?v=13"></script>
-<script src="js/usuarios.js?v=13"></script>
-<script src="js/nomenclador.js?v=13"></script>
-<script src="js/contratos.js?v=13"></script>
-<script src="js/matching.js?v=13"></script>
-<script src="js/pegar-resumen.js?v=13"></script>
-<script src="js/prestaciones.js?v=13"></script>
-<script src="js/honorarios.js?v=13"></script>
-<script src="js/caja.js?v=13"></script>
-<script src="js/liquidaciones.js?v=13"></script>
-<script src="js/derivaciones.js?v=13"></script>
-<script src="js/alarmas.js?v=13"></script>
-<script src="js/estadisticas.js?v=13"></script>
-<script src="js/ui-medicos.js?v=13"></script>
-<script src="js/ui-nomenclador.js?v=13"></script>
-<script src="js/ui-prestaciones.js?v=13"></script>
-<script src="js/ui-obras-sociales.js?v=13"></script>
-<script src="js/ui-sedes.js?v=13"></script>
-<script src="js/ui-consultorios.js?v=13"></script>
-<script src="js/ui-contratos.js?v=13"></script>
-<script src="js/ui-admin.js?v=13"></script>
-<script src="js/ui-honorarios.js?v=13"></script>
-<script src="js/ui-caja.js?v=13"></script>
-<script src="js/ui-liquidaciones.js?v=13"></script>
-<script src="js/ui-derivaciones.js?v=13"></script>
-<script src="js/ui-alarmas.js?v=13"></script>
-<script src="js/ui-estadisticas.js?v=13"></script>
-<script src="js/ui-carga-diaria.js?v=13"></script>
-<script src="js/ui-panel.js?v=13"></script>
-<script src="js/ui-usuarios.js?v=13"></script>
-<script src="js/diagnostico.js?v=13"></script>
-<script src="js/ui-diagnostico.js?v=13"></script>
-<script src="js/ui-dialogos.js?v=13"></script>
-<script src="js/auth.js?v=13"></script>
-<script src="js/persistencia.js?v=13"></script>
+<script src="js/datos.js?v=14"></script>
+<script src="js/auditoria.js?v=14"></script>
+<script src="js/usuarios.js?v=14"></script>
+<script src="js/nomenclador.js?v=14"></script>
+<script src="js/contratos.js?v=14"></script>
+<script src="js/matching.js?v=14"></script>
+<script src="js/pegar-resumen.js?v=14"></script>
+<script src="js/prestaciones.js?v=14"></script>
+<script src="js/honorarios.js?v=14"></script>
+<script src="js/caja.js?v=14"></script>
+<script src="js/liquidaciones.js?v=14"></script>
+<script src="js/derivaciones.js?v=14"></script>
+<script src="js/alarmas.js?v=14"></script>
+<script src="js/estadisticas.js?v=14"></script>
+<script src="js/ui-medicos.js?v=14"></script>
+<script src="js/ui-nomenclador.js?v=14"></script>
+<script src="js/ui-prestaciones.js?v=14"></script>
+<script src="js/ui-obras-sociales.js?v=14"></script>
+<script src="js/ui-sedes.js?v=14"></script>
+<script src="js/ui-consultorios.js?v=14"></script>
+<script src="js/ui-contratos.js?v=14"></script>
+<script src="js/ui-admin.js?v=14"></script>
+<script src="js/ui-honorarios.js?v=14"></script>
+<script src="js/ui-caja.js?v=14"></script>
+<script src="js/ui-liquidaciones.js?v=14"></script>
+<script src="js/ui-derivaciones.js?v=14"></script>
+<script src="js/ui-alarmas.js?v=14"></script>
+<script src="js/ui-estadisticas.js?v=14"></script>
+<script src="js/ui-carga-diaria.js?v=14"></script>
+<script src="js/ui-panel.js?v=14"></script>
+<script src="js/ui-usuarios.js?v=14"></script>
+<script src="js/diagnostico.js?v=14"></script>
+<script src="js/ui-diagnostico.js?v=14"></script>
+<script src="js/ui-dialogos.js?v=14"></script>
+<script src="js/auth.js?v=14"></script>
+<script src="js/persistencia.js?v=14"></script>
 <script>
 // ── Navegación entre secciones ──
 function showSection(id) {
@@ -1223,8 +1261,15 @@ function visTab(p) {
 function nomconTab(p) {
   document.querySelectorAll('.nomconpanel').forEach(el => { el.hidden = el.dataset.p !== p; });
   document.querySelectorAll('#nomconTabs button').forEach(b => b.classList.toggle('active', b.dataset.p === p));
-  const render = { contr: 'renderContratos', menor: 'renderMenorValor', os: 'renderOS' }[p];
+  const render = { prest: 'renderPrestacionesOIP', contr: 'renderContratos', menor: 'renderMenorValor', os: 'renderOS' }[p];
   if (render && typeof window[render] === 'function') { try { window[render](); } catch (e) {} }
+}
+
+// "+ Nueva prestación": lleva a Contratos OS, donde está el alta (tipo+código+valor).
+function irAltaPrestacion() {
+  nomconTab('contr');
+  const el = document.getElementById('ctrNuevoDesc');
+  if (el) { try { el.scrollIntoView({ block: 'center' }); el.focus(); } catch (e) {} }
 }
 
 // ── init(): se llama tras cargar la nube (o en modo local). Renderiza todo. ──
@@ -1254,7 +1299,7 @@ function sincronizarUI() {
   run([
     '_poblarFiltrosPrestaciones', 'renderPrestaciones', 'renderCargaDiaria',
     'renderMedicos', 'renderNomenclador', 'renderOS', 'renderSedes', 'renderConsultorios',
-    'renderAgendaConfig', 'renderContratos', 'renderValoresMedico', 'renderAdmin', 'renderCaja',
+    'renderAgendaConfig', 'renderContratos', 'renderPrestacionesOIP', 'renderValoresMedico', 'renderAdmin', 'renderCaja',
     'renderLiquidaciones', 'renderHistorialPagos', 'renderDerivaciones', 'renderAvisos', 'renderEstadisticas', 'poblarActuandoComo',
   ]);
 }

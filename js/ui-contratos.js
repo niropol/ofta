@@ -582,3 +582,105 @@ function quitarCobroSAMUI(i) {
   if (typeof renderCaja === 'function') renderCaja();
   if (typeof renderPanelMes === 'function') renderPanelMes();
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  PRESTACIONES — vista única estilo OIP (todas las OS, filtro) + edición por modal
+// ───────────────────────────────────────────────────────────────────────────
+//  Una fila por (obra social × prestación) con su valor. "Editar" abre un modal
+//  donde se cambia el valor y la VIGENCIA (el mes desde el que rige) — así se
+//  corrigen valores de meses pasados sin pisar los anteriores (setContratoDeMes).
+// ═══════════════════════════════════════════════════════════════════════════
+
+function _osParaPrest() { return ['Particular', ...getObrasSocialesActivas().map(o => o.nombre)]; }
+
+const _CAT_PILL_PREST = {
+  consulta:            { label: '🩺 Consulta', bg: 'var(--acento-soft)', fg: 'var(--acento)' },
+  realizacion_estudio: { label: '🔬 Estudio',  bg: '#ede8f5',            fg: '#5a3a99' },
+  practica:            { label: '⚕️ Práctica', bg: 'var(--warn-soft)',  fg: 'var(--warn)' },
+  cirugia:             { label: '🔪 Cirugía',  bg: 'var(--primario-soft)', fg: 'var(--primario)' },
+};
+
+function renderPrestacionesOIP() {
+  const cont = document.getElementById('prestOIPTabla');
+  if (!cont) return;
+  const selF = document.getElementById('prestFiltroOS');
+  if (selF) {
+    const cur = selF.value;
+    selF.innerHTML = '<option value="">Todas las OS</option>' + _osParaPrest().map(n => `<option value="${escHtml(n)}">${escHtml(n)}</option>`).join('');
+    if (cur) selF.value = cur;
+  }
+  const q = (((document.getElementById('prestBuscarOIP') || {}).value) || '').trim().toLowerCase();
+  const filtro = (selF || {}).value || '';
+  const hoy = hoyISO();
+  const orden = { consulta: 0, realizacion_estudio: 1, practica: 2, cirugia: 3 };
+  const osList = filtro ? [filtro] : _osParaPrest();
+  const rows = [];
+  osList.forEach(os => {
+    contratosDeOS(os, hoy)
+      .filter(c => c.valor != null && (!q || (c.descripcion || '').toLowerCase().includes(q) || (c.codigo || '').toLowerCase().includes(q)))
+      .sort((a, b) => ((orden[a.categoria] ?? 9) - (orden[b.categoria] ?? 9)) || String(a.codigo || '').localeCompare(String(b.codigo || ''), undefined, { numeric: true }))
+      .forEach(c => {
+        const ver = versionActual(c.grupo);
+        const exenta = !(ver && ver.ivaExento === false);
+        const valPart = valorContrato('Particular', c.grupo, hoy);
+        const cp = _CAT_PILL_PREST[c.categoria] || { label: c.categoria, bg: 'var(--panel-2)', fg: 'var(--muted)' };
+        const vig = c.vigenciaDesde ? c.vigenciaDesde.slice(0, 7) : '—';
+        rows.push(`<tr>
+          <td style="font-family:var(--mono);font-size:11px;font-weight:600">${escHtml(c.codigo || '—')}</td>
+          <td>${escHtml(c.descripcion)}</td>
+          <td><span class="pill" style="background:var(--acento-soft);color:var(--acento);font-size:10px">${escHtml(os)}</span></td>
+          <td><button class="pill" title="Clic para cambiar la categoría" onclick="togglePrestCatOIP(${c.grupo})" style="border:none;cursor:pointer;font-size:10px;background:${cp.bg};color:${cp.fg}">${cp.label}</button></td>
+          <td class="num" style="font-weight:600">${fmtMoneda(c.valor, 'ARS')}</td>
+          <td class="num muted">${valPart != null ? fmtMoneda(valPart, 'ARS') : '—'}</td>
+          <td class="muted" style="font-size:11px">${escHtml(vig)}</td>
+          <td><button class="pill" onclick="toggleIvaPrestacionUI(${c.grupo})" style="border:none;cursor:pointer;font-size:10px;${exenta ? 'background:var(--ok-soft);color:var(--ok)' : 'background:var(--warn-soft);color:var(--warn)'}">${exenta ? '✓ Exenta' : '⚡ ' + ivaAlicuota() + '%'}</button></td>
+          <td class="acc"><button onclick="abrirEditarPrestOIP('${escHtml(os).replace(/'/g, "\\'")}',${c.grupo})">Editar</button></td>
+        </tr>`);
+      });
+  });
+  cont.innerHTML = rows.length
+    ? `<table class="tabla"><thead><tr><th>Código</th><th>Descripción</th><th>OS</th><th>Categoría</th><th class="num">Valor OS</th><th class="num">Valor particular</th><th>Vigencia</th><th>IVA</th><th></th></tr></thead><tbody>${rows.join('')}</tbody></table>`
+    : '<p class="vacio">No hay prestaciones con contrato para ese filtro. Cargá valores en «Contratos OS» o con «+ Nueva prestación».</p>';
+}
+
+// Cambiar la categoría de una prestación (rota entre los 4 tipos), como el pill de OIP.
+function togglePrestCatOIP(grupo) {
+  const ver = versionActual(grupo); if (!ver) return;
+  const ciclo = ['consulta', 'realizacion_estudio', 'practica', 'cirugia'];
+  const i = ciclo.indexOf(ver.categoria);
+  const nueva = ciclo[(i + 1) % ciclo.length];
+  try { editarPrestacion(grupo, { categoria: nueva }); } catch (e) { avisoUI(e.message); return; }
+  if (typeof sincronizarUI === 'function') sincronizarUI(); else renderPrestacionesOIP();
+}
+
+// ── Modal de edición de una prestación para una OS (estilo OIP) ──
+function abrirEditarPrestOIP(os, grupo) {
+  const ver = versionActual(grupo); if (!ver) return;
+  const mes = hoyISO().slice(0, 7);
+  const valor = valorContrato(os, grupo, mes + '-01');
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v == null ? '' : v; };
+  set('ep_os', os); set('ep_grupo', grupo);
+  set('ep_codigo', ver.codigo || ''); set('ep_desc', ver.descripcion || '');
+  set('ep_valor', valor != null ? valor : '');
+  set('ep_vigencia', vigenciaContrato(os, grupo, mes + '-01') ? vigenciaContrato(os, grupo, mes + '-01').slice(0, 7) : mes);
+  const selIva = document.getElementById('ep_iva'); if (selIva) selIva.value = (ver.ivaExento === false) ? 'false' : 'true';
+  const selCat = document.getElementById('ep_cat');
+  if (selCat) selCat.innerHTML = ['consulta', 'realizacion_estudio', 'practica', 'cirugia'].map(c => `<option value="${c}"${c === ver.categoria ? ' selected' : ''}>${(categoriaInfo(c) || {}).label || c}</option>`).join('');
+  const m = document.getElementById('modalEditarPrest'); if (m) m.style.display = 'flex';
+}
+function cerrarEditarPrestOIP() { const m = document.getElementById('modalEditarPrest'); if (m) m.style.display = 'none'; }
+
+function guardarEditarPrestOIP() {
+  const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  const grupo = Number(val('ep_grupo')), os = val('ep_os');
+  if (!grupo || !os) return;
+  const valor = val('ep_valor'), mes = val('ep_vigencia') || hoyISO().slice(0, 7);
+  if (valor === '' || isNaN(Number(valor))) { avisoUI('El valor debe ser un número.'); return; }
+  try {
+    editarPrestacion(grupo, { codigo: val('ep_codigo'), descripcion: val('ep_desc'), categoria: val('ep_cat'), ivaExento: val('ep_iva') === 'true' ? true : false });
+    setContratoDeMes(os, grupo, valor, mes);
+  } catch (e) { avisoUI(e.message); return; }
+  cerrarEditarPrestOIP();
+  if (typeof sincronizarUI === 'function') sincronizarUI(); else renderPrestacionesOIP();
+  if (typeof ofrecerRecalcularAfectadas === 'function') ofrecerRecalcularAfectadas();
+}
