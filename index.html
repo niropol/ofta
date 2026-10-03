@@ -11,15 +11,16 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   :root {
-    --bg: #edeae3; --panel: #ffffff; --texto: #211f1b; --muted: #726d64;
-    --borde: #e6e1d8; --borde-fuerte: #d5cfc4;
-    --primario: #22492f; --primario-osc: #143022; --primario-soft: #e3ebdf;
-    --acento: #2f6040;
-    --danger: #b34040; --ok: #1f6b3a; --warn: #8c6820;
-    --grad: linear-gradient(120deg, #0f2419 0%, #1a3d29 52%, #275236 100%);
-    --radio: 14px; --radio-sm: 9px; --radio-lg: 20px;
-    --sombra: 0 1px 3px rgba(40,34,22,.05), 0 4px 14px rgba(40,34,22,.05);
-    --sombra-hover: 0 2px 6px rgba(40,34,22,.08), 0 10px 26px rgba(40,34,22,.10);
+    /* Paleta y escala tomadas de OIP (cálida, acento verde esmeralda + azul). */
+    --bg: #eceae5; --panel: #f5f3ef; --panel-2: #efedea; --texto: #1a1916; --muted: #6b6860; --muted-2: #9a988f;
+    --borde: #dedad2; --borde-fuerte: #cbc6ba;
+    --primario: #1d6a4a; --primario-osc: #15533a; --primario-soft: #e8f4ee;
+    --acento: #2d5a8e; --acento-soft: #e8eff8;
+    --danger: #b34040; --danger-soft: #fdf0f0; --ok: #2d7a4a; --ok-soft: #eef8f2; --warn: #8c6820; --warn-soft: #fdf6e8;
+    --grad: #1a1916;   /* nav oscura estilo OIP (sin degradé) */
+    --radio: 10px; --radio-sm: 6px; --radio-lg: 14px;
+    --sombra: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+    --sombra-hover: 0 4px 12px rgba(0,0,0,.09);
     --mono: "DM Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   }
   * { box-sizing: border-box; }
@@ -61,17 +62,17 @@
   @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
   .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
   .section-head h2 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -.01em; }
-  button.btn { background: var(--primario); color: #fff; border: none; padding: 10px 17px;
-    border-radius: var(--radio-sm); cursor: pointer; font-size: 14px; font-weight: 600;
-    box-shadow: 0 1px 2px rgba(11,72,86,.18); transition: background .15s, transform .05s, box-shadow .15s; }
-  button.btn:hover { background: var(--primario-osc); box-shadow: 0 3px 10px rgba(11,72,86,.24); }
+  button.btn { background: var(--primario); color: #fff; border: none; padding: 8px 15px;
+    border-radius: var(--radio-sm); cursor: pointer; font-size: 13px; font-weight: 500;
+    transition: background .12s; }
+  button.btn:hover { background: var(--primario-osc); }
   button.btn:active { transform: translateY(1px); }
-  button.btn.secundario { background: var(--primario-soft); color: var(--primario-osc); box-shadow: none; }
-  button.btn.secundario:hover { background: #d2ebef; }
+  button.btn.secundario { background: var(--panel); color: var(--texto); border: 1px solid var(--borde-fuerte); }
+  button.btn.secundario:hover { background: var(--panel-2); }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
   .med-card { background: var(--panel); border: 1px solid var(--borde); border-radius: var(--radio);
-    padding: 16px; box-shadow: var(--sombra); transition: box-shadow .16s, transform .16s; }
-  .med-card:hover { box-shadow: var(--sombra-hover); transform: translateY(-2px); }
+    padding: 16px; box-shadow: var(--sombra); transition: box-shadow .16s; }
+  .med-card:hover { box-shadow: var(--sombra-hover); }
   .med-card.inactivo { opacity: .6; }
   .med-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
   .med-head strong { font-size: 15px; }
@@ -87,9 +88,9 @@
   .aviso-info { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; }
   .badge-warn { background: #fef3c7; color: #92400e; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
   .med-acciones { margin-top: 12px; display: flex; gap: 6px; flex-wrap: wrap; }
-  .med-acciones button { background: #f1f5f9; border: 1px solid var(--borde); border-radius: 7px;
+  .med-acciones button { background: var(--panel-2); border: 1px solid var(--borde); border-radius: 7px;
     padding: 6px 11px; cursor: pointer; font-size: 12.5px; transition: background .14s, border-color .14s; }
-  .med-acciones button:hover { background: #e6edf4; border-color: var(--borde-fuerte); }
+  .med-acciones button:hover { background: var(--borde); border-color: var(--borde-fuerte); }
   .med-acciones button.danger { color: var(--danger); }
   .med-acciones button.danger:hover { background: #fdecec; border-color: #f3c6c6; }
   .vacio { color: var(--muted); background: var(--panel); border: 1px dashed var(--borde);
@@ -110,7 +111,7 @@
   .campo input:focus, .campo select:focus { outline: none; border-color: var(--primario);
     box-shadow: 0 0 0 3px var(--primario-soft); }
   .modal-acciones { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
-  .modal-acciones .secundario { background: #eef2f7; color: var(--texto); }
+  .modal-acciones .secundario { background: var(--panel-2); color: var(--texto); }
   .modal-box.ancho { width: 720px; }
   /* Documento imprimible dentro del modal */
   #docPrintable { color: #222; }
@@ -138,44 +139,44 @@
   .filtros input[type=search] { min-width: 220px; }
   .tabla { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--panel); border: 1px solid var(--borde);
     border-radius: var(--radio); overflow: hidden; box-shadow: var(--sombra); }
-  .tabla th, .tabla td { padding: 11px 14px; text-align: left; border-bottom: 1px solid var(--borde); font-size: 13px; }
-  .tabla th { background: #f6f9fb; color: var(--muted); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: .03em; }
+  .tabla th, .tabla td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--borde); font-size: 13px; }
+  .tabla th { background: var(--panel-2); color: var(--muted-2); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
   .tabla tbody tr { transition: background .12s; }
-  .tabla tbody tr:hover { background: #f7fafc; }
-  .tabla td.num, .tabla th.num { text-align: right; white-space: nowrap; }
+  .tabla tbody tr:hover { background: var(--panel-2); }
+  .tabla td.num, .tabla th.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
   .tabla tr:last-child td { border-bottom: none; }
   .tabla .fila-inactiva { opacity: .5; }
   .tabla td.acc { white-space: nowrap; }
-  .tabla td.acc button { background: #f1f5f9; border: 1px solid var(--borde); border-radius: 7px;
-    padding: 5px 9px; cursor: pointer; font-size: 11.5px; margin-right: 4px; transition: background .14s, border-color .14s; }
-  .tabla td.acc button:hover { background: #e6edf4; border-color: var(--borde-fuerte); }
+  .tabla td.acc button { background: var(--panel); border: 1px solid var(--borde-fuerte); border-radius: var(--radio-sm);
+    padding: 4px 10px; cursor: pointer; font-size: 12px; margin-right: 4px; transition: background .14s, border-color .14s; }
+  .tabla td.acc button:hover { background: var(--panel-2); }
   .tabla td.acc button.danger { color: var(--danger); }
   .tabla td.acc button.danger:hover { background: #fdecec; border-color: #f3c6c6; }
   .nota { font-size: 12px; color: var(--warn); background: #fffbeb; border: 1px solid #fde68a;
     padding: 9px 12px; border-radius: var(--radio-sm); margin-bottom: 12px; }
   .tabla-wrap { overflow-x: auto; }
   /* Insumos dentro del alta de prestación */
-  .ins-box { border: 1px solid var(--borde); border-radius: var(--radio); padding: 14px; margin-bottom: 12px; background: #f7fafc; }
+  .ins-box { border: 1px solid var(--borde); border-radius: var(--radio); padding: 14px; margin-bottom: 12px; background: var(--panel-2); }
   .ins-box > label { display: block; margin-bottom: 8px; }
   .ins-add { display: flex; gap: 8px; margin-bottom: 8px; }
   .ins-add select { flex: 1; padding: 8px 10px; border: 1px solid var(--borde); border-radius: 6px; font-size: 14px; }
   .ins-item { display: flex; justify-content: space-between; align-items: center; gap: 8px;
     padding: 6px 10px; background: var(--panel); border: 1px solid var(--borde); border-radius: 6px; margin-bottom: 6px; font-size: 13px; }
-  .ins-item button { background: #eef2f7; border: 1px solid var(--borde); border-radius: 5px; padding: 3px 8px; cursor: pointer; font-size: 11.5px; }
+  .ins-item button { background: var(--panel-2); border: 1px solid var(--borde); border-radius: 5px; padding: 3px 8px; cursor: pointer; font-size: 11.5px; }
   /* Caja */
   .pos { color: var(--ok); }
   .neg { color: var(--danger); }
   .saldos { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; margin-bottom: 20px; }
   .saldo-card { background: var(--panel); border: 1px solid var(--borde); border-radius: var(--radio); padding: 16px 18px;
-    box-shadow: var(--sombra); transition: box-shadow .16s, transform .16s; }
-  .saldo-card:hover { box-shadow: var(--sombra-hover); transform: translateY(-2px); }
-  .saldo-card.total { background: linear-gradient(135deg, #f0f3e2, #e6ecd0); border-color: #d3ddb2; }
-  .saldo-card.alerta { background: #fef2f2; border-color: #fecaca; }
+    box-shadow: var(--sombra); }
+  .saldo-card.total { background: var(--primario-soft); border-color: #c7e3d4; }
+  .saldo-card.alerta { background: var(--danger-soft); border-color: #f0d0d0; }
+  .saldo-titulo, .saldo-card .saldo-titulo { text-transform: uppercase; letter-spacing: .05em; font-size: 11px; font-weight: 600; color: var(--muted-2); }
   .aviso { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 11px 14px; border-radius: var(--radio-sm); font-size: 13px; }
   .cd-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
   .cd-card { background: var(--panel); border: 1px solid var(--borde); border-radius: var(--radio); padding: 18px;
-    box-shadow: var(--sombra); transition: box-shadow .16s, transform .16s; }
-  .cd-card:hover { box-shadow: var(--sombra-hover); transform: translateY(-2px); }
+    box-shadow: var(--sombra); transition: box-shadow .16s; }
+  .cd-card:hover { box-shadow: var(--sombra-hover); }
   .cd-card h4 { margin-top: 0; font-size: 15px; font-weight: 700; }
   .cd-form { display: flex; flex-direction: column; gap: 9px; }
   .cd-form input, .cd-form select { padding: 9px 11px; border: 1px solid var(--borde-fuerte); border-radius: var(--radio-sm); font-size: 14px; width: 100%; background: #fff; transition: border-color .14s, box-shadow .14s; }
@@ -185,7 +186,7 @@
   .ag-grid { display: grid; gap: 10px; overflow-x: auto; }
   .ag-col { background: var(--panel); border: 1px solid var(--borde); border-radius: 8px; padding: 8px; min-width: 0; }
   .ag-dia { font-weight: 600; font-size: 13px; text-align: center; padding-bottom: 6px; margin-bottom: 6px; border-bottom: 1px solid var(--borde); }
-  .ag-bloque { position: relative; background: #f8fafc; border: 1px solid var(--borde); border-left: 4px solid #64748b; border-radius: 6px; padding: 6px 8px; margin-bottom: 6px; }
+  .ag-bloque { position: relative; background: var(--panel-2); border: 1px solid var(--borde); border-left: 4px solid #64748b; border-radius: 6px; padding: 6px 8px; margin-bottom: 6px; }
   .ag-hora { font-weight: 600; font-size: 13px; }
   .ag-medico { font-size: 13px; }
   .ag-cons { font-size: 12px; color: var(--muted); }
@@ -207,8 +208,8 @@
   #adminSubtabs { margin-bottom: 16px; }
   h4 { margin: 8px 0; font-size: 14px; }
   .pager { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
-  .pager button { background: #f1f5f9; border: 1px solid var(--borde); border-radius: var(--radio-sm); padding: 7px 13px; cursor: pointer; font-size: 13px; transition: background .14s; }
-  .pager button:not(:disabled):hover { background: #e6edf4; }
+  .pager button { background: var(--panel-2); border: 1px solid var(--borde); border-radius: var(--radio-sm); padding: 7px 13px; cursor: pointer; font-size: 13px; transition: background .14s; }
+  .pager button:not(:disabled):hover { background: var(--borde); }
   .pager button:disabled { opacity: .45; cursor: default; }
   .diag-ok { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; padding: 10px 12px; border-radius: 6px; margin-bottom: 10px; }
   .diag-err { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 10px 12px; border-radius: 6px; margin-bottom: 10px; }
@@ -219,7 +220,7 @@
 <!-- ── Pantalla de login (cubre la app hasta que haya un ingreso válido) ── -->
 <div id="login-screen" style="display:flex;position:fixed;inset:0;z-index:100000;background:var(--grad);align-items:center;justify-content:center;padding:20px">
   <div style="background:var(--panel);border-radius:var(--radio-lg);box-shadow:0 20px 60px rgba(0,0,0,.35);padding:34px 30px;width:100%;max-width:380px;text-align:center">
-    <img src="logo.png?v=9" alt="SAM — Centro de Diagnóstico Médico" style="width:230px;max-width:78%;height:auto;margin:0 auto 20px;display:block">
+    <img src="logo.png?v=10" alt="SAM — Centro de Diagnóstico Médico" style="width:230px;max-width:78%;height:auto;margin:0 auto 20px;display:block">
     <p style="margin:-6px 0 20px;color:var(--muted);font-size:13px">Gestión oftalmológica</p>
 
     <button id="login-google" class="btn" onclick="loginGoogle()" style="width:100%;justify-content:center;background:#fff;color:#3c4043;border:1px solid var(--borde-fuerte);box-shadow:none;display:flex;align-items:center;gap:10px;font-weight:600">
@@ -249,7 +250,7 @@
 
 <header class="top">
   <div class="brand">
-    <img src="logo.png?v=9" alt="SAM — Centro de Diagnóstico Médico" style="height:42px;background:#fff;border-radius:9px;padding:5px 10px;display:block">
+    <img src="logo.png?v=10" alt="SAM — Centro de Diagnóstico Médico" style="height:42px;background:#fff;border-radius:9px;padding:5px 10px;display:block">
   </div>
   <div style="display:flex;align-items:center;gap:14px">
     <div id="indicadorGuardado"></div>
@@ -1080,42 +1081,42 @@
   </div>
 </div>
 
-<script src="js/datos.js?v=9"></script>
-<script src="js/auditoria.js?v=9"></script>
-<script src="js/usuarios.js?v=9"></script>
-<script src="js/nomenclador.js?v=9"></script>
-<script src="js/contratos.js?v=9"></script>
-<script src="js/matching.js?v=9"></script>
-<script src="js/pegar-resumen.js?v=9"></script>
-<script src="js/prestaciones.js?v=9"></script>
-<script src="js/honorarios.js?v=9"></script>
-<script src="js/caja.js?v=9"></script>
-<script src="js/liquidaciones.js?v=9"></script>
-<script src="js/derivaciones.js?v=9"></script>
-<script src="js/alarmas.js?v=9"></script>
-<script src="js/estadisticas.js?v=9"></script>
-<script src="js/ui-medicos.js?v=9"></script>
-<script src="js/ui-nomenclador.js?v=9"></script>
-<script src="js/ui-prestaciones.js?v=9"></script>
-<script src="js/ui-obras-sociales.js?v=9"></script>
-<script src="js/ui-sedes.js?v=9"></script>
-<script src="js/ui-consultorios.js?v=9"></script>
-<script src="js/ui-contratos.js?v=9"></script>
-<script src="js/ui-admin.js?v=9"></script>
-<script src="js/ui-honorarios.js?v=9"></script>
-<script src="js/ui-caja.js?v=9"></script>
-<script src="js/ui-liquidaciones.js?v=9"></script>
-<script src="js/ui-derivaciones.js?v=9"></script>
-<script src="js/ui-alarmas.js?v=9"></script>
-<script src="js/ui-estadisticas.js?v=9"></script>
-<script src="js/ui-carga-diaria.js?v=9"></script>
-<script src="js/ui-panel.js?v=9"></script>
-<script src="js/ui-usuarios.js?v=9"></script>
-<script src="js/diagnostico.js?v=9"></script>
-<script src="js/ui-diagnostico.js?v=9"></script>
-<script src="js/ui-dialogos.js?v=9"></script>
-<script src="js/auth.js?v=9"></script>
-<script src="js/persistencia.js?v=9"></script>
+<script src="js/datos.js?v=10"></script>
+<script src="js/auditoria.js?v=10"></script>
+<script src="js/usuarios.js?v=10"></script>
+<script src="js/nomenclador.js?v=10"></script>
+<script src="js/contratos.js?v=10"></script>
+<script src="js/matching.js?v=10"></script>
+<script src="js/pegar-resumen.js?v=10"></script>
+<script src="js/prestaciones.js?v=10"></script>
+<script src="js/honorarios.js?v=10"></script>
+<script src="js/caja.js?v=10"></script>
+<script src="js/liquidaciones.js?v=10"></script>
+<script src="js/derivaciones.js?v=10"></script>
+<script src="js/alarmas.js?v=10"></script>
+<script src="js/estadisticas.js?v=10"></script>
+<script src="js/ui-medicos.js?v=10"></script>
+<script src="js/ui-nomenclador.js?v=10"></script>
+<script src="js/ui-prestaciones.js?v=10"></script>
+<script src="js/ui-obras-sociales.js?v=10"></script>
+<script src="js/ui-sedes.js?v=10"></script>
+<script src="js/ui-consultorios.js?v=10"></script>
+<script src="js/ui-contratos.js?v=10"></script>
+<script src="js/ui-admin.js?v=10"></script>
+<script src="js/ui-honorarios.js?v=10"></script>
+<script src="js/ui-caja.js?v=10"></script>
+<script src="js/ui-liquidaciones.js?v=10"></script>
+<script src="js/ui-derivaciones.js?v=10"></script>
+<script src="js/ui-alarmas.js?v=10"></script>
+<script src="js/ui-estadisticas.js?v=10"></script>
+<script src="js/ui-carga-diaria.js?v=10"></script>
+<script src="js/ui-panel.js?v=10"></script>
+<script src="js/ui-usuarios.js?v=10"></script>
+<script src="js/diagnostico.js?v=10"></script>
+<script src="js/ui-diagnostico.js?v=10"></script>
+<script src="js/ui-dialogos.js?v=10"></script>
+<script src="js/auth.js?v=10"></script>
+<script src="js/persistencia.js?v=10"></script>
 <script>
 // ── Navegación entre secciones ──
 function showSection(id) {
