@@ -302,6 +302,42 @@ function renderDashboard() {
       : '<p class="muted" style="margin:6px 0">Todo en orden. Sin avisos activos.</p>';
   }
 
+  // ── Atenciones por médico del mes (con «Ver preliq» → vista médico) ──
+  const med = document.getElementById('dashMedicos');
+  if (med) {
+    const lista = (typeof honorariosDelMes === 'function' ? honorariosDelMes(mes) : []);
+    const maxTot = lista.reduce((m, h) => Math.max(m, h.total), 0) || 1;
+    med.innerHTML = lista.length
+      ? lista.map(h => {
+          const nombre = (typeof medicoNombre === 'function') ? medicoNombre(h.medicoId) : ('Médico ' + h.medicoId);
+          const unidades = h.detalle.reduce((s, d) => s + (d.cantidad || 1), 0);
+          const falta = h.faltaValor.length ? ' <span class="badge-inactivo" title="Falta valor fijo">falta valor</span>' : '';
+          return `
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:11px">
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:600;margin-bottom:3px">${escHtml(nombre)}${falta}</div>
+                <div class="dist-bar"><div style="width:${Math.round(h.total / maxTot * 100)}%"></div></div>
+                <div class="muted" style="font-size:11px;margin-top:2px">${unidades} prestación(es)</div>
+              </div>
+              <div style="text-align:right">
+                <div class="num" style="font-weight:600">${fm(h.total)}</div>
+                <button class="btn secundario btn-sm" style="margin-top:3px" onclick="verPreliqMedico(${h.medicoId},'${mes}')">Ver preliq</button>
+              </div>
+            </div>`;
+        }).join('')
+      : '<p class="muted" style="margin:6px 0">Sin atenciones cargadas este mes.</p>';
+  }
+
   // ── Agenda semanal (reusa la grilla de Carga diaria) ──
   if (typeof renderHorarios === 'function') renderHorarios('dashAgenda');
+}
+
+// «Ver preliq» del dashboard: salta a Resumen ▸ Vista médico para ese médico/mes.
+function verPreliqMedico(medicoId, mes) {
+  if (typeof irA === 'function') irA('resumen');
+  const mEl = document.getElementById('statMes');
+  if (mEl && mes) mEl.value = mes;
+  if (typeof switchStatView === 'function') switchStatView('medico');  // renderiza la vista médico
+  const sel = document.getElementById('statMedico');
+  if (sel) { sel.value = String(medicoId); if (typeof renderEstadisticas === 'function') renderEstadisticas(); }
 }
