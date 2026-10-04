@@ -14,10 +14,10 @@
     /* Paleta y escala tomadas de OIP (cálida, acento verde esmeralda + azul). */
     --bg: #eceae5; --panel: #f5f3ef; --panel-2: #efedea; --texto: #1a1916; --muted: #6b6860; --muted-2: #9a988f;
     --borde: #dedad2; --borde-fuerte: #cbc6ba;
-    --primario: #1d6a4a; --primario-osc: #15533a; --primario-soft: #e8f4ee;
+    --primario: #22492f; --primario-osc: #143022; --primario-soft: #e3ebdf;
     --acento: #2d5a8e; --acento-soft: #e8eff8;
     --danger: #b34040; --danger-soft: #fdf0f0; --ok: #2d7a4a; --ok-soft: #eef8f2; --warn: #8c6820; --warn-soft: #fdf6e8;
-    --grad: #1a1916;   /* nav oscura estilo OIP (sin degradé) */
+    --grad: linear-gradient(120deg, #0f2419 0%, #1a3d29 52%, #275236 100%);   /* nav verde SAM */
     --radio: 10px; --radio-sm: 6px; --radio-lg: 14px;
     --sombra: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
     --sombra-hover: 0 4px 12px rgba(0,0,0,.09);
@@ -188,6 +188,18 @@
     box-shadow: var(--sombra); transition: box-shadow .16s; }
   .cd-card:hover { box-shadow: var(--sombra-hover); }
   .cd-card h4 { margin-top: 0; font-size: 15px; font-weight: 700; }
+  .panel { background: var(--panel); border: 1px solid var(--borde); border-radius: var(--radio); padding: 18px; box-shadow: var(--sombra); }
+  .btn-sm { padding: 5px 11px; font-size: 12.5px; }
+  /* Dashboard: distribución 60/40 */
+  .dist-split { display: flex; height: 30px; border-radius: var(--radio-sm); overflow: hidden; margin: 10px 0 6px; border: 1px solid var(--borde); }
+  .dist-split > div { display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; }
+  .dist-sam { background: var(--primario); }
+  .dist-ofta { background: var(--acento); }
+  .dist-leg { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--muted); margin-bottom: 16px; }
+  .dist-row { margin-bottom: 9px; }
+  .dist-row-top { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 3px; }
+  .dist-bar { height: 7px; border-radius: 4px; background: var(--panel-2); overflow: hidden; }
+  .dist-bar > div { height: 100%; background: var(--primario); }
   .cd-form { display: flex; flex-direction: column; gap: 9px; }
   .cd-form input, .cd-form select { padding: 9px 11px; border: 1px solid var(--borde-fuerte); border-radius: var(--radio-sm); font-size: 14px; width: 100%; background: #fff; transition: border-color .14s, box-shadow .14s; }
   .cd-form input:focus, .cd-form select:focus { outline: none; border-color: var(--primario); box-shadow: 0 0 0 3px var(--primario-soft); }
@@ -241,7 +253,7 @@
 <!-- ── Pantalla de login (cubre la app hasta que haya un ingreso válido) ── -->
 <div id="login-screen" style="display:flex;position:fixed;inset:0;z-index:100000;background:var(--grad);align-items:center;justify-content:center;padding:20px">
   <div style="background:var(--panel);border-radius:var(--radio-lg);box-shadow:0 20px 60px rgba(0,0,0,.35);padding:34px 30px;width:100%;max-width:380px;text-align:center">
-    <img src="logo.png?v=14" alt="SAM — Centro de Diagnóstico Médico" style="width:230px;max-width:78%;height:auto;margin:0 auto 20px;display:block">
+    <img src="logo.png?v=15" alt="SAM — Centro de Diagnóstico Médico" style="width:230px;max-width:78%;height:auto;margin:0 auto 20px;display:block">
     <p style="margin:-6px 0 20px;color:var(--muted);font-size:13px">Gestión oftalmológica</p>
 
     <button id="login-google" class="btn" onclick="loginGoogle()" style="width:100%;justify-content:center;background:#fff;color:#3c4043;border:1px solid var(--borde-fuerte);box-shadow:none;display:flex;align-items:center;gap:10px;font-weight:600">
@@ -271,10 +283,11 @@
 
 <header class="top">
   <div class="brand">
-    <img src="logo.png?v=14" alt="SAM — Centro de Diagnóstico Médico" style="height:34px;background:#fff;border-radius:7px;padding:4px 8px;display:block">
+    <img src="logo.png?v=15" alt="SAM — Centro de Diagnóstico Médico" style="height:34px;background:#fff;border-radius:7px;padding:4px 8px;display:block">
   </div>
   <nav class="topnav" id="topnav">
-    <button class="topnav-item active" data-dest="carga" onclick="irA('carga')"><span class="nav-icon">📋</span> Carga diaria</button>
+    <button class="topnav-item active" data-dest="dashboard" onclick="irA('dashboard')"><span class="nav-icon">🏠</span> Dashboard</button>
+    <button class="topnav-item" data-dest="carga" onclick="irA('carga')"><span class="nav-icon">📋</span> Carga diaria</button>
     <button class="topnav-item" data-dest="resumen" onclick="irA('resumen')"><span class="nav-icon">📊</span> Resumen</button>
     <button class="topnav-item" data-dest="pagos" onclick="irA('pagos')"><span class="nav-icon">💵</span> Pagos</button>
     <button class="topnav-item" data-dest="finanzas" onclick="irA('finanzas')"><span class="nav-icon">💸</span> Finanzas</button>
@@ -291,6 +304,40 @@
 </header>
 
 <main>
+  <!-- ── DASHBOARD (vista principal del admin: agenda + distribución 60/40) ── -->
+  <section id="section-dashboard" class="section">
+    <div class="section-head">
+      <h2>Dashboard</h2>
+      <span class="muted" id="dashMesLabel"></span>
+    </div>
+
+    <!-- KPIs del mes -->
+    <div class="saldos" id="dashKpis" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr))"></div>
+
+    <!-- Distribución 60/40 + Agenda -->
+    <div class="row2" style="align-items:start;margin-bottom:18px">
+      <div class="panel">
+        <div class="section-head"><h3 style="margin:0">Distribución del mes · SAM 60% / OFTA 40%</h3></div>
+        <div id="dashDistribucion"></div>
+      </div>
+      <div class="panel">
+        <div class="section-head"><h3 style="margin:0">Avisos activos</h3>
+          <button class="btn secundario btn-sm" onclick="irA('avisos')">Ver todos</button>
+        </div>
+        <div id="dashAvisos"></div>
+      </div>
+    </div>
+
+    <!-- Agenda semanal -->
+    <div class="panel">
+      <div class="section-head"><h3 style="margin:0">Agenda de la semana</h3>
+        <button class="btn secundario btn-sm" onclick="irA('config')">Editar agenda</button>
+      </div>
+      <p class="muted" style="margin-top:0">Qué médico atiende cada día, en qué horario y consultorio. Cada color es un médico.</p>
+      <div id="dashAgenda"></div>
+    </div>
+  </section>
+
   <!-- ── CARGA DIARIA (uso de la secretaria) ── -->
   <section id="section-prestaciones" class="section active">
     <div class="section-head"><h2>Carga diaria</h2></div>
@@ -1165,42 +1212,42 @@
   </div>
 </div>
 
-<script src="js/datos.js?v=14"></script>
-<script src="js/auditoria.js?v=14"></script>
-<script src="js/usuarios.js?v=14"></script>
-<script src="js/nomenclador.js?v=14"></script>
-<script src="js/contratos.js?v=14"></script>
-<script src="js/matching.js?v=14"></script>
-<script src="js/pegar-resumen.js?v=14"></script>
-<script src="js/prestaciones.js?v=14"></script>
-<script src="js/honorarios.js?v=14"></script>
-<script src="js/caja.js?v=14"></script>
-<script src="js/liquidaciones.js?v=14"></script>
-<script src="js/derivaciones.js?v=14"></script>
-<script src="js/alarmas.js?v=14"></script>
-<script src="js/estadisticas.js?v=14"></script>
-<script src="js/ui-medicos.js?v=14"></script>
-<script src="js/ui-nomenclador.js?v=14"></script>
-<script src="js/ui-prestaciones.js?v=14"></script>
-<script src="js/ui-obras-sociales.js?v=14"></script>
-<script src="js/ui-sedes.js?v=14"></script>
-<script src="js/ui-consultorios.js?v=14"></script>
-<script src="js/ui-contratos.js?v=14"></script>
-<script src="js/ui-admin.js?v=14"></script>
-<script src="js/ui-honorarios.js?v=14"></script>
-<script src="js/ui-caja.js?v=14"></script>
-<script src="js/ui-liquidaciones.js?v=14"></script>
-<script src="js/ui-derivaciones.js?v=14"></script>
-<script src="js/ui-alarmas.js?v=14"></script>
-<script src="js/ui-estadisticas.js?v=14"></script>
-<script src="js/ui-carga-diaria.js?v=14"></script>
-<script src="js/ui-panel.js?v=14"></script>
-<script src="js/ui-usuarios.js?v=14"></script>
-<script src="js/diagnostico.js?v=14"></script>
-<script src="js/ui-diagnostico.js?v=14"></script>
-<script src="js/ui-dialogos.js?v=14"></script>
-<script src="js/auth.js?v=14"></script>
-<script src="js/persistencia.js?v=14"></script>
+<script src="js/datos.js?v=15"></script>
+<script src="js/auditoria.js?v=15"></script>
+<script src="js/usuarios.js?v=15"></script>
+<script src="js/nomenclador.js?v=15"></script>
+<script src="js/contratos.js?v=15"></script>
+<script src="js/matching.js?v=15"></script>
+<script src="js/pegar-resumen.js?v=15"></script>
+<script src="js/prestaciones.js?v=15"></script>
+<script src="js/honorarios.js?v=15"></script>
+<script src="js/caja.js?v=15"></script>
+<script src="js/liquidaciones.js?v=15"></script>
+<script src="js/derivaciones.js?v=15"></script>
+<script src="js/alarmas.js?v=15"></script>
+<script src="js/estadisticas.js?v=15"></script>
+<script src="js/ui-medicos.js?v=15"></script>
+<script src="js/ui-nomenclador.js?v=15"></script>
+<script src="js/ui-prestaciones.js?v=15"></script>
+<script src="js/ui-obras-sociales.js?v=15"></script>
+<script src="js/ui-sedes.js?v=15"></script>
+<script src="js/ui-consultorios.js?v=15"></script>
+<script src="js/ui-contratos.js?v=15"></script>
+<script src="js/ui-admin.js?v=15"></script>
+<script src="js/ui-honorarios.js?v=15"></script>
+<script src="js/ui-caja.js?v=15"></script>
+<script src="js/ui-liquidaciones.js?v=15"></script>
+<script src="js/ui-derivaciones.js?v=15"></script>
+<script src="js/ui-alarmas.js?v=15"></script>
+<script src="js/ui-estadisticas.js?v=15"></script>
+<script src="js/ui-carga-diaria.js?v=15"></script>
+<script src="js/ui-panel.js?v=15"></script>
+<script src="js/ui-usuarios.js?v=15"></script>
+<script src="js/diagnostico.js?v=15"></script>
+<script src="js/ui-diagnostico.js?v=15"></script>
+<script src="js/ui-dialogos.js?v=15"></script>
+<script src="js/auth.js?v=15"></script>
+<script src="js/persistencia.js?v=15"></script>
 <script>
 // ── Navegación entre secciones ──
 function showSection(id) {
@@ -1211,7 +1258,11 @@ function showSection(id) {
 
 // ── Nav única superior (estilo OIP): "carga" → Carga diaria; el resto → un área de Admin. ──
 function irA(dest) {
-  if (dest === 'carga') {
+  if (dest === 'dashboard') {
+    if (typeof puedeVerSeccion === 'function' && !puedeVerSeccion('section-dashboard')) return;
+    showSection('section-dashboard');
+    if (typeof renderDashboard === 'function') renderDashboard();
+  } else if (dest === 'carga') {
     if (typeof puedeVerSeccion === 'function' && !puedeVerSeccion('section-prestaciones')) return;
     showSection('section-prestaciones');
   } else {
@@ -1287,7 +1338,9 @@ function init() {
   renderUsuariosYAuditoria();
   if (typeof adminArea === 'function') adminArea('resumen');  // prepara el área por defecto
   if (typeof aplicarPermisos === 'function') aplicarPermisos();
-  if (typeof irA === 'function') irA('carga');                // arranca en Carga diaria
+  // Admin arranca en el Dashboard; las secretarías (sin acceso) caen en Carga diaria.
+  const inicio = (typeof puedeVerSeccion === 'function' && puedeVerSeccion('section-dashboard')) ? 'dashboard' : 'carga';
+  if (typeof irA === 'function') irA(inicio);
 }
 
 // ── sincronizarUI(): re-renderiza TODO para que la info viaje entre las partes.

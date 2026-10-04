@@ -148,11 +148,17 @@ function _agendaAclaracionBanner() {
   return `<div class="aviso" style="margin-bottom:14px;white-space:pre-line">📌 ${escHtml(txt)}</div>`;
 }
 
-function renderHorarios() {
-  const cont = document.getElementById('horariosTabla');
+function renderHorarios(contId) {
+  contId = contId || 'horariosTabla';
+  const cont = document.getElementById(contId);
   if (!cont) return;
-  _poblarFiltroConsultorioAgenda();
-  const filtroCons = (document.getElementById('agFiltroConsultorio') || {}).value || '';
+  // El filtro por consultorio vive solo en la vista de Carga diaria. En otros
+  // contenedores (p. ej. el Dashboard) se muestra la agenda completa.
+  let filtroCons = '';
+  if (contId === 'horariosTabla') {
+    _poblarFiltroConsultorioAgenda();
+    filtroCons = (document.getElementById('agFiltroConsultorio') || {}).value || '';
+  }
   const banner = _agendaAclaracionBanner();
 
   let lista = DB.horarios.slice();

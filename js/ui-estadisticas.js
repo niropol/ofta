@@ -215,3 +215,93 @@ function descargarCSVContable(mes) {
     _copiar(csv, 'No se pudo descargar; CSV copiado al portapapeles.');
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  DASHBOARD — vista principal del admin (estilo OIP).
+//  KPIs del mes + distribución 60/40 (SAM retiene 60%, OFTA cobra 40%) +
+//  avisos activos + agenda semanal (la misma grilla que Carga diaria).
+// ─────────────────────────────────────────────────────────────────────────────
+function renderDashboard() {
+  const mes = hoyISO().slice(0, 7);
+  const [anio, mesNum] = mes.split('-');
+  const MESES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  const lbl = document.getElementById('dashMesLabel');
+  if (lbl) lbl.textContent = (MESES[+mesNum] || '') + ' ' + anio;
+
+  const r = resumenMes(mes);
+  const facturado = r.facturadoSAM || 0;
+  const ofta = r.ingresoSAM || 0;             // 40% → lo que OFTA cobra
+  const sam = Math.max(0, facturado - ofta);  // 60% → lo que SAM retiene
+  const pctOfta = facturado > 0 ? Math.round(ofta / facturado * 100) : 0;
+  const pctSam = facturado > 0 ? 100 - pctOfta : 0;
+  const fm = m => (typeof fmtMoneda === 'function' ? fmtMoneda(m) : '$' + Math.round(m || 0).toLocaleString('es-AR'));
+
+  // ── KPIs del mes ──
+  const kpis = document.getElementById('dashKpis');
+  if (kpis) {
+    const card = (titulo, monto, extra, cls) => `
+      <div class="saldo-card ${cls || ''}">
+        <div class="saldo-titulo">${titulo}</div>
+        <div class="saldo-monto">${monto}</div>
+        ${extra ? `<div class="muted" style="font-size:11.5px;margin-top:3px">${extra}</div>` : ''}
+      </div>`;
+    kpis.innerHTML =
+      card('Prestaciones del mes', (r.totalPrestaciones || 0), (r.consultas || 0) + ' consultas') +
+      card('Facturado a SAM', fm(facturado), 'Base del reparto') +
+      card('OFTA cobra (40%)', fm(ofta), 'Ingreso de la clínica', 'total') +
+      card('SAM retiene (60%)', fm(sam), 'Queda en SAM') +
+      card('Honorarios médicos', fm(r.honorariosCalc || 0), 'A liquidar este mes') +
+      card('Margen estimado', fm(r.margenEstimado || 0), 'OFTA 40% − honorarios', (r.margenEstimado || 0) < 0 ? 'alerta' : '');
+  }
+
+  // ── Distribución 60/40 + por obra social ──
+  const dist = document.getElementById('dashDistribucion');
+  if (dist) {
+    let html;
+    if (facturado <= 0) {
+      html = '<p class="vacio">Sin prestaciones facturadas este mes.</p>';
+    } else {
+      html = `
+        <div class="dist-split">
+          <div class="dist-sam" style="width:${pctSam}%">${pctSam >= 12 ? 'SAM ' + pctSam + '%' : ''}</div>
+          <div class="dist-ofta" style="width:${pctOfta}%">${pctOfta >= 12 ? 'OFTA ' + pctOfta + '%' : ''}</div>
+        </div>
+        <div class="dist-leg">
+          <span>SAM retiene <strong>${fm(sam)}</strong></span>
+          <span>OFTA cobra <strong>${fm(ofta)}</strong></span>
+        </div>`;
+      const porOS = (typeof ingresoSAMPorOS === 'function' ? ingresoSAMPorOS(mes) : [])
+        .filter(o => o.facturado > 0).sort((a, b) => b.ingreso - a.ingreso);
+      const maxIng = porOS.reduce((m, o) => Math.max(m, o.ingreso), 0) || 1;
+      if (porOS.length) {
+        html += `<div class="saldo-titulo" style="margin:4px 0 8px">OFTA cobra por obra social</div>`;
+        html += porOS.slice(0, 8).map(o => `
+          <div class="dist-row">
+            <div class="dist-row-top"><span>${escHtml(o.obraSocial)}</span><span class="num">${fm(o.ingreso)}</span></div>
+            <div class="dist-bar"><div style="width:${Math.round(o.ingreso / maxIng * 100)}%"></div></div>
+          </div>`).join('');
+      }
+    }
+    dist.innerHTML = html;
+  }
+
+  // ── Avisos activos (automáticos + recordatorios vencidos) ──
+  const av = document.getElementById('dashAvisos');
+  if (av) {
+    const icon = { urgente: '🔴', importante: '🟡', info: '🔵' };
+    const autos = (typeof avisosAutomaticos === 'function' ? avisosAutomaticos(mes) : []);
+    const manual = (typeof alarmasVencidas === 'function' ? alarmasVencidas() : [])
+      .map(a => ({ tipo: a.tipo || 'info', texto: a.texto || 'Recordatorio' }));
+    const todos = autos.concat(manual);
+    av.innerHTML = todos.length
+      ? todos.map(a => `
+          <div style="display:flex;align-items:flex-start;gap:9px;padding:9px 0;border-bottom:1px solid var(--borde)">
+            <span>${icon[a.tipo] || '🔵'}</span>
+            <div style="font-size:13px">${escHtml(a.texto)}</div>
+          </div>`).join('')
+      : '<p class="muted" style="margin:6px 0">Todo en orden. Sin avisos activos.</p>';
+  }
+
+  // ── Agenda semanal (reusa la grilla de Carga diaria) ──
+  if (typeof renderHorarios === 'function') renderHorarios('dashAgenda');
+}

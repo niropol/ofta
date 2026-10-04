@@ -78,7 +78,7 @@ const EXPONER = [
   'liquidacionesDesactualizadas', 'recalcularLiquidacion', 'renderHistorialPagos',
   // estadísticas
   'resumenMes', 'resumenMedicoMes', 'controlInterno', 'resumenMesTextoWhatsApp', 'csvContable', 'desgloseCategoriasMes',
-  'renderEstadisticas', 'switchStatView',
+  'renderEstadisticas', 'switchStatView', 'renderDashboard',
   // usuarios / permisos / auditoría
   'ROL_LABEL', 'PERMISOS_SECCIONES', 'rolActual', 'puedeVerSeccion', 'setUsuarioActual',
   'guardarUsuarioDatos', 'toggleEstadoUsuario', 'eliminarUsuario', 'listarAuditoria',

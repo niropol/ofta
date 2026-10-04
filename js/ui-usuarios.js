@@ -22,12 +22,16 @@ function cambiarActuandoComo() {
 function aplicarPermisos() {
   // Oculta en la nav superior los ítems que el rol no puede ver (secretaría = solo Carga diaria).
   document.querySelectorAll('#topnav .topnav-item').forEach(b => {
-    const sec = b.dataset.dest === 'carga' ? 'section-prestaciones' : 'section-admin';
+    const sec = b.dataset.dest === 'carga' ? 'section-prestaciones'
+      : b.dataset.dest === 'dashboard' ? 'section-dashboard'
+      : 'section-admin';
     b.hidden = !puedeVerSeccion(sec);
   });
   const activa = document.querySelector('.section.active');
   if (!activa || !puedeVerSeccion(activa.id)) {
-    const dest = puedeVerSeccion('section-prestaciones') ? 'carga' : (puedeVerSeccion('section-admin') ? 'resumen' : null);
+    const dest = puedeVerSeccion('section-dashboard') ? 'dashboard'
+      : puedeVerSeccion('section-prestaciones') ? 'carga'
+      : (puedeVerSeccion('section-admin') ? 'resumen' : null);
     if (dest && typeof irA === 'function') irA(dest);
   }
 }
