@@ -40,25 +40,42 @@ function valorMedicoVigente(categoria, medicoId, fecha, grupo) {
     (v.grupo != null ? Number(v.grupo) : null) === gg &&
     v.estado !== 'Inactivo' &&
     v.vigenciaDesde <= f && (!v.vigenciaHasta || v.vigenciaHasta >= f));
+  const salida = (rec, origen) => ({ valor: rec.valor, origen, modo: rec.modo === 'pct' ? 'pct' : 'fijo' });
   if (g != null) {
     const im = mid != null ? buscar(mid, g) : null;
-    if (im) return { valor: im.valor, origen: 'medico_item' };
+    if (im) return salida(im, 'medico_item');
     const ig = buscar(null, g);
-    if (ig) return { valor: ig.valor, origen: 'item' };
+    if (ig) return salida(ig, 'item');
   }
   const em = mid != null ? buscar(mid, null) : null;
-  if (em) return { valor: em.valor, origen: 'medico' };
+  if (em) return salida(em, 'medico');
   const gen = buscar(null, null);
-  if (gen) return { valor: gen.valor, origen: 'general' };
+  if (gen) return salida(gen, 'general');
   return null;
+}
+
+// ── Monto POR UNIDAD de un valor a médico ──
+//  modo 'fijo' → el valor en pesos tal cual.
+//  modo 'pct'  → ese % del valor de contrato de la prestación (la OS del registro).
+//                Así un médico puede cobrar, p. ej., el 20% de lo que vale la práctica.
+function montoValorMedico(v, reg) {
+  if (!v) return 0;
+  if (v.modo === 'pct') {
+    const vc = (typeof valorContrato === 'function')
+      ? (valorContrato(reg.obraSocial, reg.grupoNomenclador, reg.fecha) || 0) : 0;
+    return vc * (Number(v.valor) || 0) / 100;
+  }
+  return Number(v.valor) || 0;
 }
 
 // Define / cambia un valor fijo. medicoId=null → general; grupo=ítem del
 // nomenclador → valor por esa cirugía puntual. Versiona por (categoría, médico, grupo).
-function setValorMedico(categoria, medicoId, valor, vigenciaDesde, grupo) {
+function setValorMedico(categoria, medicoId, valor, vigenciaDesde, grupo, modo) {
   if (!CATEGORIAS_VALOR_MEDICO.some(c => c.id === categoria)) throw new Error('Categoría de valor inválida.');
+  const md = modo === 'pct' ? 'pct' : 'fijo';
   const val = Number(valor);
   if (isNaN(val) || val < 0) throw new Error('El valor debe ser un número ≥ 0.');
+  if (md === 'pct' && val > 100) throw new Error('El porcentaje no puede ser mayor a 100%.');
   const mid = (medicoId != null && medicoId !== '') ? Number(medicoId) : null;
   const g = (grupo != null && grupo !== '') ? Number(grupo) : null;
   if (g != null) {
@@ -77,7 +94,7 @@ function setValorMedico(categoria, medicoId, valor, vigenciaDesde, grupo) {
   }
   const antes = actual ? JSON.parse(JSON.stringify(actual)) : null;
   if (actual) actual.vigenciaHasta = _diaAnterior(desde);
-  const nuevo = { id: nuevoId(), categoria, medicoId: mid, grupo: g, valor: val, vigenciaDesde: desde, vigenciaHasta: null, estado: 'Activo' };
+  const nuevo = { id: nuevoId(), categoria, medicoId: mid, grupo: g, valor: val, modo: md, vigenciaDesde: desde, vigenciaHasta: null, estado: 'Activo' };
   DB.valoresMedico.push(nuevo);
   registrarAuditoria(actual ? 'edicion' : 'alta', 'valorMedico', nuevo.id, antes, nuevo);
   marcarCambios('valoresMedico');
@@ -86,21 +103,23 @@ function setValorMedico(categoria, medicoId, valor, vigenciaDesde, grupo) {
 
 // Corrige EN EL LUGAR el valor vigente (no versiona) — edición rápida / typo.
 // Si no existe, lo crea con vigencia el 1° del mes actual. Devuelve el registro.
-function setValorMedicoActual(categoria, medicoId, valor, grupo) {
+function setValorMedicoActual(categoria, medicoId, valor, grupo, modo) {
   if (!CATEGORIAS_VALOR_MEDICO.some(c => c.id === categoria)) throw new Error('Categoría de valor inválida.');
+  const md = modo === 'pct' ? 'pct' : 'fijo';
   const val = Number(valor);
   if (isNaN(val) || val < 0) throw new Error('El valor debe ser un número ≥ 0.');
+  if (md === 'pct' && val > 100) throw new Error('El porcentaje no puede ser mayor a 100%.');
   const mid = (medicoId != null && medicoId !== '') ? Number(medicoId) : null;
   const g = (grupo != null && grupo !== '') ? Number(grupo) : null;
   const actual = _valorActual(categoria, mid, g);
   if (actual) {
     const antes = JSON.parse(JSON.stringify(actual));
-    actual.valor = val;
+    actual.valor = val; actual.modo = md;
     registrarAuditoria('edicion', 'valorMedico', actual.id, antes, actual);
     marcarCambios('valoresMedico');
     return actual;
   }
-  return setValorMedico(categoria, mid, val, hoyISO().slice(0, 7) + '-01', g);
+  return setValorMedico(categoria, mid, val, hoyISO().slice(0, 7) + '-01', g, md);
 }
 
 // Define/edita el valor que rige EN UN MES dado (y de ahí en adelante, hasta el
@@ -109,10 +128,12 @@ function setValorMedicoActual(categoria, medicoId, valor, grupo) {
 //   1) ya hay una versión que arranca ese mes → se edita en el lugar.
 //   2) hay una versión que cubre ese mes (empezó antes) → se parte en ese mes.
 //   3) no hay versión que lo cubra (mes anterior a todas / sin versiones) → se crea.
-function setValorMedicoDeMes(categoria, medicoId, valor, mes, grupo) {
+function setValorMedicoDeMes(categoria, medicoId, valor, mes, grupo, modo) {
   if (!CATEGORIAS_VALOR_MEDICO.some(c => c.id === categoria)) throw new Error('Categoría de valor inválida.');
+  const md = modo === 'pct' ? 'pct' : 'fijo';
   const val = Number(valor);
   if (isNaN(val) || val < 0) throw new Error('El valor debe ser un número ≥ 0.');
+  if (md === 'pct' && val > 100) throw new Error('El porcentaje no puede ser mayor a 100%.');
   const mid = (medicoId != null && medicoId !== '') ? Number(medicoId) : null;
   const g = (grupo != null && grupo !== '') ? Number(grupo) : null;
   const desde = (mes || hoyISO().slice(0, 7)) + '-01';
@@ -127,7 +148,7 @@ function setValorMedicoDeMes(categoria, medicoId, valor, mes, grupo) {
   const exacta = vers.find(v => v.vigenciaDesde === desde);
   if (exacta) {
     const antes = JSON.parse(JSON.stringify(exacta));
-    exacta.valor = val; exacta.estado = 'Activo';
+    exacta.valor = val; exacta.modo = md; exacta.estado = 'Activo';
     registrarAuditoria('edicion', 'valorMedico', exacta.id, antes, exacta);
     marcarCambios('valoresMedico');
     return exacta;
@@ -139,7 +160,7 @@ function setValorMedicoDeMes(categoria, medicoId, valor, mes, grupo) {
     const finOriginal = cubre.vigenciaHasta;
     cubre.vigenciaHasta = _diaAnterior(desde);
     registrarAuditoria('edicion', 'valorMedico', cubre.id, antes, cubre);
-    const nuevo = { id: nuevoId(), categoria, medicoId: mid, grupo: g, valor: val, vigenciaDesde: desde, vigenciaHasta: finOriginal, estado: 'Activo' };
+    const nuevo = { id: nuevoId(), categoria, medicoId: mid, grupo: g, valor: val, modo: md, vigenciaDesde: desde, vigenciaHasta: finOriginal, estado: 'Activo' };
     DB.valoresMedico.push(nuevo);
     registrarAuditoria('alta', 'valorMedico', nuevo.id, null, nuevo);
     marcarCambios('valoresMedico');
@@ -148,7 +169,7 @@ function setValorMedicoDeMes(categoria, medicoId, valor, mes, grupo) {
   // 3) No hay versión que cubra ese mes → crear (cerrando en la próxima, si hay).
   const primera = vers[0];
   const hasta = primera ? _diaAnterior(primera.vigenciaDesde) : null;
-  const nuevo = { id: nuevoId(), categoria, medicoId: mid, grupo: g, valor: val, vigenciaDesde: desde, vigenciaHasta: hasta, estado: 'Activo' };
+  const nuevo = { id: nuevoId(), categoria, medicoId: mid, grupo: g, valor: val, modo: md, vigenciaDesde: desde, vigenciaHasta: hasta, estado: 'Activo' };
   DB.valoresMedico.push(nuevo);
   registrarAuditoria('alta', 'valorMedico', nuevo.id, null, nuevo);
   marcarCambios('valoresMedico');
@@ -182,7 +203,7 @@ function honorariosDePrestacion(reg) {
   const cant = Math.max(1, Math.floor(Number(reg.cantidad) || 1));  // consulta/estudio se cargan por cantidad
   const v = valorMedicoVigente(reg.categoria, reg.medicoRealizadorId, reg.fecha, reg.grupoNomenclador);
   const faltaValor = v ? [] : [reg.categoria];
-  const base = v ? v.valor : 0;
+  const base = montoValorMedico(v, reg);
   const extra = Number(reg.extraMedico) || 0;
   // Fijo al médico por cada insumo colocado (lente A → $X, lente B → $B…).
   const insHon = (reg.insumos || []).reduce((s, i) => s + (Number(i.honorarioMedico) || 0), 0);
@@ -193,7 +214,7 @@ function honorariosDePrestacion(reg) {
     // La derivación admite valor por tipo (grupo del nomenclador) con respaldo al general:
     // derivar una catarata puede pagar distinto que derivar un estudio simple.
     const vd = valorMedicoVigente('derivacion', reg.medicoDerivadorId, reg.fecha, reg.grupoNomenclador);
-    derivador = { medicoId: reg.medicoDerivadorId, monto: redondearAbajo(vd ? vd.valor : 0) * cant, faltaValor: vd ? [] : ['derivacion'] };
+    derivador = { medicoId: reg.medicoDerivadorId, monto: redondearAbajo(montoValorMedico(vd, reg)) * cant, faltaValor: vd ? [] : ['derivacion'] };
   }
   return { realizador, derivador };
 }

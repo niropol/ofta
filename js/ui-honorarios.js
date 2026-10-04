@@ -46,9 +46,13 @@ function renderValoresMedico() {
       + `<td class="muted" title="Promedio de los contratos${r.cantidadOS > 1 ? ' de ' + r.cantidadOS + ' OS' : ''}">${fmtMoneda(r.promedio, 'ARS')}<br><span style="font-size:11px">${pct}%: <strong>${fmtMoneda(p40(r.promedio), 'ARS')}</strong></span></td>`;
   };
 
+  // Etiqueta de un valor según su modo: "$12.000" (fijo) o "20%" (porcentaje).
+  const valLabel = v => v == null ? '—' : (v.modo === 'pct' ? (v.valor + '%') : fmtMoneda(v.valor, 'ARS'));
+
   // Fila editable de un valor por categoría (+ grupo opcional = tipo puntual).
   const fila = (label, categoria, grupo) => {
     const gen = valorMedicoVigente(categoria, null, fecha, grupo);
+    let shown = gen;                 // registro que se muestra / edita en esta fila
     let valorInput = gen ? gen.valor : '';
     // "rige desde" de la versión mostrada (para saber qué valor correspondía al mes).
     const vigDesde = vigenciaValorMedico(categoria, mid, fecha, grupo) || vigenciaValorMedico(categoria, null, fecha, grupo);
@@ -57,19 +61,30 @@ function renderValoresMedico() {
     if (mid != null) {
       const propio = valorMedicoVigente(categoria, mid, fecha, grupo);
       const esOverride = propio && /^medico/.test(propio.origen);
+      shown = esOverride ? propio : null;
       valorInput = esOverride ? propio.valor : '';
-      hint = (gen ? `general ${fmtMoneda(gen.valor, 'ARS')} · ` : 'sin general · ') + rige;
+      hint = (gen ? `general ${valLabel(gen)} · ` : 'sin general · ') + rige;
     }
+    const modo = shown ? (shown.modo || 'fijo') : 'fijo';
     const id = 'vm_' + categoria + '_' + (grupo || 'g') + '_' + (mid || 'gen');
-    // Rojo si el pago supera el 40% del contrato MÁS BARATO: pagarías más de lo que SAM te deja.
+    // Rojo si el pago supera lo que SAM te deja: en $ = 40% del contrato más barato; en % = el propio 40%.
     const r = grupo != null ? compMap[grupo] : null;
     const techo = r ? p40(r.menorValor) : null;
     const efectivo = Number((valorInput !== '' && valorInput != null) ? valorInput : (gen ? gen.valor : 0)) || 0;
-    const excede = techo != null && efectivo > techo;
-    const inpStyle = excede ? 'width:120px;border:2px solid var(--danger);background:#fdecec' : 'width:120px';
+    const excede = modo === 'pct' ? (efectivo > pct) : (techo != null && efectivo > techo);
+    const avisoTit = modo === 'pct'
+      ? 'Pagás más del ' + pct + '% (lo que SAM te deja por la prestación)'
+      : (techo != null ? 'Pagás más que el ' + pct + '% del contrato más barato (' + fmtMoneda(techo, 'ARS') + ')' : '');
+    const inpStyle = excede ? 'width:88px;border:2px solid var(--danger);background:#fdecec' : 'width:88px';
     return `<tr>
-      <td>${escHtml(label)}${excede ? ' <span title="Pagás más que el ' + pct + '% del contrato más barato (' + fmtMoneda(techo, 'ARS') + ')" style="color:var(--danger)">⚠</span>' : ''}</td>
-      <td><input type="number" step="0.01" id="${id}" value="${valorInput}" style="${inpStyle}" placeholder="${mid != null ? '(usa el general)' : 'sin definir'}"></td>
+      <td>${escHtml(label)}${excede ? ' <span title="' + avisoTit + '" style="color:var(--danger)">⚠</span>' : ''}</td>
+      <td><div style="display:flex;gap:4px;align-items:center">
+        <input type="number" step="0.01" id="${id}" value="${valorInput}" style="${inpStyle}" placeholder="${mid != null ? '(usa el general)' : 'sin definir'}">
+        <select id="${id}_modo" style="width:48px" title="Monto fijo ($) o porcentaje (%) del valor de la prestación">
+          <option value="fijo"${modo === 'fijo' ? ' selected' : ''}>$</option>
+          <option value="pct"${modo === 'pct' ? ' selected' : ''}>%</option>
+        </select>
+      </div></td>
       ${celdaSug(grupo)}
       <td class="muted">${hint}</td>
       <td class="acc"><button onclick="guardarValorInlineUI('${categoria}',${grupo || 'null'},${mid || 'null'},'${id}')">Guardar</button></td>
@@ -151,8 +166,10 @@ function guardarValorInlineUI(categoria, grupo, medicoId, inputId) {
   const el = document.getElementById(inputId);
   const v = el ? el.value.trim() : '';
   if (v === '') return;  // vacío = sin cambio (para el override vacío usá "quitar" — próxima)
+  const modoEl = document.getElementById(inputId + '_modo');
+  const modo = modoEl ? modoEl.value : 'fijo';
   const mes = (document.getElementById('valMes') || {}).value || hoyISO().slice(0, 7);
-  try { setValorMedicoDeMes(categoria, medicoId || null, v, mes, grupo || null); }
+  try { setValorMedicoDeMes(categoria, medicoId || null, v, mes, grupo || null, modo); }
   catch (e) { avisoUI(e.message); return; }
   if (typeof sincronizarUI === 'function') sincronizarUI(); else renderValoresMedico();
   if (typeof ofrecerRecalcularAfectadas === "function") ofrecerRecalcularAfectadas();
@@ -193,14 +210,23 @@ function abrirNuevoValorMedico() {
     getMedicosActivos().sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es'))
       .map(m => `<option value="${m.id}">${escHtml(m.nombre)}</option>`).join('');
   set('valor_monto', ''); set('valor_vigencia', hoyISO().slice(0, 7) + '-01');
+  const md = document.getElementById('valor_modo'); if (md) md.value = 'fijo';
   onValorCategoriaChange();
+  onValorModoChange();
   _mostrarModalValor(true);
+}
+
+// Al cambiar entre monto fijo y porcentaje: ajusta la etiqueta del campo valor.
+function onValorModoChange() {
+  const modo = (document.getElementById('valor_modo') || {}).value || 'fijo';
+  const lbl = document.getElementById('valor_monto_lbl');
+  if (lbl) lbl.textContent = modo === 'pct' ? 'Porcentaje (%)' : 'Valor fijo ($)';
 }
 
 function guardarValorMedico() {
   const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
   try {
-    setValorMedico(val('valor_categoria'), val('valor_medico') || null, val('valor_monto'), val('valor_vigencia') || (hoyISO().slice(0, 7) + '-01'), val('valor_prestacion') || null);
+    setValorMedico(val('valor_categoria'), val('valor_medico') || null, val('valor_monto'), val('valor_vigencia') || (hoyISO().slice(0, 7) + '-01'), val('valor_prestacion') || null, val('valor_modo') || 'fijo');
   } catch (e) { avisoUI(e.message); return false; }
   cerrarModalValor();
   if (typeof sincronizarUI === 'function') sincronizarUI(); else renderValoresMedico();
