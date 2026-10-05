@@ -19,8 +19,19 @@ function _renderAvisosAutomaticos() {
     <div class="aviso-item aviso-${a.tipo}">
       <span>${_AVISO_ICON[a.tipo] || '•'}</span>
       <span style="flex:1">${escHtml(a.texto)}</span>
-      ${a.area ? `<button class="btn secundario" style="padding:5px 10px;font-size:12px" onclick="adminArea('${a.area}')">Ir</button>` : ''}
+      ${a.area ? `<button class="btn secundario" style="padding:5px 10px;font-size:12px" onclick="irDesdeAviso('${a.area}')">Ir</button>` : ''}
     </div>`).join('');
+}
+
+// Navega al origen de un aviso. Derivaciones vive dentro de Carga diaria; el resto
+// son áreas de Admin (finanzas, config, …) a las que se llega con la nav superior.
+function irDesdeAviso(area) {
+  if (area === 'derivaciones') {
+    if (typeof irA === 'function') irA('carga');
+    if (typeof visTab === 'function') visTab('derivaciones');
+    return;
+  }
+  if (typeof irA === 'function') irA(area);
 }
 
 function _renderAlarmas() {

@@ -11,6 +11,9 @@ function aplicarPermisos() {
       : 'section-admin';
     b.hidden = !puedeVerSeccion(sec);
   });
+  // La campana de avisos abre el panel de Avisos (área Admin): solo para quien ve Admin.
+  const bell = document.getElementById('btnAvisos');
+  if (bell) bell.style.display = puedeVerSeccion('section-admin') ? '' : 'none';
   const activa = document.querySelector('.section.active');
   if (!activa || !puedeVerSeccion(activa.id)) {
     const dest = puedeVerSeccion('section-dashboard') ? 'dashboard'
