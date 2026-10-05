@@ -8,7 +8,6 @@
 let _statView = 'clinica';
 
 function _statMes() { const el = document.getElementById('statMes'); return el ? el.value : ''; }
-function _statCotiz() { const el = document.getElementById('statCotiz'); return el ? (Number(el.value) || null) : null; }
 
 function switchStatView(v) {
   _statView = v;

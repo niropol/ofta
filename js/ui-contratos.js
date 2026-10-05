@@ -193,13 +193,14 @@ function renderContratosTabla() {
     <tr>
       <td>${escHtml((categoriaInfo(f.categoria) || {}).label || f.categoria)}</td>
       <td>${escHtml(f.codigo || '—')}</td>
-      <td>${escHtml(f.descripcion)}</td>
+      <td>${escHtml(f.descripcion)}${v && v.estado === 'Inactivo' ? ' <span class="badge-inactivo">Inactiva</span>' : ''}</td>
       <td>${pill}${forzada}</td>
       <td><input type="number" step="0.01" id="ctr_${f.grupo}" value="${f.valor != null ? f.valor : ''}" style="width:130px" placeholder="sin cargar">${f.vigenciaDesde ? `<br><span class="muted" style="font-size:10px">rige desde ${escHtml(f.vigenciaDesde.slice(0, 7))}</span>` : ''}</td>
       <td class="num">${nosPaga != null ? fmtMoneda(nosPaga, 'ARS') + (iva > 0 ? '<br><span class="muted" style="font-size:10px">c/IVA ' + fmtMoneda(f.valor + iva, 'ARS') + '</span>' : '') : '—'}</td>
       <td class="acc">
         <button onclick="guardarValorContratoUI(${f.grupo})">Guardar</button>
         <button onclick="editarPrestacionUI(${f.grupo})" title="Editar código/descripción">✎</button>
+        <button onclick="inactivarPrestacionUI(${f.grupo})" title="${v && v.estado === 'Inactivo' ? 'Reactivar' : 'Inactivar (dejar de ofrecerla sin borrar su historial)'}">${v && v.estado === 'Inactivo' ? '↺' : '🚫'}</button>
         <button class="danger" onclick="eliminarPrestacionUI(${f.grupo})" title="Eliminar la prestación del catálogo">🗑</button>
       </td>
     </tr>`;
@@ -277,22 +278,6 @@ function _msgImport(text, isError) {
   if (el) el.innerHTML = '<div class="' + (isError ? 'diag-err' : 'diag-ok') + '" style="margin:8px 0">' + escHtml(text) + '</div>';
 }
 
-function aumentarContratosOSUI() {
-  const os = (document.getElementById('ctrOS') || {}).value;
-  const pct = (document.getElementById('ctrAumento') || {}).value;
-  if (!os) { avisoUI('Elegí una obra social.'); return; }
-  if (pct === '' || isNaN(Number(pct))) { avisoUI('Ingresá el porcentaje.'); return; }
-  const mes = (document.getElementById('ctrMes') || {}).value || hoyISO().slice(0, 7);
-  confirmarUI('¿Aumentar un ' + pct + '% todos los contratos de ' + os + '? Rige desde el 1° de ' + mes + '.').then(ok => {
-    if (!ok) return;
-    let r; try { r = aumentarContratosOS(os, pct, mes + '-01'); }
-    catch (e) { avisoUI(e.message); return; }
-    document.getElementById('ctrAumento').value = '';
-    _msgImport('Actualizados ' + r.actualizados + ' contrato(s) de ' + os + ' (+' + pct + '%).', false);
-    if (typeof sincronizarUI === 'function') sincronizarUI(); else { renderContratos(); if (typeof renderPanelMes === 'function') renderPanelMes(); }
-    _avisoCobrosRegistrados(os);
-  });
-}
 
 // CSV simple → objetos (separador coma o punto y coma).
 function _csvAObjetos(text) {

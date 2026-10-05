@@ -16,13 +16,6 @@ function _cdSet(id, v) { const el = document.getElementById(id); if (el) el.valu
 
 // Opciones del nomenclador de una categoría (o varias). En la parte visible solo
 // se muestra la descripción — los valores quedan para la parte restringida.
-function _optsNomencladorCats(cats, fecha, sel) {
-  let items = [];
-  cats.forEach(c => { items = items.concat(listarPrestaciones({ categoria: c, incluirInactivos: false })); });
-  if (items.length === 0) return '<option value="">(cargá el nomenclador primero)</option>';
-  return '<option value="">Elegí…</option>' + items.map(v =>
-    `<option value="${v.grupo}"${v.grupo === sel ? ' selected' : ''}>${escHtml(v.descripcion)}</option>`).join('');
-}
 
 // Opciones del nomenclador FILTRADAS por el contrato de la OS elegida (primero la
 // OS, después la prestación). Solo se ofrecen las que tienen contrato para esa OS.

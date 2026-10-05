@@ -154,14 +154,6 @@ function renderValoresMedico() {
       : 'Valor especial para <strong>' + escHtml(medicoNombre(mid)) + '</strong>. Vacío = usa el general. Los insumos son siempre generales.'}</p>`;
 }
 
-// Aviso si hay liquidaciones cerradas (el cambio no las toca hasta reabrirlas).
-function _avisoLiquidacionesCerradas() {
-  const cerradas = [...new Set(DB.pagosMedicos.filter(p => p.estado === 'cerrada').map(p => p.mes))];
-  if (cerradas.length) {
-    avisoUI('Aviso: hay liquidaciones CERRADAS (' + cerradas.join(', ') + '). El cambio no las modifica. Para aplicarlo a esos meses, reabrilas en Finanzas ▸ Liquidaciones.');
-  }
-}
-
 function guardarValorInlineUI(categoria, grupo, medicoId, inputId) {
   const el = document.getElementById(inputId);
   const v = el ? el.value.trim() : '';
@@ -182,56 +174,6 @@ function guardarHonInsumoInlineUI(grupo) {
   catch (e) { avisoUI(e.message); return; }
   if (typeof sincronizarUI === 'function') sincronizarUI(); else renderValoresMedico();
   if (typeof ofrecerRecalcularAfectadas === "function") ofrecerRecalcularAfectadas();
-}
-
-// Al cambiar la categoría en el modal: repuebla la lista de prestaciones específicas.
-function onValorCategoriaChange() {
-  const cat = document.getElementById('valor_categoria').value;
-  const box = document.getElementById('valor_prestacion_box');
-  const sel = document.getElementById('valor_prestacion');
-  if (!sel || !box) return;
-  const conNomenclador = (categoriaInfo(cat) || {}).nomenclador && cat !== 'derivacion';
-  box.style.display = conNomenclador ? 'block' : 'none';
-  if (!conNomenclador) { sel.innerHTML = ''; return; }
-  const items = listarPrestaciones({ categoria: cat, incluirInactivos: false });
-  sel.innerHTML = '<option value="">— toda la categoría (valor general) —</option>' +
-    items.map(v => `<option value="${v.grupo}">${escHtml(v.descripcion)}</option>`).join('');
-}
-
-function _mostrarModalValor(on) { const m = document.getElementById('modalValor'); if (m) m.style.display = on ? 'flex' : 'none'; }
-function cerrarModalValor() { _mostrarModalValor(false); }
-
-function abrirNuevoValorMedico() {
-  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v == null ? '' : v; };
-  document.getElementById('valor_categoria').innerHTML =
-    CATEGORIAS_VALOR_MEDICO.map(c => `<option value="${c.id}">${escHtml(c.label)}</option>`).join('');
-  document.getElementById('valor_medico').innerHTML =
-    '<option value="">General (todos los médicos)</option>' +
-    getMedicosActivos().sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es'))
-      .map(m => `<option value="${m.id}">${escHtml(m.nombre)}</option>`).join('');
-  set('valor_monto', ''); set('valor_vigencia', hoyISO().slice(0, 7) + '-01');
-  const md = document.getElementById('valor_modo'); if (md) md.value = 'fijo';
-  onValorCategoriaChange();
-  onValorModoChange();
-  _mostrarModalValor(true);
-}
-
-// Al cambiar entre monto fijo y porcentaje: ajusta la etiqueta del campo valor.
-function onValorModoChange() {
-  const modo = (document.getElementById('valor_modo') || {}).value || 'fijo';
-  const lbl = document.getElementById('valor_monto_lbl');
-  if (lbl) lbl.textContent = modo === 'pct' ? 'Porcentaje (%)' : 'Valor fijo ($)';
-}
-
-function guardarValorMedico() {
-  const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
-  try {
-    setValorMedico(val('valor_categoria'), val('valor_medico') || null, val('valor_monto'), val('valor_vigencia') || (hoyISO().slice(0, 7) + '-01'), val('valor_prestacion') || null, val('valor_modo') || 'fijo');
-  } catch (e) { avisoUI(e.message); return false; }
-  cerrarModalValor();
-  if (typeof sincronizarUI === 'function') sincronizarUI(); else renderValoresMedico();
-  if (typeof ofrecerRecalcularAfectadas === 'function') ofrecerRecalcularAfectadas();
-  return true;
 }
 
 // ── Vista previa de pagos del mes ──

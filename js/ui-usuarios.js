@@ -2,22 +2,6 @@
 //  SAM — UI de USUARIOS / PERMISOS / AUDITORÍA (Etapa 8)
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ── "Actuando como" (simula la sesión hasta la Etapa 10) ──
-function poblarActuandoComo() {
-  const sel = document.getElementById('actuandoComo');
-  if (!sel) return;
-  const activos = DB.usuarios.filter(u => u.estado !== 'Inactivo');
-  const actual = usuarioActual();
-  sel.innerHTML = activos.map(u => `<option value="${u.id}"${u.id === actual.id ? ' selected' : ''}>${escHtml(u.nombre)} · ${escHtml(ROL_LABEL[u.rol] || u.rol)}</option>`).join('');
-}
-
-function cambiarActuandoComo() {
-  const sel = document.getElementById('actuandoComo');
-  if (!sel) return;
-  setUsuarioActual(sel.value);
-  aplicarPermisos();
-}
-
 // ── Permisos: oculta las secciones no permitidas y redirige si hace falta ──
 function aplicarPermisos() {
   // Oculta en la nav superior los ítems que el rol no puede ver (secretaría = solo Carga diaria).
@@ -92,13 +76,13 @@ function guardarUsuario() {
     guardarUsuarioDatos({ nombre: val('usr_nombre'), email: val('usr_email'), rol: val('usr_rol'), estado: val('usr_estado') }, idEdit);
   } catch (e) { avisoUI(e.message); return false; }
   cerrarModalUsuario();
-  renderUsuarios(); poblarActuandoComo();
+  renderUsuarios();
   return true;
 }
 
 function toggleEstadoUsuarioUI(id) {
   try { toggleEstadoUsuario(id); } catch (e) { avisoUI(e.message); return; }
-  renderUsuarios(); poblarActuandoComo(); aplicarPermisos();
+  renderUsuarios(); aplicarPermisos();
 }
 
 function eliminarUsuarioUI(id) {
@@ -106,7 +90,7 @@ function eliminarUsuarioUI(id) {
     if (!ok) return;
     const r = eliminarUsuario(id);
     if (!r.ok) { avisoUI('No se puede eliminar: ' + (r.motivo || '')); return; }
-    renderUsuarios(); poblarActuandoComo();
+    renderUsuarios();
   });
 }
 
@@ -185,7 +169,6 @@ function vaciarAuditoriaUI() {
 }
 
 function renderUsuariosYAuditoria() {
-  poblarActuandoComo();
   renderUsuarios();
   renderAuditoria();
   aplicarPermisos();

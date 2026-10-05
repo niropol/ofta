@@ -22,11 +22,6 @@ function puedeVerSeccion(secId) {
   const perms = PERMISOS_SECCIONES[rolActual()] || [];
   return perms.includes('*') || perms.includes(secId);
 }
-function primeraSeccionPermitida() {
-  if (puedeVerSeccion('section-prestaciones')) return 'section-prestaciones';
-  if (puedeVerSeccion('section-admin')) return 'section-admin';
-  return null;
-}
 
 function setUsuarioActual(id) {
   DB.config.usuarioActualId = (id != null && id !== '') ? Number(id) : null;
