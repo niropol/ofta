@@ -72,13 +72,13 @@ function renderCargaDiaria() {
   setHTML('cd_est_os', _optsOS(estOs));
   setHTML('cd_est_tipo', _optsNomencladorCatsOS(['realizacion_estudio', 'practica'], estOs, fecha, prev.estTipo ? Number(prev.estTipo) : null));
 
-  const lbl = document.getElementById('cd_fecha_lbl');
-  if (lbl) lbl.textContent = fecha || '—';
+  ['cd_fecha_lbl', 'cd_fecha_lbl2', 'cd_modal_fecha'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = fecha || '—'; });
 
   // Tabla del día: una fila por registro (las consultas/estudios ya vienen agrupados por cantidad).
   const filas = DB.prestacionesRealizadas.filter(r => r.fecha === fecha).sort((a, b) => b.id - a.id);
   if (filas.length === 0) {
     cont.innerHTML = '<p class="vacio">Todavía no cargaste nada para este día.</p>';
+    _cdEspejarTabla();
     return;
   }
   const rows = filas.map(r => {
@@ -115,6 +115,27 @@ function renderCargaDiaria() {
       <tbody>${rows}</tbody>
     </table>
     <p class="muted" style="margin-top:8px">${filas.length} línea(s) el ${escHtml(fecha)}.</p>`;
+  _cdEspejarTabla();
+}
+
+// La tabla «Cargado el día» se ve en la vista Día y también dentro del modal de carga.
+function _cdEspejarTabla() {
+  const src = document.getElementById('cd_tabla');
+  const dst = document.getElementById('cd_tabla_modal');
+  if (src && dst) dst.innerHTML = src.innerHTML;
+}
+
+// ── Modal «Cargar día de atención» (estilo OIP) ──
+function abrirCargaDia() {
+  if (!_cdGet('cd_fecha')) _cdSet('cd_fecha', hoyISO());
+  renderCargaDiaria();   // repuebla selects (médico/sede/OS/tipo) y la tabla espejada
+  const m = document.getElementById('modalCargaDia');
+  if (m) m.style.display = 'flex';
+}
+function cerrarCargaDia() {
+  const m = document.getElementById('modalCargaDia');
+  if (m) m.style.display = 'none';
+  renderCargaDiaria();
 }
 
 // Día + médico + sede/consultorio comunes.
