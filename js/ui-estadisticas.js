@@ -188,16 +188,40 @@ function copiarResumenMedicoWhatsApp(medicoId, mes) {
   _copiar(_textoResumenMedicoControl(medicoId, mes), 'Resumen — ' + medicoNombre(Number(medicoId)));
 }
 
-// Abre Gmail (compose) con el resumen ya cargado para enviarlo al médico.
-// Usa la cuenta de Gmail con la que esté logueado el navegador (la predeterminada de la clínica).
-function enviarResumenMedicoMail(medicoId, mes) {
+// Envía el resumen al médico. Primero intenta el envío AUTOMÁTICO por el backend
+// (Edge Function «enviar-mail» → SMTP del Gmail de la clínica). Si el backend no
+// está configurado o falla, abre el compose de Gmail para enviarlo a mano.
+async function enviarResumenMedicoMail(medicoId, mes) {
   const med = DB.medicos.find(m => m.id === Number(medicoId));
   if (!med) return;
   if (!med.email) { avisoUI('Este médico no tiene email cargado. Agregalo en Configuración ▸ Médicos/Consul (Editar médico).'); return; }
   const asunto = `Resumen de atenciones ${mes} — ${med.nombre}`;
   const cuerpo = _textoResumenMedicoControl(medicoId, mes);
+
+  // Envío automático por backend (si hay sesión de Supabase).
+  if (typeof sb !== 'undefined' && sb && sb.functions) {
+    const ok = (typeof confirmarUI === 'function')
+      ? await confirmarUI(`¿Enviar por mail a ${med.nombre} (${med.email}) el resumen de ${mes}?`)
+      : true;
+    if (!ok) return;
+    try {
+      const { data, error } = await sb.functions.invoke('enviar-mail', { body: { to: med.email, subject: asunto, text: cuerpo } });
+      if (error) throw new Error((error && error.message) || 'Error del servidor');
+      if (data && data.ok) { avisoUI('✅ Mail enviado a ' + med.email + '.'); return; }
+      throw new Error((data && data.error) || 'Respuesta inesperada del servidor.');
+    } catch (e) {
+      avisoUI('No se pudo enviar automáticamente (' + (e.message || e) + '). Abro Gmail para enviarlo a mano.');
+      _abrirGmailCompose(med.email, asunto, cuerpo);
+    }
+    return;
+  }
+  // Sin backend: compose de Gmail prellenado.
+  _abrirGmailCompose(med.email, asunto, cuerpo);
+}
+
+function _abrirGmailCompose(to, asunto, cuerpo) {
   const url = 'https://mail.google.com/mail/?view=cm&fs=1'
-    + '&to=' + encodeURIComponent(med.email)
+    + '&to=' + encodeURIComponent(to)
     + '&su=' + encodeURIComponent(asunto)
     + '&body=' + encodeURIComponent(cuerpo);
   try {
@@ -205,7 +229,7 @@ function enviarResumenMedicoMail(medicoId, mes) {
     a.href = url; a.target = '_blank'; a.rel = 'noopener';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
   } catch (e) {
-    if (typeof copiarTextoUI === 'function') copiarTextoUI('Enviar por mail a ' + med.email, cuerpo);
+    if (typeof copiarTextoUI === 'function') copiarTextoUI('Enviar por mail a ' + to, cuerpo);
   }
 }
 
