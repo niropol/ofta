@@ -109,10 +109,10 @@ function renderVistaMedico(cont, mes) {
   // Cuadritos de médicos (clic para elegir), con la cantidad de prestaciones del mes.
   const cards = meds.map(m => {
     const rc = resumenMedicoControl(m.id, mes);
-    return `<button class="med-card${m.id === cur ? ' sel' : ''}" onclick="seleccionarMedicoStat(${m.id})">
-      <span class="med-card-dot" style="background:${m.color || 'var(--primario)'}"></span>
-      <span class="med-card-nombre">${escHtml(m.nombre)}</span>
-      <span class="med-card-cant">${rc.total} prest.</span>
+    return `<button class="medpick${m.id === cur ? ' sel' : ''}" onclick="seleccionarMedicoStat(${m.id})">
+      <span class="medpick-dot" style="background:${m.color || 'var(--primario)'}"></span>
+      <span class="medpick-nombre">${escHtml(m.nombre)}</span>
+      <span class="medpick-cant">${rc.total} prest.</span>
     </button>`;
   }).join('');
 
@@ -133,7 +133,7 @@ function renderVistaMedico(cont, mes) {
 
   const med = DB.medicos.find(m => m.id === cur) || {};
   cont.innerHTML = `
-    <div class="med-cards">${cards}</div>
+    <div class="medpick-cards">${cards}</div>
     <div class="section-head" style="margin-top:16px"><h3 style="margin:0">${escHtml(med.nombre)}</h3>
       <span class="muted">Total: ${r.total} prestación(es) · ${escHtml(mes)}</span></div>
     <p class="muted" style="margin-top:0">Resumen de lo atendido para enviarle al médico (solo control, sin valores).</p>
