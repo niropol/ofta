@@ -262,7 +262,7 @@
 <!-- ── Pantalla de login (cubre la app hasta que haya un ingreso válido) ── -->
 <div id="login-screen" style="display:flex;position:fixed;inset:0;z-index:100000;background:var(--grad);align-items:center;justify-content:center;padding:20px">
   <div style="background:var(--panel);border-radius:var(--radio-lg);box-shadow:0 20px 60px rgba(0,0,0,.35);padding:34px 30px;width:100%;max-width:380px;text-align:center">
-    <img src="logo.png?v=22" alt="SAM — Centro de Diagnóstico Médico" style="width:230px;max-width:78%;height:auto;margin:0 auto 20px;display:block">
+    <img src="logo.png?v=23" alt="SAM — Centro de Diagnóstico Médico" style="width:230px;max-width:78%;height:auto;margin:0 auto 20px;display:block">
     <p style="margin:-6px 0 20px;color:var(--muted);font-size:13px">Gestión oftalmológica</p>
 
     <button id="login-google" class="btn" onclick="loginGoogle()" style="width:100%;justify-content:center;background:#fff;color:#3c4043;border:1px solid var(--borde-fuerte);box-shadow:none;display:flex;align-items:center;gap:10px;font-weight:600">
@@ -292,12 +292,11 @@
 
 <header class="top">
   <div class="brand">
-    <img src="logo.png?v=22" alt="SAM — Centro de Diagnóstico Médico" style="height:34px;background:#fff;border-radius:7px;padding:4px 8px;display:block">
+    <img src="logo.png?v=23" alt="SAM — Centro de Diagnóstico Médico" style="height:34px;background:#fff;border-radius:7px;padding:4px 8px;display:block">
   </div>
   <nav class="topnav" id="topnav">
     <button class="topnav-item active" data-dest="dashboard" onclick="irA('dashboard')"><span class="nav-icon">🏠</span> Dashboard</button>
     <button class="topnav-item" data-dest="carga" onclick="irA('carga')"><span class="nav-icon">📋</span> Carga diaria</button>
-    <button class="topnav-item" data-dest="resumen" onclick="irA('resumen')"><span class="nav-icon">📊</span> Resumen</button>
     <button class="topnav-item" data-dest="pagos" onclick="irA('pagos')"><span class="nav-icon">💵</span> Pagos</button>
     <button class="topnav-item" data-dest="finanzas" onclick="irA('finanzas')"><span class="nav-icon">💸</span> Finanzas</button>
     <button class="topnav-item" data-dest="config" onclick="irA('config')"><span class="nav-icon">⚙️</span> Configuración</button>
@@ -318,39 +317,59 @@
       <h2>Dashboard</h2>
       <span class="muted" id="dashMesLabel"></span>
     </div>
+    <div class="subtabs" id="dashTabs">
+      <button class="active" data-d="panel" onclick="dashTab('panel')">Dashboard</button>
+      <button data-d="estad" onclick="dashTab('estad')">Estadísticas</button>
+    </div>
 
-    <!-- KPIs del mes -->
-    <div class="saldos" id="dashKpis" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr))"></div>
+    <!-- Panel principal del Dashboard -->
+    <div class="dashpanel" data-d="panel">
+      <!-- KPIs del mes -->
+      <div class="saldos" id="dashKpis" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr))"></div>
 
-    <!-- Distribución 60/40 + Atenciones por médico -->
-    <div class="row2" style="align-items:start;margin-bottom:18px">
-      <div class="panel">
-        <div class="section-head"><h3 style="margin:0">Distribución del mes · SAM 60% / OFTA 40%</h3></div>
-        <div id="dashDistribucion"></div>
-      </div>
-      <div class="panel">
-        <div class="section-head"><h3 style="margin:0">Atenciones por médico (mes)</h3>
-          <button class="btn secundario btn-sm" onclick="irA('pagos')">Ir a Pagos</button>
+      <!-- Distribución 60/40 + Atenciones por médico -->
+      <div class="row2" style="align-items:start;margin-bottom:18px">
+        <div class="panel">
+          <div class="section-head"><h3 style="margin:0">Distribución del mes · SAM 60% / OFTA 40%</h3></div>
+          <div id="dashDistribucion"></div>
         </div>
-        <div id="dashMedicos"></div>
+        <div class="panel">
+          <div class="section-head"><h3 style="margin:0">Atenciones por médico (mes)</h3>
+            <button class="btn secundario btn-sm" onclick="irA('pagos')">Ir a Pagos</button>
+          </div>
+          <div id="dashMedicos"></div>
+        </div>
+      </div>
+
+      <!-- Avisos activos -->
+      <div class="panel" style="margin-bottom:18px">
+        <div class="section-head"><h3 style="margin:0">Avisos activos</h3>
+          <button class="btn secundario btn-sm" onclick="irA('avisos')">Ver todos</button>
+        </div>
+        <div id="dashAvisos"></div>
+      </div>
+
+      <!-- Agenda semanal -->
+      <div class="panel">
+        <div class="section-head"><h3 style="margin:0">Agenda de la semana</h3>
+          <button class="btn secundario btn-sm" onclick="irA('config')">Editar agenda</button>
+        </div>
+        <p class="muted" style="margin-top:0">Qué médico atiende cada día, en qué horario y consultorio. Cada color es un médico.</p>
+        <div id="dashAgenda"></div>
       </div>
     </div>
 
-    <!-- Avisos activos -->
-    <div class="panel" style="margin-bottom:18px">
-      <div class="section-head"><h3 style="margin:0">Avisos activos</h3>
-        <button class="btn secundario btn-sm" onclick="irA('avisos')">Ver todos</button>
+    <!-- Estadísticas (antes «Resumen») -->
+    <div class="dashpanel" data-d="estad" hidden>
+      <div class="filtros">
+        <label class="muted">Mes <input type="month" id="statMes" onchange="renderEstadisticas()"></label>
       </div>
-      <div id="dashAvisos"></div>
-    </div>
-
-    <!-- Agenda semanal -->
-    <div class="panel">
-      <div class="section-head"><h3 style="margin:0">Agenda de la semana</h3>
-        <button class="btn secundario btn-sm" onclick="irA('config')">Editar agenda</button>
+      <div class="subtabs" id="statTabs">
+        <button class="active" data-v="clinica" onclick="switchStatView('clinica')">Clínica</button>
+        <button data-v="medico" onclick="switchStatView('medico')">Médico</button>
+        <button data-v="control" onclick="switchStatView('control')">Control interno</button>
       </div>
-      <p class="muted" style="margin-top:0">Qué médico atiende cada día, en qué horario y consultorio. Cada color es un médico.</p>
-      <div id="dashAgenda"></div>
+      <div id="statContenido"></div>
     </div>
   </section>
 
@@ -442,6 +461,16 @@
       <div class="section-head"><h3 style="margin:0">Médicos</h3>
         <button class="btn" onclick="abrirNuevoMedico()">+ Nuevo médico</button></div>
       <div id="medicosGrid" class="grid"></div>
+
+      <div class="section-head" style="margin-top:28px"><h3 style="margin:0">Sedes</h3>
+        <button class="btn" onclick="abrirNuevaSede()">+ Nueva sede</button></div>
+      <p class="muted" style="margin-top:0">Hoy hay una sola sede. Podés agregar más y elegir cuál es la activa por defecto.</p>
+      <div class="tabla-wrap"><div id="sedesTabla"></div></div>
+
+      <div class="section-head" style="margin-top:28px"><h3 style="margin:0">Consultorios</h3>
+        <button class="btn" onclick="abrirNuevoConsultorio()">+ Nuevo consultorio</button></div>
+      <p class="muted" style="margin-top:0">Cada consultorio pertenece a una sede. En cada prestación se elige el consultorio.</p>
+      <div class="tabla-wrap"><div id="consultoriosTabla"></div></div>
     </div>
 
     <div class="adminpanel" data-p="nomcon" hidden>
@@ -449,7 +478,6 @@
       <div class="subtabs" id="nomconTabs">
         <button class="active" data-p="prest" onclick="nomconTab('prest')">Prestaciones</button>
         <button data-p="contr" onclick="nomconTab('contr')">Contratos OS</button>
-        <button data-p="menor" onclick="nomconTab('menor')">Prestaciones de menor valor</button>
         <button data-p="os" onclick="nomconTab('os')">Obras sociales</button>
       </div>
 
@@ -470,21 +498,6 @@
         <div class="tabla-wrap"><div id="osTabla"></div></div>
       </div>
 
-      <div class="nomconpanel" data-p="menor" hidden>
-        <div class="section-head"><h4 style="margin:0">Prestaciones de menor valor</h4></div>
-        <p class="muted" style="margin-top:0">Para cada prestación, la obra social que la paga <strong>más barata</strong> (y comparada con la más cara). Se recalcula sola cada vez que cargás o editás un contrato.</p>
-        <div class="filtros">
-          <label class="muted">Categoría <select id="mvCat" onchange="renderMenorValor()">
-            <option value="">Todas</option>
-            <option value="consulta">Consultas</option>
-            <option value="realizacion_estudio">Estudios</option>
-            <option value="practica">Prácticas</option>
-            <option value="cirugia">Cirugías</option>
-          </select></label>
-          <input type="search" id="mvBuscar" placeholder="Buscar prestación…" oninput="renderMenorValor()" style="min-width:180px">
-        </div>
-        <div class="tabla-wrap"><div id="menorValorTabla"></div></div>
-      </div>
 
       <div class="nomconpanel" data-p="contr">
         <div class="section-head"><h4 style="margin:0">Contratos por obra social</h4>
@@ -544,17 +557,6 @@
 
     </div>
 
-    <div class="adminpanel" data-p="sedes" hidden>
-      <div class="section-head"><h3 style="margin:0">Sedes</h3>
-        <button class="btn" onclick="abrirNuevaSede()">+ Nueva sede</button></div>
-      <p class="muted" style="margin-top:0">Hoy hay una sola sede. Podés agregar más y elegir cuál es la activa por defecto.</p>
-      <div class="tabla-wrap"><div id="sedesTabla"></div></div>
-
-      <div class="section-head" style="margin-top:26px"><h3 style="margin:0">Consultorios</h3>
-        <button class="btn" onclick="abrirNuevoConsultorio()">+ Nuevo consultorio</button></div>
-      <p class="muted" style="margin-top:0">Cada consultorio pertenece a una sede. En cada prestación se elige el consultorio.</p>
-      <div class="tabla-wrap"><div id="consultoriosTabla"></div></div>
-    </div>
 
     <div class="adminpanel" data-p="agenda" hidden>
       <div class="section-head"><h3 style="margin:0">Agenda de médicos</h3>
@@ -568,18 +570,6 @@
       <div style="margin-top:8px"><button class="btn" onclick="guardarAgendaAclaracion()">Guardar aclaración</button></div>
     </div>
 
-    <div class="adminpanel" data-p="estadisticas" hidden>
-      <div class="section-head"><h3 style="margin:0">Estadísticas</h3></div>
-      <div class="filtros">
-        <label class="muted">Mes <input type="month" id="statMes" onchange="renderEstadisticas()"></label>
-      </div>
-      <div class="subtabs" id="statTabs">
-        <button class="active" data-v="clinica" onclick="switchStatView('clinica')">Clínica</button>
-        <button data-v="medico" onclick="switchStatView('medico')">Médico</button>
-        <button data-v="control" onclick="switchStatView('control')">Control interno</button>
-      </div>
-      <div id="statContenido"></div>
-    </div>
 
     <div class="adminpanel" data-p="caja" hidden>
     <div class="section-head">
@@ -647,6 +637,22 @@
       </div>
       <div class="tabla-wrap"><div id="previewHonorarios"></div></div>
     </div><!-- /panel valores a médicos -->
+
+    <div class="adminpanel" data-p="menor" hidden>
+      <div class="section-head"><h3 style="margin:0">Prestaciones de menor valor</h3></div>
+      <p class="muted" style="margin-top:0">Para cada prestación, la obra social que la paga <strong>más barata</strong> (y comparada con la más cara). Sirve de referencia para fijar los valores a médicos. Se recalcula sola cada vez que cargás o editás un contrato.</p>
+      <div class="filtros">
+        <label class="muted">Categoría <select id="mvCat" onchange="renderMenorValor()">
+          <option value="">Todas</option>
+          <option value="consulta">Consultas</option>
+          <option value="realizacion_estudio">Estudios</option>
+          <option value="practica">Prácticas</option>
+          <option value="cirugia">Cirugías</option>
+        </select></label>
+        <input type="search" id="mvBuscar" placeholder="Buscar prestación…" oninput="renderMenorValor()" style="min-width:180px">
+      </div>
+      <div class="tabla-wrap"><div id="menorValorTabla"></div></div>
+    </div><!-- /panel prestaciones de menor valor -->
 
     <div class="adminpanel" data-p="avisos" hidden>
       <div class="section-head"><h3 style="margin:0">Avisos y recordatorios</h3></div>
@@ -1195,42 +1201,42 @@
   </div>
 </div>
 
-<script src="js/datos.js?v=22"></script>
-<script src="js/auditoria.js?v=22"></script>
-<script src="js/usuarios.js?v=22"></script>
-<script src="js/nomenclador.js?v=22"></script>
-<script src="js/contratos.js?v=22"></script>
-<script src="js/matching.js?v=22"></script>
-<script src="js/pegar-resumen.js?v=22"></script>
-<script src="js/prestaciones.js?v=22"></script>
-<script src="js/honorarios.js?v=22"></script>
-<script src="js/caja.js?v=22"></script>
-<script src="js/liquidaciones.js?v=22"></script>
-<script src="js/derivaciones.js?v=22"></script>
-<script src="js/alarmas.js?v=22"></script>
-<script src="js/estadisticas.js?v=22"></script>
-<script src="js/ui-medicos.js?v=22"></script>
-<script src="js/ui-nomenclador.js?v=22"></script>
-<script src="js/ui-prestaciones.js?v=22"></script>
-<script src="js/ui-obras-sociales.js?v=22"></script>
-<script src="js/ui-sedes.js?v=22"></script>
-<script src="js/ui-consultorios.js?v=22"></script>
-<script src="js/ui-contratos.js?v=22"></script>
-<script src="js/ui-admin.js?v=22"></script>
-<script src="js/ui-honorarios.js?v=22"></script>
-<script src="js/ui-caja.js?v=22"></script>
-<script src="js/ui-liquidaciones.js?v=22"></script>
-<script src="js/ui-derivaciones.js?v=22"></script>
-<script src="js/ui-alarmas.js?v=22"></script>
-<script src="js/ui-estadisticas.js?v=22"></script>
-<script src="js/ui-carga-diaria.js?v=22"></script>
-<script src="js/ui-panel.js?v=22"></script>
-<script src="js/ui-usuarios.js?v=22"></script>
-<script src="js/diagnostico.js?v=22"></script>
-<script src="js/ui-diagnostico.js?v=22"></script>
-<script src="js/ui-dialogos.js?v=22"></script>
-<script src="js/auth.js?v=22"></script>
-<script src="js/persistencia.js?v=22"></script>
+<script src="js/datos.js?v=23"></script>
+<script src="js/auditoria.js?v=23"></script>
+<script src="js/usuarios.js?v=23"></script>
+<script src="js/nomenclador.js?v=23"></script>
+<script src="js/contratos.js?v=23"></script>
+<script src="js/matching.js?v=23"></script>
+<script src="js/pegar-resumen.js?v=23"></script>
+<script src="js/prestaciones.js?v=23"></script>
+<script src="js/honorarios.js?v=23"></script>
+<script src="js/caja.js?v=23"></script>
+<script src="js/liquidaciones.js?v=23"></script>
+<script src="js/derivaciones.js?v=23"></script>
+<script src="js/alarmas.js?v=23"></script>
+<script src="js/estadisticas.js?v=23"></script>
+<script src="js/ui-medicos.js?v=23"></script>
+<script src="js/ui-nomenclador.js?v=23"></script>
+<script src="js/ui-prestaciones.js?v=23"></script>
+<script src="js/ui-obras-sociales.js?v=23"></script>
+<script src="js/ui-sedes.js?v=23"></script>
+<script src="js/ui-consultorios.js?v=23"></script>
+<script src="js/ui-contratos.js?v=23"></script>
+<script src="js/ui-admin.js?v=23"></script>
+<script src="js/ui-honorarios.js?v=23"></script>
+<script src="js/ui-caja.js?v=23"></script>
+<script src="js/ui-liquidaciones.js?v=23"></script>
+<script src="js/ui-derivaciones.js?v=23"></script>
+<script src="js/ui-alarmas.js?v=23"></script>
+<script src="js/ui-estadisticas.js?v=23"></script>
+<script src="js/ui-carga-diaria.js?v=23"></script>
+<script src="js/ui-panel.js?v=23"></script>
+<script src="js/ui-usuarios.js?v=23"></script>
+<script src="js/diagnostico.js?v=23"></script>
+<script src="js/ui-diagnostico.js?v=23"></script>
+<script src="js/ui-dialogos.js?v=23"></script>
+<script src="js/auth.js?v=23"></script>
+<script src="js/persistencia.js?v=23"></script>
 <script>
 // ── Navegación entre secciones ──
 function showSection(id) {
@@ -1244,7 +1250,7 @@ function irA(dest) {
   if (dest === 'dashboard') {
     if (typeof puedeVerSeccion === 'function' && !puedeVerSeccion('section-dashboard')) return;
     showSection('section-dashboard');
-    if (typeof renderDashboard === 'function') renderDashboard();
+    if (typeof dashTab === 'function') dashTab('panel');
   } else if (dest === 'carga') {
     if (typeof puedeVerSeccion === 'function' && !puedeVerSeccion('section-prestaciones')) return;
     showSection('section-prestaciones');
@@ -1260,12 +1266,19 @@ function irA(dest) {
 // Admin en 2 niveles: áreas (Resumen / Finanzas / Configuración / Seguridad) →
 // cada una con sus sub-pestañas (paneles).
 const ADMIN_AREAS = {
-  resumen:   { tabs: [['estadisticas', 'Resumen del mes']] },
   finanzas:  { tabs: [['cobros', 'Cobros de SAM'], ['caja', 'Caja']] },
-  pagos:     { tabs: [['liquidaciones', 'Liquidaciones del mes'], ['histpagos', 'Historial de pagos'], ['valores', 'Valores a médicos']] },
+  pagos:     { tabs: [['liquidaciones', 'Liquidaciones del mes'], ['histpagos', 'Historial de pagos'], ['valores', 'Valores a médicos'], ['menor', 'Prestaciones de menor valor']] },
   avisos:    { tabs: [['avisos', 'Avisos']] },
-  config:    { tabs: [['nomcon', 'Nomenclador y contratos'], ['honorarios', 'Insumos'], ['medicos', 'Médicos'], ['sedes', 'Sedes y consultorios'], ['agenda', 'Agenda'], ['seguridad', 'Usuarios y seguridad']] },
+  config:    { tabs: [['nomcon', 'Nomenclador y contratos'], ['honorarios', 'Insumos'], ['medicos', 'Médicos/Consul'], ['agenda', 'Agenda'], ['seguridad', 'Usuarios y seguridad']] },
 };
+
+// Sub-pestañas del Dashboard: panel principal / Estadísticas (antes «Resumen»).
+function dashTab(p) {
+  document.querySelectorAll('#section-dashboard .dashpanel').forEach(el => { el.hidden = el.dataset.d !== p; });
+  document.querySelectorAll('#dashTabs button').forEach(b => b.classList.toggle('active', b.dataset.d === p));
+  if (p === 'panel' && typeof renderDashboard === 'function') { try { renderDashboard(); } catch (e) {} }
+  if (p === 'estad' && typeof renderEstadisticas === 'function') { try { renderEstadisticas(); } catch (e) {} }
+}
 
 function adminArea(area) {
   const cfg = ADMIN_AREAS[area]; if (!cfg) return;
@@ -1279,7 +1292,7 @@ function adminArea(area) {
 function adminTab(p) {
   document.querySelectorAll('#section-admin .adminpanel').forEach(el => { el.hidden = el.dataset.p !== p; });
   document.querySelectorAll('#adminSubtabs button').forEach(b => b.classList.toggle('active', b.dataset.p === p));
-  const render = { avisos: 'renderAvisos', liquidaciones: 'renderLiquidaciones', histpagos: 'renderHistorialPagos', valores: 'renderValoresMedico', caja: 'renderCaja', medicos: 'renderMedicos', honorarios: 'renderAdmin', estadisticas: 'renderEstadisticas', agenda: 'renderAgendaConfig', seguridad: 'renderUsuariosYAuditoria' }[p];
+  const render = { avisos: 'renderAvisos', liquidaciones: 'renderLiquidaciones', histpagos: 'renderHistorialPagos', valores: 'renderValoresMedico', menor: 'renderMenorValor', caja: 'renderCaja', medicos: 'renderMedicosConsul', honorarios: 'renderAdmin', agenda: 'renderAgendaConfig', seguridad: 'renderUsuariosYAuditoria' }[p];
   if (render && typeof window[render] === 'function') { try { window[render](); } catch (e) {} }
 }
 
@@ -1295,7 +1308,7 @@ function visTab(p) {
 function nomconTab(p) {
   document.querySelectorAll('.nomconpanel').forEach(el => { el.hidden = el.dataset.p !== p; });
   document.querySelectorAll('#nomconTabs button').forEach(b => b.classList.toggle('active', b.dataset.p === p));
-  const render = { prest: 'renderPrestacionesOIP', contr: 'renderContratos', menor: 'renderMenorValor', os: 'renderOS' }[p];
+  const render = { prest: 'renderPrestacionesOIP', contr: 'renderContratos', os: 'renderOS' }[p];
   if (render && typeof window[render] === 'function') { try { window[render](); } catch (e) {} }
 }
 
@@ -1318,7 +1331,7 @@ function init() {
   if (cdFecha && !cdFecha.value) cdFecha.value = hoyISO();
   sincronizarUI();
   renderUsuariosYAuditoria();
-  if (typeof adminArea === 'function') adminArea('resumen');  // prepara el área por defecto
+  if (typeof adminArea === 'function') adminArea('pagos');  // prepara un área de Admin por defecto
   if (typeof aplicarPermisos === 'function') aplicarPermisos();
   // Admin arranca en el Dashboard; las secretarías (sin acceso) caen en Carga diaria.
   const inicio = (typeof puedeVerSeccion === 'function' && puedeVerSeccion('section-dashboard')) ? 'dashboard' : 'carga';

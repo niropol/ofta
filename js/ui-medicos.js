@@ -24,6 +24,13 @@ function _referenciasMedico(id) {
   return { prest, reglas, liq, total: prest + reglas + liq };
 }
 
+// Panel unificado «Médicos/Consul» (Configuración): médicos + sedes + consultorios juntos.
+function renderMedicosConsul() {
+  if (typeof renderMedicos === 'function') renderMedicos();
+  if (typeof renderSedes === 'function') renderSedes();
+  if (typeof renderConsultorios === 'function') renderConsultorios();
+}
+
 // ── Render de la grilla de médicos ──
 function renderMedicos() {
   const cont = document.getElementById('medicosGrid');

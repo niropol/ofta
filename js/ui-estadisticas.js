@@ -331,9 +331,10 @@ function renderDashboard() {
   if (typeof renderHorarios === 'function') renderHorarios('dashAgenda');
 }
 
-// «Ver preliq» del dashboard: salta a Resumen ▸ Vista médico para ese médico/mes.
+// «Ver preliq» del dashboard: salta a Dashboard ▸ Estadísticas ▸ Vista médico para ese médico/mes.
 function verPreliqMedico(medicoId, mes) {
-  if (typeof irA === 'function') irA('resumen');
+  if (typeof irA === 'function') irA('dashboard');
+  if (typeof dashTab === 'function') dashTab('estad');
   const mEl = document.getElementById('statMes');
   if (mEl && mes) mEl.value = mes;
   if (typeof switchStatView === 'function') switchStatView('medico');  // renderiza la vista médico

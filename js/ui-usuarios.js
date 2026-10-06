@@ -18,7 +18,7 @@ function aplicarPermisos() {
   if (!activa || !puedeVerSeccion(activa.id)) {
     const dest = puedeVerSeccion('section-dashboard') ? 'dashboard'
       : puedeVerSeccion('section-prestaciones') ? 'carga'
-      : (puedeVerSeccion('section-admin') ? 'resumen' : null);
+      : (puedeVerSeccion('section-admin') ? 'pagos' : null);
     if (dest && typeof irA === 'function') irA(dest);
   }
 }
