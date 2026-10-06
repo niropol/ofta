@@ -180,8 +180,47 @@ function _textoResumenMedicoControl(medicoId, mes) {
     L.push('');
   });
   L.push(`Total: ${r.total} prestación(es).`);
-  L.push('(Resumen para control, sin valores.)');
   return L.join('\n');
+}
+
+// Colores por categoría para el informe (cuadro prolijo, como el de OIP).
+const _COLORES_CAT_MED = {
+  consulta:            { bg: '#e3ebdf', fg: '#143022' },
+  realizacion_estudio: { bg: '#e8eff8', fg: '#1f4e79' },
+  practica:            { bg: '#fdf6e8', fg: '#8c6820' },
+  cirugia:             { bg: '#f3e9f7', fg: '#6b3fa0' },
+};
+function _colCatMed(c) { return _COLORES_CAT_MED[c] || { bg: '#edeae3', fg: '#444' }; }
+
+// Informe HTML del médico (cuadro con colores + descripciones debajo). Sin valores $.
+function _htmlResumenMedicoControl(medicoId, mes) {
+  const med = DB.medicos.find(m => m.id === Number(medicoId)) || {};
+  const r = resumenMedicoControl(medicoId, mes);
+  const MESES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  const [anio, mm] = String(mes).split('-');
+  const mesLbl = (MESES[+mm] || '') + ' ' + anio;
+  const cats = categoriasOrdenadasMedico(r.cats);
+
+  const tiles = cats.map(c => {
+    const cc = _colCatMed(c);
+    return `<td style="background:${cc.bg};border-radius:8px;padding:12px 10px;text-align:center">
+      <div style="font-size:11px;color:${cc.fg};text-transform:uppercase;letter-spacing:.04em">${escHtml(_catLabelSt(c))}</div>
+      <div style="font-size:26px;font-weight:bold;color:${cc.fg};line-height:1.1">${r.cats[c].total}</div></td>`;
+  }).join('<td style="width:8px"></td>');
+
+  const detalle = cats.map(c => {
+    const cc = _colCatMed(c);
+    const rows = Object.entries(r.cats[c].items).sort((a, b) => b[1] - a[1])
+      .map(([desc, cant]) => `<tr><td style="padding:7px 10px;border-bottom:1px solid #eee">${escHtml(desc)}</td><td style="padding:7px 10px;border-bottom:1px solid #eee;text-align:right;font-weight:bold">${cant}</td></tr>`).join('');
+    return `<h3 style="color:${cc.fg};margin:18px 0 4px;border-left:4px solid ${cc.fg};padding-left:8px;font-size:15px">${escHtml(_catLabelSt(c))} — ${r.cats[c].total}</h3>
+      <table style="border-collapse:collapse;width:100%;font-size:14px"><tbody>${rows}</tbody></table>`;
+  }).join('');
+
+  return `<div style="font-family:Arial,Helvetica,sans-serif;color:#211f1b;max-width:620px;margin:0 auto;padding:4px">
+    <h2 style="color:#22492f;margin:0 0 2px">Resumen de atenciones — ${escHtml(mesLbl)}</h2>
+    <p style="margin:0 0 14px;color:#555;font-size:15px"><strong>${escHtml(med.nombre || '')}</strong> · Total: <strong>${r.total}</strong> prestación(es)</p>
+    ${cats.length ? `<table style="width:100%;border-collapse:collapse;margin-bottom:4px"><tbody><tr>${tiles}</tr></tbody></table>${detalle}` : '<p>Sin prestaciones este mes.</p>'}
+  </div>`;
 }
 
 function copiarResumenMedicoWhatsApp(medicoId, mes) {
@@ -197,6 +236,7 @@ async function enviarResumenMedicoMail(medicoId, mes) {
   if (!med.email) { avisoUI('Este médico no tiene email cargado. Agregalo en Configuración ▸ Médicos/Consul (Editar médico).'); return; }
   const asunto = `Resumen de atenciones ${mes} — ${med.nombre}`;
   const cuerpo = _textoResumenMedicoControl(medicoId, mes);
+  const html = _htmlResumenMedicoControl(medicoId, mes);
 
   // Envío automático por backend (si hay sesión de Supabase).
   if (typeof sb !== 'undefined' && sb && sb.functions) {
@@ -206,7 +246,7 @@ async function enviarResumenMedicoMail(medicoId, mes) {
     if (!ok) return;
     try {
       // Nombre con el que quedó desplegada la Edge Function en Supabase.
-      const { data, error } = await sb.functions.invoke('swift-endpoint', { body: { to: med.email, subject: asunto, text: cuerpo } });
+      const { data, error } = await sb.functions.invoke('swift-endpoint', { body: { to: med.email, subject: asunto, text: cuerpo, html } });
       if (error) throw new Error((error && error.message) || 'Error del servidor');
       if (data && data.ok) { avisoUI('✅ Mail enviado a ' + med.email + '.'); return; }
       throw new Error((data && data.error) || 'Respuesta inesperada del servidor.');
@@ -280,8 +320,7 @@ function verResumenMedicoPDF(medicoId, mes) {
   }).join('') || '<p>Sin prestaciones este mes.</p>';
   const html = `<h1>SAM — Centro de Diagnóstico Médico</h1><h2>Resumen de atenciones — ${escHtml(mes)}</h2>
     <p><strong>${escHtml(med.nombre || '')}</strong> · Total: ${r.total} prestación(es)</p>
-    ${bloques}
-    <p style="margin-top:18px;color:#666">Resumen para control, sin valores.</p>`;
+    ${bloques}`;
   _abrirVentanaImpresion('Resumen ' + (med.nombre || '') + ' ' + mes, html);
 }
 

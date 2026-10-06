@@ -63,9 +63,9 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!aut) return json({ error: "Usuario no autorizado para enviar correos." }, 403);
 
-    // 3) Datos del correo.
-    const { to, subject, text } = await req.json().catch(() => ({}));
-    if (!to || !subject || !text) return json({ error: "Faltan datos: to, subject, text." }, 400);
+    // 3) Datos del correo (text plano y/o html).
+    const { to, subject, text, html } = await req.json().catch(() => ({}));
+    if (!to || !subject || (!text && !html)) return json({ error: "Faltan datos: to, subject, text/html." }, 400);
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(to))) return json({ error: "Email de destino inválido." }, 400);
 
     // 4) Enviar por SMTP de Gmail.
@@ -81,7 +81,8 @@ Deno.serve(async (req) => {
       from: GMAIL_USER,
       to: String(to),
       subject: String(subject),
-      content: String(text),
+      content: text ? String(text) : "Abrí el correo en formato HTML para ver el resumen.",
+      html: html ? String(html) : undefined,
     });
     await client.close();
 
