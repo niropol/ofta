@@ -94,6 +94,13 @@
   .avisos-badge { background: var(--danger); color: #fff; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px; margin-left: 4px; }
   .avisos-btn { position: relative; font-size: 16px; line-height: 1; }
   .avisos-btn .avisos-badge { position: absolute; top: -6px; right: -6px; margin-left: 0; min-width: 16px; text-align: center; box-shadow: 0 0 0 2px var(--grad, #143022); }
+  .cargar-btn { background: #fff; color: var(--primario-osc); border: none; border-radius: var(--radio-sm); padding: 8px 14px; font-size: 13.5px; font-weight: 700; cursor: pointer; margin-right: 6px; transition: background .14s; }
+  .cargar-btn:hover { background: #eef4ee; }
+  .cd-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .cd-row select, .cd-row input { padding: 9px 11px; border: 1px solid var(--borde-fuerte); border-radius: var(--radio-sm); font-size: 14px; background: #fff; }
+  .cd-row select { min-width: 150px; flex: 1; }
+  .cd-row input[type=number] { width: 90px; flex: none; }
+  .cd-block { margin-top: 10px; }
   .aviso-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: var(--radio-sm); margin-bottom: 6px; font-size: 13px; }
   .aviso-urgente { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
   .aviso-importante { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
@@ -255,7 +262,7 @@
 <!-- ── Pantalla de login (cubre la app hasta que haya un ingreso válido) ── -->
 <div id="login-screen" style="display:flex;position:fixed;inset:0;z-index:100000;background:var(--grad);align-items:center;justify-content:center;padding:20px">
   <div style="background:var(--panel);border-radius:var(--radio-lg);box-shadow:0 20px 60px rgba(0,0,0,.35);padding:34px 30px;width:100%;max-width:380px;text-align:center">
-    <img src="logo.png?v=20" alt="SAM — Centro de Diagnóstico Médico" style="width:230px;max-width:78%;height:auto;margin:0 auto 20px;display:block">
+    <img src="logo.png?v=21" alt="SAM — Centro de Diagnóstico Médico" style="width:230px;max-width:78%;height:auto;margin:0 auto 20px;display:block">
     <p style="margin:-6px 0 20px;color:var(--muted);font-size:13px">Gestión oftalmológica</p>
 
     <button id="login-google" class="btn" onclick="loginGoogle()" style="width:100%;justify-content:center;background:#fff;color:#3c4043;border:1px solid var(--borde-fuerte);box-shadow:none;display:flex;align-items:center;gap:10px;font-weight:600">
@@ -285,7 +292,7 @@
 
 <header class="top">
   <div class="brand">
-    <img src="logo.png?v=20" alt="SAM — Centro de Diagnóstico Médico" style="height:34px;background:#fff;border-radius:7px;padding:4px 8px;display:block">
+    <img src="logo.png?v=21" alt="SAM — Centro de Diagnóstico Médico" style="height:34px;background:#fff;border-radius:7px;padding:4px 8px;display:block">
   </div>
   <nav class="topnav" id="topnav">
     <button class="topnav-item active" data-dest="dashboard" onclick="irA('dashboard')"><span class="nav-icon">🏠</span> Dashboard</button>
@@ -296,6 +303,7 @@
     <button class="topnav-item" data-dest="config" onclick="irA('config')"><span class="nav-icon">⚙️</span> Configuración</button>
   </nav>
   <div class="top-actions">
+    <button class="cargar-btn" id="btnCargar" onclick="abrirCargaDia()" title="Cargar atención del día">+ Cargar atención</button>
     <div id="indicadorGuardado"></div>
     <button class="btn-actualizar avisos-btn" id="btnAvisos" onclick="irA('avisos')" title="Avisos y recordatorios">🔔<span id="avisosBadge" class="avisos-badge" style="display:none">0</span></button>
     <button class="btn-actualizar" onclick="actualizarApp()" title="Guardar los cambios y refrescar todo">↻</button>
@@ -362,10 +370,7 @@
         <div class="filtros" style="margin:0">
           <label class="muted">Día <input type="date" id="cd_fecha" onchange="renderCargaDiaria()"></label>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn secundario" onclick="abrirPegarResumen()">📋 Pegar resumen</button>
-          <button class="btn" onclick="abrirCargaDia()">+ Cargar día de atención</button>
-        </div>
+        <button class="btn secundario" onclick="abrirPegarResumen()">📋 Pegar resumen</button>
       </div>
 
       <div class="section-head" style="margin-top:14px"><h3 style="margin:0">Cargado el <span id="cd_fecha_lbl">—</span></h3></div>
@@ -840,51 +845,49 @@
   </div>
 </div>
 
-<!-- ── Modal cargar día de atención (estilo OIP) ── -->
+<!-- ── Modal cargar atención (compacto, estilo OIP) ── -->
 <div id="modalCargaDia" class="modal">
-  <div class="modal-box" style="max-width:940px">
-    <div class="section-head"><h3 style="margin:0">Cargar día de atención</h3>
-      <span class="muted">Día: <strong id="cd_modal_fecha">—</strong></span></div>
-    <div class="filtros">
+  <div class="modal-box" style="max-width:720px;max-height:88vh;display:flex;flex-direction:column">
+    <div class="section-head"><h3 style="margin:0">Cargar atención</h3>
+      <label class="muted" style="margin:0">Día <input type="date" id="cd_fecha_modal" onchange="cdFechaModalChange()"></label></div>
+
+    <div class="filtros" style="margin-bottom:6px">
       <label class="muted">Médico <select id="cd_medico"></select></label>
       <label class="muted">Sede <select id="cd_sede" onchange="cdSedeChange()"></select></label>
       <label class="muted">Consultorio <select id="cd_consultorio"></select></label>
     </div>
 
-    <div class="cd-grid">
-      <div class="cd-card">
-        <h4>Consultas</h4>
-        <p class="muted">Elegí primero la obra social (contrato) y después la consulta. Por cantidad, sin paciente.</p>
-        <div class="cd-form">
-          <select id="cd_con_os" title="Obra social" onchange="cdConOsChange()"></select>
-          <select id="cd_con_tipo" title="Tipo de consulta"></select>
-          <input id="cd_con_cant" type="number" min="1" step="1" placeholder="Cantidad" value="1">
-          <button class="btn" onclick="cdAgregarConsulta()">+ Agregar</button>
-        </div>
-      </div>
-
-      <div class="cd-card">
-        <h4>Estudios y prácticas</h4>
-        <p class="muted">Elegí primero la obra social (contrato), después el estudio/práctica y la cantidad.</p>
-        <div class="cd-form">
-          <select id="cd_est_os" title="Obra social" onchange="cdEstOsChange()"></select>
-          <select id="cd_est_tipo" title="Tipo de estudio/práctica"></select>
-          <input id="cd_est_cant" type="number" min="1" step="1" placeholder="Cantidad" value="1">
-          <button class="btn" onclick="cdAgregarEstudio()">+ Agregar</button>
-        </div>
-      </div>
-
-      <div class="cd-card">
-        <h4>Cirugías</h4>
-        <p class="muted">Detalle por paciente: apellido, nombre, DNI, OS, tipo, insumo y derivador.</p>
-        <button class="btn" onclick="cdNuevaCirugia()">+ Cargar cirugía</button>
-      </div>
+    <div class="subtabs" id="cdModoTabs">
+      <button class="active" data-m="con" onclick="cdModoCarga('con')">Consultas</button>
+      <button data-m="est" onclick="cdModoCarga('est')">Estudios / Prácticas</button>
+      <button data-m="cir" onclick="cdModoCarga('cir')">Cirugías</button>
     </div>
 
-    <div class="section-head" style="margin-top:18px"><h4 style="margin:0">Cargado el <span id="cd_fecha_lbl2">—</span></h4></div>
-    <div class="tabla-wrap"><div id="cd_tabla_modal"></div></div>
+    <div id="cdBlockCon" class="cd-block">
+      <div class="cd-row">
+        <select id="cd_con_os" title="Obra social" onchange="cdConOsChange()"></select>
+        <select id="cd_con_tipo" title="Tipo de consulta"></select>
+        <input id="cd_con_cant" type="number" min="1" step="1" value="1" title="Cantidad">
+        <button class="btn" onclick="cdAgregarConsulta()">+ Agregar</button>
+      </div>
+    </div>
+    <div id="cdBlockEst" class="cd-block" hidden>
+      <div class="cd-row">
+        <select id="cd_est_os" title="Obra social" onchange="cdEstOsChange()"></select>
+        <select id="cd_est_tipo" title="Tipo de estudio/práctica"></select>
+        <input id="cd_est_cant" type="number" min="1" step="1" value="1" title="Cantidad">
+        <button class="btn" onclick="cdAgregarEstudio()">+ Agregar</button>
+      </div>
+    </div>
+    <div id="cdBlockCir" class="cd-block" hidden>
+      <p class="muted" style="margin:4px 0">Cirugía con detalle del paciente (apellido, DNI, OS, tipo, insumo, derivador).</p>
+      <button class="btn" onclick="cdNuevaCirugia()">+ Cargar cirugía</button>
+    </div>
 
-    <div class="modal-acciones">
+    <div class="section-head" style="margin:14px 0 4px"><h4 style="margin:0;font-size:13px">Cargado el <span id="cd_fecha_lbl2">—</span></h4></div>
+    <div id="cd_tabla_modal" style="flex:1;overflow:auto;min-height:70px"></div>
+
+    <div class="modal-acciones" style="margin-top:10px">
       <button class="btn" onclick="cerrarCargaDia()">Listo</button>
     </div>
   </div>
@@ -1189,42 +1192,42 @@
   </div>
 </div>
 
-<script src="js/datos.js?v=20"></script>
-<script src="js/auditoria.js?v=20"></script>
-<script src="js/usuarios.js?v=20"></script>
-<script src="js/nomenclador.js?v=20"></script>
-<script src="js/contratos.js?v=20"></script>
-<script src="js/matching.js?v=20"></script>
-<script src="js/pegar-resumen.js?v=20"></script>
-<script src="js/prestaciones.js?v=20"></script>
-<script src="js/honorarios.js?v=20"></script>
-<script src="js/caja.js?v=20"></script>
-<script src="js/liquidaciones.js?v=20"></script>
-<script src="js/derivaciones.js?v=20"></script>
-<script src="js/alarmas.js?v=20"></script>
-<script src="js/estadisticas.js?v=20"></script>
-<script src="js/ui-medicos.js?v=20"></script>
-<script src="js/ui-nomenclador.js?v=20"></script>
-<script src="js/ui-prestaciones.js?v=20"></script>
-<script src="js/ui-obras-sociales.js?v=20"></script>
-<script src="js/ui-sedes.js?v=20"></script>
-<script src="js/ui-consultorios.js?v=20"></script>
-<script src="js/ui-contratos.js?v=20"></script>
-<script src="js/ui-admin.js?v=20"></script>
-<script src="js/ui-honorarios.js?v=20"></script>
-<script src="js/ui-caja.js?v=20"></script>
-<script src="js/ui-liquidaciones.js?v=20"></script>
-<script src="js/ui-derivaciones.js?v=20"></script>
-<script src="js/ui-alarmas.js?v=20"></script>
-<script src="js/ui-estadisticas.js?v=20"></script>
-<script src="js/ui-carga-diaria.js?v=20"></script>
-<script src="js/ui-panel.js?v=20"></script>
-<script src="js/ui-usuarios.js?v=20"></script>
-<script src="js/diagnostico.js?v=20"></script>
-<script src="js/ui-diagnostico.js?v=20"></script>
-<script src="js/ui-dialogos.js?v=20"></script>
-<script src="js/auth.js?v=20"></script>
-<script src="js/persistencia.js?v=20"></script>
+<script src="js/datos.js?v=21"></script>
+<script src="js/auditoria.js?v=21"></script>
+<script src="js/usuarios.js?v=21"></script>
+<script src="js/nomenclador.js?v=21"></script>
+<script src="js/contratos.js?v=21"></script>
+<script src="js/matching.js?v=21"></script>
+<script src="js/pegar-resumen.js?v=21"></script>
+<script src="js/prestaciones.js?v=21"></script>
+<script src="js/honorarios.js?v=21"></script>
+<script src="js/caja.js?v=21"></script>
+<script src="js/liquidaciones.js?v=21"></script>
+<script src="js/derivaciones.js?v=21"></script>
+<script src="js/alarmas.js?v=21"></script>
+<script src="js/estadisticas.js?v=21"></script>
+<script src="js/ui-medicos.js?v=21"></script>
+<script src="js/ui-nomenclador.js?v=21"></script>
+<script src="js/ui-prestaciones.js?v=21"></script>
+<script src="js/ui-obras-sociales.js?v=21"></script>
+<script src="js/ui-sedes.js?v=21"></script>
+<script src="js/ui-consultorios.js?v=21"></script>
+<script src="js/ui-contratos.js?v=21"></script>
+<script src="js/ui-admin.js?v=21"></script>
+<script src="js/ui-honorarios.js?v=21"></script>
+<script src="js/ui-caja.js?v=21"></script>
+<script src="js/ui-liquidaciones.js?v=21"></script>
+<script src="js/ui-derivaciones.js?v=21"></script>
+<script src="js/ui-alarmas.js?v=21"></script>
+<script src="js/ui-estadisticas.js?v=21"></script>
+<script src="js/ui-carga-diaria.js?v=21"></script>
+<script src="js/ui-panel.js?v=21"></script>
+<script src="js/ui-usuarios.js?v=21"></script>
+<script src="js/diagnostico.js?v=21"></script>
+<script src="js/ui-diagnostico.js?v=21"></script>
+<script src="js/ui-dialogos.js?v=21"></script>
+<script src="js/auth.js?v=21"></script>
+<script src="js/persistencia.js?v=21"></script>
 <script>
 // ── Navegación entre secciones ──
 function showSection(id) {

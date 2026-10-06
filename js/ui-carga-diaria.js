@@ -72,7 +72,8 @@ function renderCargaDiaria() {
   setHTML('cd_est_os', _optsOS(estOs));
   setHTML('cd_est_tipo', _optsNomencladorCatsOS(['realizacion_estudio', 'practica'], estOs, fecha, prev.estTipo ? Number(prev.estTipo) : null));
 
-  ['cd_fecha_lbl', 'cd_fecha_lbl2', 'cd_modal_fecha'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = fecha || '—'; });
+  ['cd_fecha_lbl', 'cd_fecha_lbl2'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = fecha || '—'; });
+  const fm = document.getElementById('cd_fecha_modal'); if (fm && document.activeElement !== fm) fm.value = fecha || '';
 
   // Tabla del día: una fila por registro (las consultas/estudios ya vienen agrupados por cantidad).
   const filas = DB.prestacionesRealizadas.filter(r => r.fecha === fecha).sort((a, b) => b.id - a.id);
@@ -125,10 +126,26 @@ function _cdEspejarTabla() {
   if (src && dst) dst.innerHTML = src.innerHTML;
 }
 
-// ── Modal «Cargar día de atención» (estilo OIP) ──
+// ── Modal «Cargar atención» (compacto, estilo OIP) ──
+// Pestañas internas: Consultas / Estudios-Prácticas / Cirugías. Se muestra una a la vez.
+function cdModoCarga(m) {
+  const map = { con: 'cdBlockCon', est: 'cdBlockEst', cir: 'cdBlockCir' };
+  Object.entries(map).forEach(([k, id]) => { const el = document.getElementById(id); if (el) el.hidden = k !== m; });
+  document.querySelectorAll('#cdModoTabs button').forEach(b => b.classList.toggle('active', b.dataset.m === m));
+}
+
+// La fecha del modal manda sobre la fecha del día (una sola fuente de verdad).
+function cdFechaModalChange() {
+  const v = _cdGet('cd_fecha_modal');
+  if (v) _cdSet('cd_fecha', v);
+  renderCargaDiaria();
+}
+
 function abrirCargaDia() {
   if (!_cdGet('cd_fecha')) _cdSet('cd_fecha', hoyISO());
-  renderCargaDiaria();   // repuebla selects (médico/sede/OS/tipo) y la tabla espejada
+  _cdSet('cd_fecha_modal', _cdGet('cd_fecha'));
+  cdModoCarga('con');     // arranca en Consultas
+  renderCargaDiaria();    // repuebla selects (médico/sede/OS/tipo) y la tabla espejada
   const m = document.getElementById('modalCargaDia');
   if (m) m.style.display = 'flex';
 }
