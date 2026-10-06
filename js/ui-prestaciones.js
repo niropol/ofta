@@ -124,8 +124,26 @@ function _poblarFiltrosPrestaciones() {
 }
 
 // ── Modal alta / edición ──
-function _mostrarModalReg(on) { const m = document.getElementById('modalReg'); if (m) m.style.display = on ? 'flex' : 'none'; }
-function cerrarModalReg() { _mostrarModalReg(false); }
+// El modal de cirugía/prestación puede abrirse DESDE el modal «Cargar atención».
+// Para que no quede detrás, ocultamos el de carga al abrir este y lo reabrimos al cerrar.
+let _volverACargaDia = false;
+function _mostrarModalReg(on) {
+  const m = document.getElementById('modalReg');
+  if (!m) return;
+  if (on) {
+    const cm = document.getElementById('modalCargaDia');
+    if (cm && cm.style.display === 'flex') { _volverACargaDia = true; cm.style.display = 'none'; }
+  }
+  m.style.display = on ? 'flex' : 'none';
+}
+function cerrarModalReg() {
+  _mostrarModalReg(false);
+  if (_volverACargaDia) {
+    _volverACargaDia = false;
+    const cm = document.getElementById('modalCargaDia');
+    if (cm) { if (typeof renderCargaDiaria === 'function') renderCargaDiaria(); cm.style.display = 'flex'; }
+  }
+}
 
 // Insumos seleccionados en el formulario abierto (snapshots {grupo, descripcion, precio, moneda, costo, costoMoneda}).
 let _regInsumos = [];
