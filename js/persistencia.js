@@ -171,8 +171,20 @@ async function guardarEnNube(automatico = false) {
 
   try {
     // 1) Upsert de todos los items con id (en lotes).
+    //    Si por algún motivo hay un id repetido dentro de una colección, se le
+    //    reasigna uno nuevo: así no se pierde el registro y el upsert no intenta
+    //    tocar la misma fila dos veces (Postgres 21000 "ON CONFLICT ... a second time").
+    _corregirNextId();
     const filas = [];
-    for (const c of COLECCIONES) for (const x of (DB[c] || [])) if (x && x.id != null) filas.push({ coleccion: c, doc_id: String(x.id), data: x });
+    for (const c of COLECCIONES) {
+      const vistos = new Set();
+      for (const x of (DB[c] || [])) {
+        if (!x || x.id == null) continue;
+        if (vistos.has(String(x.id))) { x.id = DB.nextId++; }   // duplicado → id nuevo
+        vistos.add(String(x.id));
+        filas.push({ coleccion: c, doc_id: String(x.id), data: x });
+      }
+    }
     for (let i = 0; i < filas.length; i += 500) {
       const { error } = await sb.from('app_data').upsert(filas.slice(i, i + 500), { onConflict: 'coleccion,doc_id' });
       if (error) throw error;
