@@ -247,7 +247,12 @@ async function enviarResumenMedicoMail(medicoId, mes) {
     try {
       // Nombre con el que quedó desplegada la Edge Function en Supabase.
       const { data, error } = await sb.functions.invoke('swift-endpoint', { body: { to: med.email, subject: asunto, text: cuerpo, html } });
-      if (error) throw new Error((error && error.message) || 'Error del servidor');
+      if (error) {
+        // Supabase da un mensaje genérico ("non-2xx"): leer el cuerpo para el motivo real.
+        let detalle = (error && error.message) || 'Error del servidor';
+        try { if (error.context && typeof error.context.json === 'function') { const b = await error.context.json(); if (b && b.error) detalle = b.error; } } catch (_) {}
+        throw new Error(detalle);
+      }
       if (data && data.ok) { avisoUI('✅ Mail enviado a ' + med.email + '.'); return; }
       throw new Error((data && data.error) || 'Respuesta inesperada del servidor.');
     } catch (e) {
