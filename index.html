@@ -262,7 +262,7 @@
 <!-- ── Pantalla de login (cubre la app hasta que haya un ingreso válido) ── -->
 <div id="login-screen" style="display:flex;position:fixed;inset:0;z-index:100000;background:var(--grad);align-items:center;justify-content:center;padding:20px">
   <div style="background:var(--panel);border-radius:var(--radio-lg);box-shadow:0 20px 60px rgba(0,0,0,.35);padding:34px 30px;width:100%;max-width:380px;text-align:center">
-    <img src="logo.png?v=24" alt="SAM — Centro de Diagnóstico Médico" style="width:230px;max-width:78%;height:auto;margin:0 auto 20px;display:block">
+    <img src="logo.png?v=25" alt="SAM — Centro de Diagnóstico Médico" style="width:230px;max-width:78%;height:auto;margin:0 auto 20px;display:block">
     <p style="margin:-6px 0 20px;color:var(--muted);font-size:13px">Gestión oftalmológica</p>
 
     <button id="login-google" class="btn" onclick="loginGoogle()" style="width:100%;justify-content:center;background:#fff;color:#3c4043;border:1px solid var(--borde-fuerte);box-shadow:none;display:flex;align-items:center;gap:10px;font-weight:600">
@@ -292,7 +292,7 @@
 
 <header class="top">
   <div class="brand">
-    <img src="logo.png?v=24" alt="SAM — Centro de Diagnóstico Médico" style="height:34px;background:#fff;border-radius:7px;padding:4px 8px;display:block">
+    <img src="logo.png?v=25" alt="SAM — Centro de Diagnóstico Médico" style="height:34px;background:#fff;border-radius:7px;padding:4px 8px;display:block">
   </div>
   <nav class="topnav" id="topnav">
     <button class="topnav-item active" data-dest="dashboard" onclick="irA('dashboard')"><span class="nav-icon">🏠</span> Dashboard</button>
@@ -1088,9 +1088,12 @@
 <!-- Pegar resumen: carga diaria por texto -->
 <div id="modalPegar" class="modal">
   <div class="modal-box ancho">
-    <h3>Pegar resumen del día</h3>
-    <p class="muted" style="margin:0 0 8px">Una línea por prestación: <strong>cantidad · prestación · obra social</strong>. Ej.: «5 consultas IOMA», «3 OCT OSDE». Se cargan para el médico y la fecha elegidos arriba. Las cirugías se cargan aparte.</p>
-    <textarea id="pegarTexto" class="copiar-ta" style="min-height:120px" placeholder="5 consultas IOMA&#10;3 OCT OSDE&#10;2 campo visual particular" oninput="previsualizarPegar()"></textarea>
+    <h3>Pegar resumen</h3>
+    <p class="muted" style="margin:0 0 8px">Pegá la tabla (desde Excel/planilla, una fila por paciente). Se detecta solo el orden de columnas:<br>
+      <strong>Fecha · Nombre · DNI · Médico · Cobertura · Consulta/Práctica · Cirugía · Arancel OS/Pago · Copago</strong><br>
+      o con <strong>Nro Afiliado</strong> después del DNI. Cada fila trae su propia fecha y médico. Avisa si ya hay carga para ese médico/fecha o si falta reconocer alguna prestación.<br>
+      <span style="font-size:12px">(También acepta el formato simple por líneas: <em>cantidad · prestación · obra social</em>, que usa el médico y la fecha de arriba.)</span></p>
+    <textarea id="pegarTexto" class="copiar-ta" style="min-height:120px" placeholder="Pegá acá la tabla copiada de la planilla…" oninput="previsualizarPegar()"></textarea>
     <div class="tabla-wrap" style="max-height:38vh;overflow:auto;margin-top:10px"><div id="pegarPreview"></div></div>
     <div id="pegarMsg"></div>
     <div class="modal-acciones">
@@ -1201,42 +1204,42 @@
   </div>
 </div>
 
-<script src="js/datos.js?v=24"></script>
-<script src="js/auditoria.js?v=24"></script>
-<script src="js/usuarios.js?v=24"></script>
-<script src="js/nomenclador.js?v=24"></script>
-<script src="js/contratos.js?v=24"></script>
-<script src="js/matching.js?v=24"></script>
-<script src="js/pegar-resumen.js?v=24"></script>
-<script src="js/prestaciones.js?v=24"></script>
-<script src="js/honorarios.js?v=24"></script>
-<script src="js/caja.js?v=24"></script>
-<script src="js/liquidaciones.js?v=24"></script>
-<script src="js/derivaciones.js?v=24"></script>
-<script src="js/alarmas.js?v=24"></script>
-<script src="js/estadisticas.js?v=24"></script>
-<script src="js/ui-medicos.js?v=24"></script>
-<script src="js/ui-nomenclador.js?v=24"></script>
-<script src="js/ui-prestaciones.js?v=24"></script>
-<script src="js/ui-obras-sociales.js?v=24"></script>
-<script src="js/ui-sedes.js?v=24"></script>
-<script src="js/ui-consultorios.js?v=24"></script>
-<script src="js/ui-contratos.js?v=24"></script>
-<script src="js/ui-admin.js?v=24"></script>
-<script src="js/ui-honorarios.js?v=24"></script>
-<script src="js/ui-caja.js?v=24"></script>
-<script src="js/ui-liquidaciones.js?v=24"></script>
-<script src="js/ui-derivaciones.js?v=24"></script>
-<script src="js/ui-alarmas.js?v=24"></script>
-<script src="js/ui-estadisticas.js?v=24"></script>
-<script src="js/ui-carga-diaria.js?v=24"></script>
-<script src="js/ui-panel.js?v=24"></script>
-<script src="js/ui-usuarios.js?v=24"></script>
-<script src="js/diagnostico.js?v=24"></script>
-<script src="js/ui-diagnostico.js?v=24"></script>
-<script src="js/ui-dialogos.js?v=24"></script>
-<script src="js/auth.js?v=24"></script>
-<script src="js/persistencia.js?v=24"></script>
+<script src="js/datos.js?v=25"></script>
+<script src="js/auditoria.js?v=25"></script>
+<script src="js/usuarios.js?v=25"></script>
+<script src="js/nomenclador.js?v=25"></script>
+<script src="js/contratos.js?v=25"></script>
+<script src="js/matching.js?v=25"></script>
+<script src="js/pegar-resumen.js?v=25"></script>
+<script src="js/prestaciones.js?v=25"></script>
+<script src="js/honorarios.js?v=25"></script>
+<script src="js/caja.js?v=25"></script>
+<script src="js/liquidaciones.js?v=25"></script>
+<script src="js/derivaciones.js?v=25"></script>
+<script src="js/alarmas.js?v=25"></script>
+<script src="js/estadisticas.js?v=25"></script>
+<script src="js/ui-medicos.js?v=25"></script>
+<script src="js/ui-nomenclador.js?v=25"></script>
+<script src="js/ui-prestaciones.js?v=25"></script>
+<script src="js/ui-obras-sociales.js?v=25"></script>
+<script src="js/ui-sedes.js?v=25"></script>
+<script src="js/ui-consultorios.js?v=25"></script>
+<script src="js/ui-contratos.js?v=25"></script>
+<script src="js/ui-admin.js?v=25"></script>
+<script src="js/ui-honorarios.js?v=25"></script>
+<script src="js/ui-caja.js?v=25"></script>
+<script src="js/ui-liquidaciones.js?v=25"></script>
+<script src="js/ui-derivaciones.js?v=25"></script>
+<script src="js/ui-alarmas.js?v=25"></script>
+<script src="js/ui-estadisticas.js?v=25"></script>
+<script src="js/ui-carga-diaria.js?v=25"></script>
+<script src="js/ui-panel.js?v=25"></script>
+<script src="js/ui-usuarios.js?v=25"></script>
+<script src="js/diagnostico.js?v=25"></script>
+<script src="js/ui-diagnostico.js?v=25"></script>
+<script src="js/ui-dialogos.js?v=25"></script>
+<script src="js/auth.js?v=25"></script>
+<script src="js/persistencia.js?v=25"></script>
 <script>
 // ── Navegación entre secciones ──
 function showSection(id) {

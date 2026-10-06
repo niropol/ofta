@@ -246,11 +246,20 @@ function abrirPegarResumen() {
 }
 
 let _pegarPlan = [];
+let _pegarModo = 'lineas';   // 'tabla' (export por paciente) | 'lineas' (cantidad·prestación·OS)
+
 function previsualizarPegar() {
   const ta = document.getElementById('pegarTexto');
   const pv = document.getElementById('pegarPreview');
   if (!ta || !pv) return;
-  _pegarPlan = parsearResumenDiario(ta.value);
+  const texto = ta.value;
+  _pegarModo = (typeof esResumenTabla === 'function' && esResumenTabla(texto)) ? 'tabla' : 'lineas';
+  if (_pegarModo === 'tabla') { _pegarPlan = parsearResumenTabla(texto); _previewPegarTabla(pv); }
+  else { _pegarPlan = parsearResumenDiario(texto); _previewPegarLineas(pv); }
+}
+
+// Preview del formato por líneas (cantidad · prestación · OS).
+function _previewPegarLineas(pv) {
   if (!_pegarPlan.length) { pv.innerHTML = '<p class="muted">Escribí o pegá el resumen arriba.</p>'; return; }
   const rows = _pegarPlan.map(p => {
     const okCell = p.problema
@@ -268,14 +277,72 @@ function previsualizarPegar() {
     <table class="tabla"><thead><tr><th class="num">Cant.</th><th>Prestación</th><th>OS</th><th>Detección</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
+// Preview del formato tabla (export por paciente), con avisos de duplicado y faltantes.
+function _previewPegarTabla(pv) {
+  if (!_pegarPlan.length) { pv.innerHTML = '<p class="muted">Pegá la tabla arriba (una fila por paciente).</p>'; return; }
+  const rows = _pegarPlan.map(p => {
+    let estado = p.problema
+      ? `<span class="badge-inactivo">${escHtml(p.problema)}</span>`
+      : `<span class="badge-ok">✓ ${escHtml((categoriaInfo(p.categoria) || {}).label || p.categoria)}</span>`;
+    if (!p.problema && p.yaCargada) estado += ' <span class="badge-inactivo" title="Ya hay carga para ese médico ese día">⚠ ya cargada</span>';
+    return `<tr class="${p.problema ? 'fila-inactiva' : ''}">
+      <td>${escHtml(p.fechaTxt)}</td>
+      <td>${escHtml(p.paciente || '—')}${p.dni ? ' <span class="muted" style="font-size:11px">' + escHtml(p.dni) + '</span>' : ''}</td>
+      <td>${escHtml(p.medicoNombre || '—')}</td>
+      <td>${escHtml(p.obraSocial)}</td>
+      <td>${escHtml(p.problema ? p.prestTxt : p.descripcion)}</td>
+      <td>${estado}</td>
+    </tr>`;
+  }).join('');
+  const okN = _pegarPlan.filter(p => !p.problema).length;
+  const faltan = _pegarPlan.filter(p => p.problema === 'prestación no reconocida en el catálogo').length;
+  const dupKeys = [...new Set(_pegarPlan.filter(p => !p.problema && p.yaCargada).map(p => p.fecha + '|' + p.medicoId))];
+  let banner = '';
+  if (dupKeys.length) {
+    const txt = dupKeys.map(k => { const [f, mid] = k.split('|'); return escHtml((typeof medicoNombre === 'function' ? medicoNombre(Number(mid)) : mid) + ' · ' + f); }).join('; ');
+    banner += `<div class="aviso" style="margin:6px 0">⚠ Ya hay prestaciones cargadas para: <strong>${txt}</strong>. Si cargás, se pueden duplicar.</div>`;
+  }
+  if (faltan) banner += `<div class="aviso" style="margin:6px 0">⚠ ${faltan} fila(s) con prestación no reconocida en el nomenclador — se van a omitir.</div>`;
+  pv.innerHTML = banner + `<p class="muted">${okN}/${_pegarPlan.length} fila(s) reconocida(s).</p>
+    <table class="tabla"><thead><tr><th>Fecha</th><th>Paciente</th><th>Médico</th><th>Cobertura</th><th>Prestación</th><th>Detección</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
 function confirmarPegarResumen() {
+  if (!_pegarPlan.length) previsualizarPegar();
+  if (_pegarModo === 'tabla') { _confirmarPegarTabla(); return; }
+  // Formato por líneas: usa el médico y la fecha elegidos arriba.
   const fecha = (document.getElementById('cd_fecha') || {}).value || hoyISO();
   const medicoId = (document.getElementById('cd_medico') || {}).value || null;
   if (!medicoId) { avisoUI('Elegí el médico arriba antes de cargar.'); return; }
-  if (!_pegarPlan.length) { previsualizarPegar(); }
   const r = aplicarResumenDiario(_pegarPlan, { fecha, medicoRealizadorId: Number(medicoId) });
-  if (r.ok === 0) { const msg = document.getElementById('pegarMsg'); if (msg) msg.innerHTML = '<div class="diag-err" style="margin:8px 0">No se cargó ninguna línea (revisá la detección).</div>'; return; }
+  _finalizarPegar(r);
+}
+
+function _confirmarPegarTabla() {
+  const okRows = _pegarPlan.filter(p => !p.problema);
+  if (!okRows.length) {
+    const msg = document.getElementById('pegarMsg');
+    if (msg) msg.innerHTML = '<div class="diag-err" style="margin:8px 0">No hay filas reconocidas para cargar. Revisá el nomenclador y los nombres de médico.</div>';
+    return;
+  }
+  const hayDup = okRows.some(p => p.yaCargada);
+  const aplicar = () => _finalizarPegar(aplicarResumenTabla(_pegarPlan));
+  if (hayDup && typeof confirmarUI === 'function') {
+    confirmarUI('Ya hay prestaciones cargadas para algún médico/fecha de esta tabla. ¿Cargar igual? (puede duplicar)').then(ok => { if (ok) aplicar(); });
+  } else aplicar();
+}
+
+function _finalizarPegar(r) {
+  if (r.ok === 0) {
+    const msg = document.getElementById('pegarMsg');
+    if (msg) msg.innerHTML = '<div class="diag-err" style="margin:8px 0">No se cargó ninguna fila (revisá la detección y los precios/contratos).</div>';
+    return;
+  }
   cerrarModalPegar();
   if (typeof sincronizarUI === 'function') sincronizarUI(); else renderCargaDiaria();
-  avisoUI('Cargadas ' + r.ok + ' línea(s) (' + r.unidades + ' unidad/es)' + (r.omitidas ? ', ' + r.omitidas + ' omitida(s)' : '') + '.');
+  let m = 'Cargadas ' + r.ok + ' prestación(es)';
+  if (r.unidades && r.unidades !== r.ok) m = 'Cargadas ' + r.ok + ' línea(s) (' + r.unidades + ' unidad/es)';
+  if (r.omitidas) m += ', ' + r.omitidas + ' omitida(s) sin reconocer';
+  if (r.errores && r.errores.length) m += ', ' + r.errores.length + ' con error (' + escHtml(r.errores[0].motivo) + ')';
+  avisoUI(m + '.');
 }
