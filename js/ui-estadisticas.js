@@ -97,34 +97,52 @@ function _avisosResumenHtml(mes) {
 }
 
 // ── Vista médico ──
+let _statMedicoSel = null;
+function seleccionarMedicoStat(id) { _statMedicoSel = Number(id); renderEstadisticas(); }
+
 function renderVistaMedico(cont, mes) {
   const meds = getMedicosActivos().sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es'));
-  const sel = document.getElementById('statMedico');
-  const cur = sel ? sel.value : (meds[0] ? meds[0].id : '');
-  const opciones = meds.map(m => `<option value="${m.id}"${String(m.id) === String(cur) ? ' selected' : ''}>${escHtml(m.nombre)}</option>`).join('');
-  let cuerpo = '<p class="muted">Elegí un médico.</p>';
-  if (cur) {
-    const r = resumenMedicoMes(Number(cur), mes);
-    const cats = Object.keys(r.porCategoria).sort()
-      .map(c => `<tr><td>${escHtml(_catLabelSt(c))}</td><td class="num">${r.porCategoria[c]}</td></tr>`).join('');
-    const flags = [];
-    if (r.faltaValor.length) flags.push('<span class="badge-inactivo">falta valor fijo</span>');
-    cuerpo = `
-      <div class="saldos">
-        <div class="saldo-card"><div class="saldo-titulo">Prestaciones</div><div class="saldo-monto">${r.cantidad}</div></div>
-        <div class="saldo-card total"><div class="saldo-titulo">Honorarios del mes</div><div class="saldo-monto">${fmtMoneda(r.total, 'ARS')}</div></div>
-      </div>
-      ${flags.length ? '<p class="nota">' + flags.join(' ') + '</p>' : ''}
-      <div class="btn-group" style="margin-bottom:14px">
-        <button class="btn" onclick="verResumenMedicoPDF(${cur},'${mes}')">Informe PDF</button>
-        <button class="btn secundario" onclick="copiarResumenMedicoWhatsApp(${cur},'${mes}')">Copiar para WhatsApp</button>
-      </div>
-      <table class="tabla" style="max-width:420px"><thead><tr><th>Categoría</th><th class="num">Cantidad</th></tr></thead>
-        <tbody>${cats || '<tr><td colspan="2" class="muted">Sin prestaciones</td></tr>'}</tbody></table>`;
-  }
+  if (!meds.length) { cont.innerHTML = '<p class="vacio">No hay médicos activos. Cargalos en Configuración ▸ Médicos/Consul.</p>'; return; }
+  if (_statMedicoSel == null || !meds.find(m => m.id === _statMedicoSel)) _statMedicoSel = meds[0].id;
+  const cur = _statMedicoSel;
+
+  // Cuadritos de médicos (clic para elegir), con la cantidad de prestaciones del mes.
+  const cards = meds.map(m => {
+    const rc = resumenMedicoControl(m.id, mes);
+    return `<button class="med-card${m.id === cur ? ' sel' : ''}" onclick="seleccionarMedicoStat(${m.id})">
+      <span class="med-card-dot" style="background:${m.color || 'var(--primario)'}"></span>
+      <span class="med-card-nombre">${escHtml(m.nombre)}</span>
+      <span class="med-card-cant">${rc.total} prest.</span>
+    </button>`;
+  }).join('');
+
+  // Detalle del médico seleccionado: por categoría, con descripción y cantidad (sin $).
+  const r = resumenMedicoControl(cur, mes);
+  const catsOrden = categoriasOrdenadasMedico(r.cats);
+  const detalle = catsOrden.length
+    ? catsOrden.map(c => {
+        const info = r.cats[c];
+        const filas = Object.entries(info.items).sort((a, b) => b[1] - a[1])
+          .map(([desc, cant]) => `<tr><td>${escHtml(desc)}</td><td class="num">${cant}</td></tr>`).join('');
+        return `<div style="margin-bottom:16px">
+          <div class="section-head" style="margin:0 0 6px"><h4 style="margin:0">${escHtml(_catLabelSt(c))}</h4><span class="badge-ok">${info.total}</span></div>
+          <table class="tabla" style="max-width:520px"><thead><tr><th>Descripción</th><th class="num">Cantidad</th></tr></thead><tbody>${filas}</tbody></table>
+        </div>`;
+      }).join('')
+    : '<p class="vacio">Sin prestaciones este mes.</p>';
+
+  const med = DB.medicos.find(m => m.id === cur) || {};
   cont.innerHTML = `
-    <div class="filtros"><label class="muted">Médico <select id="statMedico" onchange="renderEstadisticas()">${opciones}</select></label></div>
-    ${cuerpo}`;
+    <div class="med-cards">${cards}</div>
+    <div class="section-head" style="margin-top:16px"><h3 style="margin:0">${escHtml(med.nombre)}</h3>
+      <span class="muted">Total: ${r.total} prestación(es) · ${escHtml(mes)}</span></div>
+    <p class="muted" style="margin-top:0">Resumen de lo atendido para enviarle al médico (solo control, sin valores).</p>
+    <div class="btn-group" style="margin-bottom:14px">
+      <button class="btn secundario" onclick="enviarResumenMedicoMail(${cur},'${mes}')">✉️ Enviar por mail</button>
+      <button class="btn secundario" onclick="copiarResumenMedicoWhatsApp(${cur},'${mes}')">Copiar para WhatsApp</button>
+      <button class="btn secundario" onclick="verResumenMedicoPDF(${cur},'${mes}')">Imprimir / PDF</button>
+    </div>
+    ${detalle}`;
 }
 
 // ── Vista control interno ──
@@ -149,10 +167,46 @@ function renderVistaControl(cont, mes) {
 // ── Exportaciones ──
 function _copiar(txt, titulo) { copiarTextoUI(titulo || 'Copiar', txt); }
 function exportarResumenWhatsApp(mes) { _copiar(resumenMesTextoWhatsApp(mes), 'Resumen del mes — ' + mes); }
+// Texto del resumen de atenciones del médico (control, SIN valores $).
+function _textoResumenMedicoControl(medicoId, mes) {
+  const med = DB.medicos.find(m => m.id === Number(medicoId)) || {};
+  const r = resumenMedicoControl(medicoId, mes);
+  const L = [`Resumen de atenciones — ${mes}`, (med.nombre || ''), ''];
+  const catsOrden = categoriasOrdenadasMedico(r.cats);
+  if (!catsOrden.length) { L.push('Sin prestaciones este mes.'); }
+  catsOrden.forEach(c => {
+    L.push(`${_catLabelSt(c)} (${r.cats[c].total}):`);
+    Object.entries(r.cats[c].items).sort((a, b) => b[1] - a[1]).forEach(([desc, cant]) => L.push(`  • ${desc}: ${cant}`));
+    L.push('');
+  });
+  L.push(`Total: ${r.total} prestación(es).`);
+  L.push('(Resumen para control, sin valores.)');
+  return L.join('\n');
+}
+
 function copiarResumenMedicoWhatsApp(medicoId, mes) {
-  const r = resumenMedicoMes(Number(medicoId), mes);
-  const txt = `👁 *OFTA* — ${medicoNombre(Number(medicoId))}\n📋 ${mes}\n\n🧾 Prestaciones: *${r.cantidad}*\n👨‍⚕️ Honorarios: *${fmtMoneda(r.total, 'ARS')}*`;
-  _copiar(txt, 'Informe médico — ' + medicoNombre(Number(medicoId)));
+  _copiar(_textoResumenMedicoControl(medicoId, mes), 'Resumen — ' + medicoNombre(Number(medicoId)));
+}
+
+// Abre Gmail (compose) con el resumen ya cargado para enviarlo al médico.
+// Usa la cuenta de Gmail con la que esté logueado el navegador (la predeterminada de la clínica).
+function enviarResumenMedicoMail(medicoId, mes) {
+  const med = DB.medicos.find(m => m.id === Number(medicoId));
+  if (!med) return;
+  if (!med.email) { avisoUI('Este médico no tiene email cargado. Agregalo en Configuración ▸ Médicos/Consul (Editar médico).'); return; }
+  const asunto = `Resumen de atenciones ${mes} — ${med.nombre}`;
+  const cuerpo = _textoResumenMedicoControl(medicoId, mes);
+  const url = 'https://mail.google.com/mail/?view=cm&fs=1'
+    + '&to=' + encodeURIComponent(med.email)
+    + '&su=' + encodeURIComponent(asunto)
+    + '&body=' + encodeURIComponent(cuerpo);
+  try {
+    const a = document.createElement('a');
+    a.href = url; a.target = '_blank'; a.rel = 'noopener';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  } catch (e) {
+    if (typeof copiarTextoUI === 'function') copiarTextoUI('Enviar por mail a ' + med.email, cuerpo);
+  }
 }
 
 function exportarResumenPDF(mes) {
@@ -191,14 +245,19 @@ function exportarResumenPDF(mes) {
 }
 
 function verResumenMedicoPDF(medicoId, mes) {
-  const r = resumenMedicoMes(Number(medicoId), mes);
-  const filas = r.detalle.map(d => `<tr><td>${escHtml(d.fecha)}</td><td>${escHtml(d.descripcion)}</td><td style="text-align:right">${Math.max(1, Math.floor(Number(d.cantidad) || 1))}</td><td>${d.rol === 'derivador' ? 'Derivador' : 'Realizador'}</td><td style="text-align:right">${fmtMoneda(d.monto, 'ARS')}</td></tr>`).join('');
-  const html = `<h1>OFTA — Oftalmología</h1><h2>Informe del médico — ${escHtml(mes)}</h2>
-    <p><strong>${escHtml(medicoNombre(Number(medicoId)))}</strong> · Prestaciones: ${r.cantidad}</p>
-    <table><thead><tr><th>Fecha</th><th>Prestación</th><th style="text-align:right">Cant.</th><th>Rol</th><th style="text-align:right">Honorario</th></tr></thead>
-      <tbody>${filas}</tbody>
-      <tfoot><tr><th colspan="4" style="text-align:right">TOTAL</th><th style="text-align:right">${fmtMoneda(r.total, 'ARS')}</th></tr></tfoot></table>`;
-  _abrirVentanaImpresion('Informe ' + medicoNombre(Number(medicoId)) + ' ' + mes, html);
+  const med = DB.medicos.find(m => m.id === Number(medicoId)) || {};
+  const r = resumenMedicoControl(medicoId, mes);
+  const bloques = categoriasOrdenadasMedico(r.cats).map(c => {
+    const filas = Object.entries(r.cats[c].items).sort((a, b) => b[1] - a[1])
+      .map(([desc, cant]) => `<tr><td>${escHtml(desc)}</td><td style="text-align:right">${cant}</td></tr>`).join('');
+    return `<h3 style="margin:16px 0 4px">${escHtml(_catLabelSt(c))} (${r.cats[c].total})</h3>
+      <table><thead><tr><th>Descripción</th><th style="text-align:right">Cantidad</th></tr></thead><tbody>${filas}</tbody></table>`;
+  }).join('') || '<p>Sin prestaciones este mes.</p>';
+  const html = `<h1>SAM — Centro de Diagnóstico Médico</h1><h2>Resumen de atenciones — ${escHtml(mes)}</h2>
+    <p><strong>${escHtml(med.nombre || '')}</strong> · Total: ${r.total} prestación(es)</p>
+    ${bloques}
+    <p style="margin-top:18px;color:#666">Resumen para control, sin valores.</p>`;
+  _abrirVentanaImpresion('Resumen ' + (med.nombre || '') + ' ' + mes, html);
 }
 
 function descargarCSVContable(mes) {
@@ -337,7 +396,6 @@ function verPreliqMedico(medicoId, mes) {
   if (typeof dashTab === 'function') dashTab('estad');
   const mEl = document.getElementById('statMes');
   if (mEl && mes) mEl.value = mes;
-  if (typeof switchStatView === 'function') switchStatView('medico');  // renderiza la vista médico
-  const sel = document.getElementById('statMedico');
-  if (sel) { sel.value = String(medicoId); if (typeof renderEstadisticas === 'function') renderEstadisticas(); }
+  _statMedicoSel = Number(medicoId);
+  if (typeof switchStatView === 'function') switchStatView('medico');  // renderiza la vista médico con ese médico elegido
 }

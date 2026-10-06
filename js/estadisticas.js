@@ -60,6 +60,31 @@ function resumenMedicoMes(medicoId, mes) {
   };
 }
 
+// ── Resumen de atenciones del médico para CONTROL (sin valores $) ──
+//  Agrupa lo que el médico REALIZÓ en el mes por categoría y por descripción,
+//  con la cantidad. Es lo que se le envía al médico para que controle.
+function resumenMedicoControl(medicoId, mes) {
+  const mid = Number(medicoId);
+  const unidades = r => Math.max(1, Math.floor(Number(r.cantidad) || 1));
+  const regs = DB.prestacionesRealizadas.filter(r =>
+    r.estado === 'activa' && Number(r.medicoRealizadorId) === mid && (r.fecha || '').slice(0, 7) === mes);
+  const cats = {};   // categoria -> { total, items: { descripcion: cantidad } }
+  regs.forEach(r => {
+    const c = cats[r.categoria] || (cats[r.categoria] = { total: 0, items: {} });
+    const u = unidades(r);
+    c.total += u;
+    const desc = (r.descripcion || '—');
+    c.items[desc] = (c.items[desc] || 0) + u;
+  });
+  return { medicoId: mid, mes, total: regs.reduce((s, r) => s + unidades(r), 0), cats };
+}
+
+// Orden de categorías para mostrar el resumen del médico.
+const ORDEN_CAT_MEDICO = ['consulta', 'realizacion_estudio', 'practica', 'cirugia'];
+function categoriasOrdenadasMedico(cats) {
+  return [...ORDEN_CAT_MEDICO.filter(c => cats[c]), ...Object.keys(cats).filter(c => !ORDEN_CAT_MEDICO.includes(c))];
+}
+
 // ── Vista control interno ──
 function controlInterno(mes) {
   const enMes = r => !mes || (r.fecha || '').slice(0, 7) === mes;
