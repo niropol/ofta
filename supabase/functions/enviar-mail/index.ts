@@ -41,6 +41,7 @@ Deno.serve(async (req) => {
     const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const GMAIL_USER = Deno.env.get("GMAIL_USER");
     const GMAIL_APP_PASSWORD = Deno.env.get("GMAIL_APP_PASSWORD");
+    const GMAIL_FROM_NAME = Deno.env.get("GMAIL_FROM_NAME");   // nombre visible del remitente (opcional)
 
     if (!GMAIL_USER || !GMAIL_APP_PASSWORD) {
       return json({ error: "Falta configurar GMAIL_USER / GMAIL_APP_PASSWORD en los secretos del proyecto." }, 500);
@@ -77,8 +78,10 @@ Deno.serve(async (req) => {
         auth: { username: GMAIL_USER, password: GMAIL_APP_PASSWORD },
       },
     });
+    // Remitente: "Nombre <casilla>" si hay GMAIL_FROM_NAME; si no, la casilla pelada.
+    const from = GMAIL_FROM_NAME ? `${GMAIL_FROM_NAME} <${GMAIL_USER}>` : GMAIL_USER;
     await client.send({
-      from: GMAIL_USER,
+      from,
       to: String(to),
       subject: String(subject),
       content: text ? String(text) : "Abrí el correo en formato HTML para ver el resumen.",
