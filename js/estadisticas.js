@@ -110,6 +110,25 @@ function medicosPendientesResumen(mes) {
     .sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es'));
 }
 
+// Lista de atenciones del médico en el mes (para el detalle): fecha, paciente,
+// cobertura (OS) y práctica/prestación de cada una.
+function atencionesMedicoMes(medicoId, mes) {
+  const mid = Number(medicoId);
+  return DB.prestacionesRealizadas
+    .filter(r => r.estado === 'activa' && Number(r.medicoRealizadorId) === mid && (r.fecha || '').slice(0, 7) === mes)
+    .sort((a, b) => (a.fecha || '').localeCompare(b.fecha || '') || (a.id - b.id))
+    .map(r => {
+      const pac = DB.pacientes.find(p => p.id === r.pacienteId);
+      return {
+        fecha: r.fecha,
+        paciente: (typeof pacienteLabel === 'function') ? (pac ? pacienteLabel(pac) : '—') : (pac ? (pac.apellido || '—') : '—'),
+        cobertura: r.obraSocial || 'Particular',
+        descripcion: r.descripcion || '—',
+        cantidad: Math.max(1, Math.floor(Number(r.cantidad) || 1)),
+      };
+    });
+}
+
 // Orden de categorías para mostrar el resumen del médico.
 const ORDEN_CAT_MEDICO = ['consulta', 'realizacion_estudio', 'practica', 'cirugia'];
 function categoriasOrdenadasMedico(cats) {

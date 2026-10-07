@@ -213,6 +213,12 @@ function _textoResumenMedicoControl(medicoId, mes) {
     fechas.forEach(f => L.push(`  • ${f}: ${r.porFecha[f]}`));
     L.push('');
   }
+  const at = (typeof atencionesMedicoMes === 'function') ? atencionesMedicoMes(medicoId, mes) : [];
+  if (at.length) {
+    L.push('Detalle de atenciones (fecha · paciente · cobertura · práctica):');
+    at.forEach(a => L.push(`  • ${a.fecha} · ${a.paciente} · ${a.cobertura} · ${a.descripcion}${a.cantidad > 1 ? ' (x' + a.cantidad + ')' : ''}`));
+    L.push('');
+  }
   L.push(`Total: ${r.total} prestación(es).`);
   return L.join('\n');
 }
@@ -257,10 +263,26 @@ function _htmlResumenMedicoControl(medicoId, mes) {
     <table style="border-collapse:collapse;width:100%;font-size:14px"><tbody>${fechaRows}
       <tr><td style="padding:8px 10px;border-top:2px solid #ccc;font-weight:bold">Total</td><td style="padding:8px 10px;border-top:2px solid #ccc;text-align:right;font-weight:bold">${r.total}</td></tr></tbody></table>` : '';
 
+  // Detalle de atenciones: paciente, cobertura y práctica de cada una.
+  const at = (typeof atencionesMedicoMes === 'function') ? atencionesMedicoMes(medicoId, mes) : [];
+  const atRows = at.map(a => `<tr>
+    <td style="padding:6px 10px;border-bottom:1px solid #eee;white-space:nowrap">${escHtml(a.fecha)}</td>
+    <td style="padding:6px 10px;border-bottom:1px solid #eee">${escHtml(a.paciente)}</td>
+    <td style="padding:6px 10px;border-bottom:1px solid #eee">${escHtml(a.cobertura)}</td>
+    <td style="padding:6px 10px;border-bottom:1px solid #eee">${escHtml(a.descripcion)}${a.cantidad > 1 ? ` <span style="color:#888">(x${a.cantidad})</span>` : ''}</td>
+  </tr>`).join('');
+  const bloqueAtenciones = at.length ? `<h3 style="color:#22492f;margin:20px 0 4px;border-left:4px solid #22492f;padding-left:8px;font-size:15px">Detalle de atenciones</h3>
+    <table style="border-collapse:collapse;width:100%;font-size:13px"><thead><tr>
+      <th style="text-align:left;padding:6px 10px;border-bottom:2px solid #ccc">Fecha</th>
+      <th style="text-align:left;padding:6px 10px;border-bottom:2px solid #ccc">Paciente</th>
+      <th style="text-align:left;padding:6px 10px;border-bottom:2px solid #ccc">Cobertura</th>
+      <th style="text-align:left;padding:6px 10px;border-bottom:2px solid #ccc">Práctica</th>
+    </tr></thead><tbody>${atRows}</tbody></table>` : '';
+
   return `<div style="font-family:Arial,Helvetica,sans-serif;color:#211f1b;max-width:620px;margin:0 auto;padding:4px">
     <h2 style="color:#22492f;margin:0 0 2px">Resumen de atenciones — ${escHtml(mesLbl)}</h2>
     <p style="margin:0 0 14px;color:#555;font-size:15px"><strong>${escHtml(med.nombre || '')}</strong> · Total: <strong>${r.total}</strong> prestación(es)</p>
-    ${cats.length ? `<table style="width:100%;border-collapse:collapse;margin-bottom:4px"><tbody><tr>${tiles}</tr></tbody></table>${bloqueFechas}${detalle}` : '<p>Sin prestaciones este mes.</p>'}
+    ${cats.length ? `<table style="width:100%;border-collapse:collapse;margin-bottom:4px"><tbody><tr>${tiles}</tr></tbody></table>${bloqueFechas}${detalle}${bloqueAtenciones}` : '<p>Sin prestaciones este mes.</p>'}
   </div>`;
 }
 
@@ -288,6 +310,12 @@ function _textoWhatsAppMedico(medicoId, mes) {
     L.push((_EMOJI_CAT_MED[c] || '•') + ' *' + _catLabelSt(c) + '* (' + r.cats[c].total + ')');
     Object.entries(r.cats[c].items).sort((a, b) => b[1] - a[1]).forEach(([d, n]) => L.push('   • ' + d + ': ' + n));
   });
+  const at = (typeof atencionesMedicoMes === 'function') ? atencionesMedicoMes(medicoId, mes) : [];
+  if (at.length) {
+    L.push('');
+    L.push('👥 *Detalle de atenciones:*');
+    at.forEach(a => L.push('• ' + a.fecha.slice(8, 10) + '/' + a.fecha.slice(5, 7) + ' · ' + a.paciente + ' · ' + a.cobertura + ' · ' + a.descripcion + (a.cantidad > 1 ? ' (x' + a.cantidad + ')' : '')));
+  }
   return L.join('\n');
 }
 
