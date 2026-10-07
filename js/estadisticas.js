@@ -68,15 +68,46 @@ function resumenMedicoControl(medicoId, mes) {
   const unidades = r => Math.max(1, Math.floor(Number(r.cantidad) || 1));
   const regs = DB.prestacionesRealizadas.filter(r =>
     r.estado === 'activa' && Number(r.medicoRealizadorId) === mid && (r.fecha || '').slice(0, 7) === mes);
-  const cats = {};   // categoria -> { total, items: { descripcion: cantidad } }
+  const cats = {};        // categoria -> { total, items: { descripcion: cantidad } }
+  const porFecha = {};    // fecha -> cantidad (parciales por día de atención)
   regs.forEach(r => {
     const c = cats[r.categoria] || (cats[r.categoria] = { total: 0, items: {} });
     const u = unidades(r);
     c.total += u;
     const desc = (r.descripcion || '—');
     c.items[desc] = (c.items[desc] || 0) + u;
+    porFecha[r.fecha] = (porFecha[r.fecha] || 0) + u;
   });
-  return { medicoId: mid, mes, total: regs.reduce((s, r) => s + unidades(r), 0), cats };
+  return { medicoId: mid, mes, total: regs.reduce((s, r) => s + unidades(r), 0), cats, porFecha };
+}
+
+// ── Control de envío de resúmenes a médicos (uno por médico + mes) ──
+function registrarResumenEnviado(medicoId, mes, email, via) {
+  const mid = Number(medicoId);
+  const existente = DB.resumenesEnviados.find(x => Number(x.medicoId) === mid && x.mes === mes);
+  const datos = { medicoId: mid, mes, email: email || '', enviadoEn: new Date().toISOString(), via: via || 'mail' };
+  if (existente) { Object.assign(existente, datos); if (typeof marcarCambios === 'function') marcarCambios('resumenesEnviados'); return existente; }
+  const nuevo = { id: nuevoId(), ...datos };
+  DB.resumenesEnviados.push(nuevo);
+  if (typeof marcarCambios === 'function') marcarCambios('resumenesEnviados');
+  return nuevo;
+}
+function resumenEnviadoDe(medicoId, mes) {
+  return DB.resumenesEnviados.find(x => Number(x.medicoId) === Number(medicoId) && x.mes === mes) || null;
+}
+function olvidarResumenEnviado(medicoId, mes) {
+  const i = DB.resumenesEnviados.findIndex(x => Number(x.medicoId) === Number(medicoId) && x.mes === mes);
+  if (i >= 0) { DB.resumenesEnviados.splice(i, 1); if (typeof marcarCambios === 'function') marcarCambios('resumenesEnviados'); }
+}
+// Médicos con atenciones en el mes que TODAVÍA no tienen el resumen enviado.
+function medicosPendientesResumen(mes) {
+  const ids = new Set();
+  DB.prestacionesRealizadas
+    .filter(r => r.estado === 'activa' && (r.fecha || '').slice(0, 7) === mes && r.medicoRealizadorId != null)
+    .forEach(r => ids.add(Number(r.medicoRealizadorId)));
+  return [...ids].filter(id => !resumenEnviadoDe(id, mes))
+    .map(id => (DB.medicos.find(m => m.id === id) || { id, nombre: 'Médico ' + id }))
+    .sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es'));
 }
 
 // Orden de categorías para mostrar el resumen del médico.

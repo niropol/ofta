@@ -175,6 +175,10 @@ const DB = {
   //    valor anterior y nuevo. Control de seguridad de caja (Etapa 8, activo ya). ──
   auditoria: [],
 
+  // ── Resúmenes de atenciones enviados a cada médico (control de qué se mandó).
+  //    { id, medicoId, mes, email, enviadoEn, via ('mail'|'manual') } — uno por médico+mes. ──
+  resumenesEnviados: [],
+
   // Contador global de IDs.
   nextId: 1000,
 };
@@ -183,7 +187,7 @@ const DB = {
 const COLECCIONES = [
   'usuarios', 'sedes', 'consultorios', 'medicos', 'obrasSociales', 'pacientes', 'nomenclador',
   'contratos', 'aliasContrato', 'valoresMedico', 'reglasReparto', 'horarios', 'derivaciones', 'alarmas', 'prestacionesRealizadas',
-  'cobros', 'gastos', 'pagosMedicos', 'cajaMovimientos', 'cajaCierres', 'auditoria',
+  'cobros', 'gastos', 'pagosMedicos', 'cajaMovimientos', 'cajaCierres', 'auditoria', 'resumenesEnviados',
 ];
 
 // Genera el próximo id global y lo consume.

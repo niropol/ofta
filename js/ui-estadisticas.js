@@ -106,15 +106,23 @@ function renderVistaMedico(cont, mes) {
   if (_statMedicoSel == null || !meds.find(m => m.id === _statMedicoSel)) _statMedicoSel = meds[0].id;
   const cur = _statMedicoSel;
 
-  // Cuadritos de médicos (clic para elegir), con la cantidad de prestaciones del mes.
+  // Cuadritos de médicos (clic para elegir), con cantidad del mes y estado de envío (✓/⏳).
   const cards = meds.map(m => {
     const rc = resumenMedicoControl(m.id, mes);
+    const env = (typeof resumenEnviadoDe === 'function') ? resumenEnviadoDe(m.id, mes) : null;
+    const marca = rc.total > 0 ? (env ? ' <span title="Resumen enviado" style="color:var(--ok)">✓</span>' : ' <span title="Falta enviar el resumen" style="color:var(--warn)">⏳</span>') : '';
     return `<button class="medpick${m.id === cur ? ' sel' : ''}" onclick="seleccionarMedicoStat(${m.id})">
       <span class="medpick-dot" style="background:${m.color || 'var(--primario)'}"></span>
       <span class="medpick-nombre">${escHtml(m.nombre)}</span>
-      <span class="medpick-cant">${rc.total} prest.</span>
+      <span class="medpick-cant">${rc.total} prest.${marca}</span>
     </button>`;
   }).join('');
+
+  // Banner: médicos con atenciones del mes que todavía no tienen el resumen enviado.
+  const pend = (typeof medicosPendientesResumen === 'function') ? medicosPendientesResumen(mes) : [];
+  const bannerPend = pend.length
+    ? `<div class="aviso" style="margin:0 0 10px">📬 Falta enviar el resumen de <strong>${escHtml(mes)}</strong> a ${pend.length} médico(s): ${pend.map(m => escHtml(m.nombre)).join(', ')}.</div>`
+    : '';
 
   // Detalle del médico seleccionado: por categoría, con descripción y cantidad (sin $).
   const r = resumenMedicoControl(cur, mes);
@@ -132,17 +140,37 @@ function renderVistaMedico(cont, mes) {
     : '<p class="vacio">Sin prestaciones este mes.</p>';
 
   const med = DB.medicos.find(m => m.id === cur) || {};
+  const env = (typeof resumenEnviadoDe === 'function') ? resumenEnviadoDe(cur, mes) : null;
+  const estadoEnvio = r.total > 0
+    ? (env
+        ? `<span class="badge-ok">✓ Enviado${env.enviadoEn ? ' · ' + escHtml(env.enviadoEn.slice(0, 10)) : ''}${env.via === 'manual' ? ' (manual)' : ''}</span>
+           <button class="btn secundario btn-sm" onclick="desmarcarResumenEnviadoUI(${cur},'${mes}')">Marcar como no enviado</button>`
+        : `<span class="badge-inactivo">⏳ Falta enviar</span>
+           <button class="btn secundario btn-sm" onclick="marcarResumenEnviadoUI(${cur},'${mes}')">Marcar como enviado</button>`)
+    : '';
   cont.innerHTML = `
+    ${bannerPend}
     <div class="medpick-cards">${cards}</div>
     <div class="section-head" style="margin-top:16px"><h3 style="margin:0">${escHtml(med.nombre)}</h3>
       <span class="muted">Total: ${r.total} prestación(es) · ${escHtml(mes)}</span></div>
-    <p class="muted" style="margin-top:0">Resumen de lo atendido para enviarle al médico (solo control, sin valores).</p>
+    <p class="muted" style="margin:4px 0 8px">Resumen de lo atendido para enviarle al médico (solo control, sin valores). ${estadoEnvio}</p>
     <div class="btn-group" style="margin-bottom:14px">
       <button class="btn secundario" onclick="enviarResumenMedicoMail(${cur},'${mes}')">✉️ Enviar por mail</button>
       <button class="btn secundario" onclick="copiarResumenMedicoWhatsApp(${cur},'${mes}')">Copiar para WhatsApp</button>
       <button class="btn secundario" onclick="verResumenMedicoPDF(${cur},'${mes}')">Imprimir / PDF</button>
     </div>
     ${detalle}`;
+}
+
+// Marcar/desmarcar manualmente el envío del resumen (ej. si se mandó por WhatsApp o a mano).
+function marcarResumenEnviadoUI(medicoId, mes) {
+  const med = DB.medicos.find(m => m.id === Number(medicoId)) || {};
+  if (typeof registrarResumenEnviado === 'function') registrarResumenEnviado(medicoId, mes, med.email || '', 'manual');
+  if (typeof sincronizarUI === 'function') sincronizarUI(); else renderEstadisticas();
+}
+function desmarcarResumenEnviadoUI(medicoId, mes) {
+  if (typeof olvidarResumenEnviado === 'function') olvidarResumenEnviado(medicoId, mes);
+  if (typeof sincronizarUI === 'function') sincronizarUI(); else renderEstadisticas();
 }
 
 // ── Vista control interno ──
@@ -179,6 +207,12 @@ function _textoResumenMedicoControl(medicoId, mes) {
     Object.entries(r.cats[c].items).sort((a, b) => b[1] - a[1]).forEach(([desc, cant]) => L.push(`  • ${desc}: ${cant}`));
     L.push('');
   });
+  const fechas = Object.keys(r.porFecha).sort();
+  if (fechas.length) {
+    L.push('Por fecha de atención:');
+    fechas.forEach(f => L.push(`  • ${f}: ${r.porFecha[f]}`));
+    L.push('');
+  }
   L.push(`Total: ${r.total} prestación(es).`);
   return L.join('\n');
 }
@@ -216,10 +250,17 @@ function _htmlResumenMedicoControl(medicoId, mes) {
       <table style="border-collapse:collapse;width:100%;font-size:14px"><tbody>${rows}</tbody></table>`;
   }).join('');
 
+  // Parciales por fecha de atención + total.
+  const fechas = Object.keys(r.porFecha).sort();
+  const fechaRows = fechas.map(f => `<tr><td style="padding:6px 10px;border-bottom:1px solid #eee">${escHtml(f)}</td><td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:right;font-weight:bold">${r.porFecha[f]}</td></tr>`).join('');
+  const bloqueFechas = fechas.length ? `<h3 style="color:#22492f;margin:18px 0 4px;border-left:4px solid #22492f;padding-left:8px;font-size:15px">Por fecha de atención</h3>
+    <table style="border-collapse:collapse;width:100%;font-size:14px"><tbody>${fechaRows}
+      <tr><td style="padding:8px 10px;border-top:2px solid #ccc;font-weight:bold">Total</td><td style="padding:8px 10px;border-top:2px solid #ccc;text-align:right;font-weight:bold">${r.total}</td></tr></tbody></table>` : '';
+
   return `<div style="font-family:Arial,Helvetica,sans-serif;color:#211f1b;max-width:620px;margin:0 auto;padding:4px">
     <h2 style="color:#22492f;margin:0 0 2px">Resumen de atenciones — ${escHtml(mesLbl)}</h2>
     <p style="margin:0 0 14px;color:#555;font-size:15px"><strong>${escHtml(med.nombre || '')}</strong> · Total: <strong>${r.total}</strong> prestación(es)</p>
-    ${cats.length ? `<table style="width:100%;border-collapse:collapse;margin-bottom:4px"><tbody><tr>${tiles}</tr></tbody></table>${detalle}` : '<p>Sin prestaciones este mes.</p>'}
+    ${cats.length ? `<table style="width:100%;border-collapse:collapse;margin-bottom:4px"><tbody><tr>${tiles}</tr></tbody></table>${bloqueFechas}${detalle}` : '<p>Sin prestaciones este mes.</p>'}
   </div>`;
 }
 
@@ -253,7 +294,12 @@ async function enviarResumenMedicoMail(medicoId, mes) {
         try { if (error.context && typeof error.context.json === 'function') { const b = await error.context.json(); if (b && b.error) detalle = b.error; } } catch (_) {}
         throw new Error(detalle);
       }
-      if (data && data.ok) { avisoUI('✅ Mail enviado a ' + med.email + '.'); return; }
+      if (data && data.ok) {
+        if (typeof registrarResumenEnviado === 'function') registrarResumenEnviado(medicoId, mes, med.email, 'mail');
+        if (typeof sincronizarUI === 'function') sincronizarUI();
+        avisoUI('✅ Mail enviado a ' + med.email + '.');
+        return;
+      }
       throw new Error((data && data.error) || 'Respuesta inesperada del servidor.');
     } catch (e) {
       avisoUI('No se pudo enviar automáticamente (' + (e.message || e) + '). Abro Gmail para enviarlo a mano.');
@@ -323,9 +369,15 @@ function verResumenMedicoPDF(medicoId, mes) {
     return `<h3 style="margin:16px 0 4px">${escHtml(_catLabelSt(c))} (${r.cats[c].total})</h3>
       <table><thead><tr><th>Descripción</th><th style="text-align:right">Cantidad</th></tr></thead><tbody>${filas}</tbody></table>`;
   }).join('') || '<p>Sin prestaciones este mes.</p>';
+  const fechas = Object.keys(r.porFecha).sort();
+  const bloqueFechas = fechas.length ? `<h3 style="margin:18px 0 4px">Por fecha de atención</h3>
+    <table><thead><tr><th>Fecha</th><th style="text-align:right">Cantidad</th></tr></thead><tbody>
+      ${fechas.map(f => `<tr><td>${escHtml(f)}</td><td style="text-align:right">${r.porFecha[f]}</td></tr>`).join('')}
+      <tr><td style="font-weight:bold;border-top:2px solid #999">Total</td><td style="text-align:right;font-weight:bold;border-top:2px solid #999">${r.total}</td></tr>
+    </tbody></table>` : '';
   const html = `<h1>SAM — Centro de Diagnóstico Médico</h1><h2>Resumen de atenciones — ${escHtml(mes)}</h2>
     <p><strong>${escHtml(med.nombre || '')}</strong> · Total: ${r.total} prestación(es)</p>
-    ${bloques}`;
+    ${bloqueFechas}${bloques}`;
   _abrirVentanaImpresion('Resumen ' + (med.nombre || '') + ' ' + mes, html);
 }
 
