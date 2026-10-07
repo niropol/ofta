@@ -31,6 +31,12 @@ function irDesdeAviso(area) {
     if (typeof visTab === 'function') visTab('derivaciones');
     return;
   }
+  if (area === 'resumenes') {   // envío de resúmenes a médicos → Dashboard ▸ Estadísticas ▸ Médico
+    if (typeof irA === 'function') irA('dashboard');
+    if (typeof dashTab === 'function') dashTab('estad');
+    if (typeof switchStatView === 'function') switchStatView('medico');
+    return;
+  }
   if (typeof irA === 'function') irA(area);
 }
 

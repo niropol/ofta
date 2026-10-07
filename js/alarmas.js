@@ -27,6 +27,10 @@ function avisosAutomaticos(mes) {
     const s = ingresoSAMDelMes(m);
     if (s.sinContrato) avisos.push({ tipo: 'info', texto: s.sinContrato + ' prestación(es) de ' + m + ' sin contrato de OS cargado', area: 'config' });
   }
+  if (typeof medicosPendientesResumen === 'function') {
+    const pend = medicosPendientesResumen(m);
+    if (pend.length) avisos.push({ tipo: 'info', texto: 'Falta enviar el resumen de ' + m + ' a ' + pend.length + ' médico(s): ' + pend.map(x => x.nombre).join(', '), area: 'resumenes' });
+  }
   return avisos;
 }
 

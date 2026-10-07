@@ -264,8 +264,35 @@ function _htmlResumenMedicoControl(medicoId, mes) {
   </div>`;
 }
 
+// Texto para WhatsApp: con emojis y *negritas* (más prolijo que el plano).
+const _EMOJI_CAT_MED = { consulta: '🩺', realizacion_estudio: '🔬', practica: '💉', cirugia: '🔪', derivacion: '↪️' };
+function _textoWhatsAppMedico(medicoId, mes) {
+  const med = DB.medicos.find(m => m.id === Number(medicoId)) || {};
+  const r = resumenMedicoControl(medicoId, mes);
+  const MESES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  const [anio, mm] = String(mes).split('-');
+  const L = [];
+  L.push('👁️ *SAM — Resumen de atenciones*');
+  L.push('📅 ' + (MESES[+mm] || '') + ' ' + anio);
+  if (med.nombre) L.push('👨‍⚕️ ' + med.nombre);
+  L.push('');
+  L.push('📊 *Total: ' + r.total + ' prestación(es)*');
+  const fechas = Object.keys(r.porFecha).sort();
+  if (fechas.length) {
+    L.push('');
+    L.push('🗓️ *Por fecha:*');
+    fechas.forEach(f => L.push('• ' + f.slice(8, 10) + '/' + f.slice(5, 7) + ': ' + r.porFecha[f]));
+  }
+  categoriasOrdenadasMedico(r.cats).forEach(c => {
+    L.push('');
+    L.push((_EMOJI_CAT_MED[c] || '•') + ' *' + _catLabelSt(c) + '* (' + r.cats[c].total + ')');
+    Object.entries(r.cats[c].items).sort((a, b) => b[1] - a[1]).forEach(([d, n]) => L.push('   • ' + d + ': ' + n));
+  });
+  return L.join('\n');
+}
+
 function copiarResumenMedicoWhatsApp(medicoId, mes) {
-  _copiar(_textoResumenMedicoControl(medicoId, mes), 'Resumen — ' + medicoNombre(Number(medicoId)));
+  _copiar(_textoWhatsAppMedico(medicoId, mes), 'Resumen — ' + medicoNombre(Number(medicoId)));
 }
 
 // Envía el resumen al médico. Primero intenta el envío AUTOMÁTICO por el backend
@@ -362,23 +389,8 @@ function exportarResumenPDF(mes) {
 
 function verResumenMedicoPDF(medicoId, mes) {
   const med = DB.medicos.find(m => m.id === Number(medicoId)) || {};
-  const r = resumenMedicoControl(medicoId, mes);
-  const bloques = categoriasOrdenadasMedico(r.cats).map(c => {
-    const filas = Object.entries(r.cats[c].items).sort((a, b) => b[1] - a[1])
-      .map(([desc, cant]) => `<tr><td>${escHtml(desc)}</td><td style="text-align:right">${cant}</td></tr>`).join('');
-    return `<h3 style="margin:16px 0 4px">${escHtml(_catLabelSt(c))} (${r.cats[c].total})</h3>
-      <table><thead><tr><th>Descripción</th><th style="text-align:right">Cantidad</th></tr></thead><tbody>${filas}</tbody></table>`;
-  }).join('') || '<p>Sin prestaciones este mes.</p>';
-  const fechas = Object.keys(r.porFecha).sort();
-  const bloqueFechas = fechas.length ? `<h3 style="margin:18px 0 4px">Por fecha de atención</h3>
-    <table><thead><tr><th>Fecha</th><th style="text-align:right">Cantidad</th></tr></thead><tbody>
-      ${fechas.map(f => `<tr><td>${escHtml(f)}</td><td style="text-align:right">${r.porFecha[f]}</td></tr>`).join('')}
-      <tr><td style="font-weight:bold;border-top:2px solid #999">Total</td><td style="text-align:right;font-weight:bold;border-top:2px solid #999">${r.total}</td></tr>
-    </tbody></table>` : '';
-  const html = `<h1>SAM — Centro de Diagnóstico Médico</h1><h2>Resumen de atenciones — ${escHtml(mes)}</h2>
-    <p><strong>${escHtml(med.nombre || '')}</strong> · Total: ${r.total} prestación(es)</p>
-    ${bloqueFechas}${bloques}`;
-  _abrirVentanaImpresion('Resumen ' + (med.nombre || '') + ' ' + mes, html);
+  // Mismo informe lindo (con colores + parciales por fecha) que se manda por mail.
+  _abrirVentanaImpresion('Resumen ' + (med.nombre || '') + ' ' + mes, _htmlResumenMedicoControl(medicoId, mes));
 }
 
 function descargarCSVContable(mes) {
